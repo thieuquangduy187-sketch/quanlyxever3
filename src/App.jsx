@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import XeDetail from './pages/XeDetail'
 import { getStats, getAllRows } from './api'
 import Sidebar from './components/Sidebar'
 import Topbar from './components/Topbar'
@@ -10,6 +11,11 @@ import LoadingScreen from './components/LoadingScreen'
 import ErrorBar from './components/ErrorBar'
 
 const PAGE_KEYS = ['xe_tai', 'oto_con', 'cua_hang']
+
+// Route: /xe-detail → render XeDetail directly
+if (typeof window !== 'undefined' && window.location.pathname === '/xe-detail') {
+  // This file won't be the entry for xe-detail, handled in main.jsx
+}
 const GAS_PAGE  = { xe_tai: 'xe_tai', oto_con: 'oto_con', cua_hang: 'cua_hang' }
 
 export default function App() {
