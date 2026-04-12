@@ -261,10 +261,11 @@ export default function PageXeTai({ data, rowsLoaded }) {
                         if (col.k === 'stt') return <td key="stt" style={{ padding:'8px 10px', color:'var(--ink3)', fontSize:11, textAlign:'center' }}>{globalIdx+1}</td>
                         if (col.k === 'bienSo') return (
                           <td key="bs" style={{ padding:'8px 10px' }}>
-                            <a href={`/xe/${r.maTaiSan}`} target="_blank" rel="noreferrer"
-                              style={{ color:'var(--brand)', fontWeight:700, textDecoration:'none', borderBottom:'1px dashed var(--brand)' }}
-                              onClick={e => { e.preventDefault(); sessionStorage.setItem('xe_detail_data', JSON.stringify(r)); window.open(`/xe-detail?id=${r.maTaiSan}`, '_blank') }}
-                            >{r.bienSo}</a>
+                            <span
+                          style={{ color:'var(--brand)', fontWeight:700, cursor:'pointer', borderBottom:'1px dashed var(--brand)' }}
+                          onClick={() => { sessionStorage.setItem('xe_detail_data', JSON.stringify(r)); window.open('/xe-detail', '_blank') }}
+                          title="Click để xem chi tiết"
+                        >{r.bienSo}</span>
                           </td>
                         )
                         if (col.k === 'mien') {
