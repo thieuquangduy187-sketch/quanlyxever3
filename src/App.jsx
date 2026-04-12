@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { getStats, getAllRows } from './api'
 import Sidebar from './components/Sidebar'
 import Topbar from './components/Topbar'
@@ -9,18 +9,21 @@ import PageCuaHang from './pages/PageCuaHang'
 import LoadingScreen from './components/LoadingScreen'
 import ErrorBar from './components/ErrorBar'
 
-const PAGES = ['overview', 'xe_tai', 'oto_con', 'cua_hang']
+const PAGE_KEYS = ['xe_tai', 'oto_con', 'cua_hang']
+const GAS_PAGE  = { xe_tai: 'xe_tai', oto_con: 'oto_con', cua_hang: 'cua_hang' }
 
 export default function App() {
-  const [page, setPage] = useState('overview')
-  const [data, setData] = useState(null)
+  const [page, setPage]           = useState('overview')
+  const [data, setData]           = useState(null)
   const [rowsLoaded, setRowsLoaded] = useState({})
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [loading, setLoading]     = useState(true)
+  const [error, setError]         = useState(null)
   const [refreshing, setRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState(null)
+  const [loadProgress, setLoadProgress] = useState({}) // { xe_tai: 'loading'|'done'|'error' }
+  const loadingRef = useRef({})  // track in-flight loads to avoid duplicates
 
-  // Step 1: load stats only (~5KB)
+  // ── Load stats (~3KB, fast) ─────────────────────────────────────────────────
   const loadStats = useCallback(async () => {
     try {
       const stats = await getStats()
@@ -32,52 +35,77 @@ export default function App() {
       setLastUpdated(stats.fetchedAt || stats.lastUpdated)
       setLoading(false)
       setRefreshing(false)
+      return true
     } catch (e) {
       setError('Lỗi kết nối: ' + e.message)
       setLoading(false)
       setRefreshing(false)
+      return false
     }
   }, [])
 
-  // Step 2: lazy load rows per page
-  const ensureRows = useCallback(async (pageKey) => {
-    const gasPage = { xe_tai: 'xe_tai', oto_con: 'oto_con', cua_hang: 'cua_hang' }[pageKey]
-    if (!gasPage || rowsLoaded[pageKey]) return
+  // ── Load rows for ONE page ──────────────────────────────────────────────────
+  const loadPageRows = useCallback(async (pageKey) => {
+    if (rowsLoaded[pageKey] || loadingRef.current[pageKey]) return
+    loadingRef.current[pageKey] = true
+    setLoadProgress(p => ({ ...p, [pageKey]: 'loading' }))
     try {
-      const rows = await getAllRows(gasPage)
+      const rows = await getAllRows(GAS_PAGE[pageKey])
       setData(prev => {
+        if (!prev) return prev
         const next = { ...prev }
-        if (gasPage === 'xe_tai')   next.xeTai   = { ...prev.xeTai,   rows }
-        if (gasPage === 'oto_con')  next.otocon  = { ...prev.otocon,  rows }
-        if (gasPage === 'cua_hang') next.cuaHang = { ...prev.cuaHang, rows }
+        if (pageKey === 'xe_tai')   next.xeTai   = { ...prev.xeTai,   rows }
+        if (pageKey === 'oto_con')  next.otocon  = { ...prev.otocon,  rows }
+        if (pageKey === 'cua_hang') next.cuaHang = { ...prev.cuaHang, rows }
         return next
       })
-      setRowsLoaded(prev => ({ ...prev, [pageKey]: true }))
+      setRowsLoaded(p => ({ ...p, [pageKey]: true }))
+      setLoadProgress(p => ({ ...p, [pageKey]: 'done' }))
     } catch (e) {
-      setError('Lỗi tải dữ liệu: ' + e.message)
+      setError('Lỗi tải ' + pageKey + ': ' + e.message)
+      setLoadProgress(p => ({ ...p, [pageKey]: 'error' }))
+    } finally {
+      loadingRef.current[pageKey] = false
     }
   }, [rowsLoaded])
 
+  // ── On mount: load stats THEN preload ALL pages in parallel ─────────────────
   useEffect(() => {
-    loadStats()
-    const interval = setInterval(loadStats, 5 * 60 * 1000)
+    loadStats().then(ok => {
+      if (!ok) return
+      // Fire all 3 page row fetches simultaneously — no waiting
+      PAGE_KEYS.forEach(k => loadPageRows(k))
+    })
+    const interval = setInterval(() => {
+      loadStats()
+      // Re-load rows after stats refresh
+      setRowsLoaded({})
+      loadingRef.current = {}
+      PAGE_KEYS.forEach(k => loadPageRows(k))
+    }, 5 * 60 * 1000)
     return () => clearInterval(interval)
-  }, [loadStats])
+  }, []) // eslint-disable-line
 
   const handleNavChange = useCallback((newPage) => {
     setPage(newPage)
-    if (newPage !== 'overview') ensureRows(newPage)
-  }, [ensureRows])
+    // If rows not loaded yet, trigger load (shouldn't happen usually)
+    if (newPage !== 'overview' && !rowsLoaded[newPage]) {
+      loadPageRows(newPage)
+    }
+  }, [rowsLoaded, loadPageRows])
 
   const doRefresh = useCallback(() => {
     setRefreshing(true)
     setRowsLoaded({})
-    loadStats()
-  }, [loadStats])
+    loadingRef.current = {}
+    loadStats().then(ok => {
+      if (ok) PAGE_KEYS.forEach(k => loadPageRows(k))
+    })
+  }, [loadStats, loadPageRows])
 
   if (loading) return <LoadingScreen />
 
-  const pageProps = { data, rowsLoaded, ensureRows }
+  const pageProps = { data, rowsLoaded, loadProgress }
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
@@ -86,11 +114,12 @@ export default function App() {
         onNav={handleNavChange}
         data={data}
         refreshing={refreshing}
+        loadProgress={loadProgress}
         onRefresh={doRefresh}
         lastUpdated={lastUpdated}
       />
       <div style={{ marginLeft: 'var(--sw)', flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-        <Topbar page={page} refreshing={refreshing} />
+        <Topbar page={page} refreshing={refreshing} loadProgress={loadProgress} />
         <main style={{ padding: 20, flex: 1 }}>
           {error && <ErrorBar message={error} onClose={() => setError(null)} />}
           {page === 'overview'  && <PageOverview  {...pageProps} />}
