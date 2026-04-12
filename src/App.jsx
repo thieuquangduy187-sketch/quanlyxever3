@@ -1,3 +1,5 @@
+import useIsMobile from './hooks/useIsMobile'
+import LoginScreen from './components/LoginScreen'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import XeDetail from './pages/XeDetail'
 import { getStats, getAllRows } from './api'
@@ -20,6 +22,11 @@ const GAS_PAGE  = { xe_tai: 'xe_tai', oto_con: 'oto_con', cua_hang: 'cua_hang' }
 
 export default function App() {
   const [page, setPage]           = useState('overview')
+  const isMobile = useIsMobile()
+  const [showSidebar, setShowSidebar] = useState(false)
+  const [user, setUser] = useState(() => {
+    try { return JSON.parse(sessionStorage.getItem('hsg_user')) } catch { return null }
+  })
   const [data, setData]           = useState(null)
   const [rowsLoaded, setRowsLoaded] = useState({})
   const [loading, setLoading]     = useState(true)
@@ -109,6 +116,12 @@ export default function App() {
     })
   }, [loadStats, loadPageRows])
 
+  const handleLogout = () => {
+    sessionStorage.removeItem('hsg_user')
+    setUser(null)
+  }
+
+  if (!user) return <LoginScreen onLogin={setUser} />
   if (loading) return <LoadingScreen />
 
   const pageProps = { data, rowsLoaded, loadProgress }
@@ -123,9 +136,14 @@ export default function App() {
         loadProgress={loadProgress}
         onRefresh={doRefresh}
         lastUpdated={lastUpdated}
+        isMobile={isMobile}
+        showSidebar={showSidebar}
+        onCloseSidebar={() => setShowSidebar(false)}
+        user={user}
+        onLogout={handleLogout}
       />
-      <div style={{ marginLeft: 'var(--sw)', flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-        <Topbar page={page} refreshing={refreshing} loadProgress={loadProgress} />
+      <div style={{ marginLeft: isMobile ? 0 : 'var(--sw)', flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+        <Topbar page={page} refreshing={refreshing} loadProgress={loadProgress} isMobile={isMobile} onMenuClick={() => setShowSidebar(s => !s)} user={user} onLogout={handleLogout} />
         <main style={{ padding: 20, flex: 1 }}>
           {error && <ErrorBar message={error} onClose={() => setError(null)} />}
           {page === 'overview'  && <PageOverview  {...pageProps} />}
