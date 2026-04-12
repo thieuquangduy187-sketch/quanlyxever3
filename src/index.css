@@ -1,0 +1,24 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --brand: #D4420A; --brand2: #F26430; --brand-l: #FFF0EB;
+  --ink: #1C1C1C; --ink2: #4A4A4A; --ink3: #909090;
+  --border: #E6E2DC; --bg: #F5F3EF; --card: #FFFFFF;
+  --sw: 220px;
+  --teal: #0E7490; --teal-l: #E0F5FB;
+  --amber: #B45309; --amber-l: #FEF3C7;
+  --green: #15803D; --green-l: #DCFCE7;
+  --red: #B91C1C; --red-l: #FEE2E2;
+  --purple: #6D28D9; --purple-l: #EDE9FE;
+  font-family: 'Be Vietnam Pro', sans-serif;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+body { background: var(--bg); min-height: 100vh; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #ccc; }
