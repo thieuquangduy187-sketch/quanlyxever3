@@ -1,10 +1,6 @@
 // ── API Client ────────────────────────────────────────────────────────────────
-// In production (Netlify): calls /.netlify/functions/api (server-side proxy)
-// In development: calls VITE_GAS_URL directly (needs CORS or browser extension)
-
 const IS_DEV = import.meta.env.DEV
 const GAS_URL = import.meta.env.VITE_GAS_URL || ''
-// In prod, use Netlify Function as proxy to avoid CORS
 const API_BASE = IS_DEV ? GAS_URL : '/.netlify/functions/api'
 
 async function get(params) {
@@ -29,30 +25,33 @@ async function post(body) {
   return res.json()
 }
 
-// ── Public API ────────────────────────────────────────────────────────────────
-
 export async function getStats() {
   return get({ action: 'stats' })
 }
 
-export async function getPageRowsMeta(page) {
-  return get({ action: 'rows', page })
-}
-
-export async function getPageRowsChunk(page, chunk) {
-  return get({ action: 'rows', page, chunk })
-}
-
+// ── getAllRows: fetch ALL chunks in PARALLEL ───────────────────────────────────
+// Old: sequential (chunk0 → chunk1 → chunk2...) = N × latency
+// New: parallel (chunk0, chunk1, chunk2... simultaneously) = 1 × latency
 export async function getAllRows(page, onProgress) {
-  const meta = await getPageRowsMeta(page)
+  // Step 1: get metadata (chunk count)
+  const meta = await get({ action: 'rows', page })
   const { chunks } = meta
-  let rows = []
-  for (let i = 0; i < chunks; i++) {
-    const chunk = await getPageRowsChunk(page, i)
-    rows = rows.concat(chunk || [])
-    if (onProgress) onProgress(i + 1, chunks)
-  }
-  return rows
+
+  if (chunks === 0) return []
+  if (chunks === 1) return get({ action: 'rows', page, chunk: 0 })
+
+  // Step 2: fire ALL chunk requests simultaneously
+  const promises = Array.from({ length: chunks }, (_, i) =>
+    get({ action: 'rows', page, chunk: i })
+  )
+
+  // Wait for all in parallel
+  const results = await Promise.all(promises)
+
+  if (onProgress) onProgress(chunks, chunks)
+
+  // Flatten in correct order
+  return results.flat()
 }
 
 export async function getXeDetail(maTaiSan) {
