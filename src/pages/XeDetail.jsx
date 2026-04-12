@@ -88,9 +88,9 @@ function Gallery({ hinhAnh }) {
       {lightbox !== null && <Lightbox imgs={imgs} idx={lightbox} onClose={() => setLightbox(null)} />}
       {/* Main image */}
       <div onClick={() => setLightbox(activeIdx)}
-        style={{ position:'relative', borderRadius:14, overflow:'hidden', background:'#111', height:360, cursor:'zoom-in', marginBottom:10 }}>
+        style={{ position:'relative', borderRadius:14, overflow:'hidden', background:'#111', width:'100%', height:360, cursor:'zoom-in', marginBottom:10, flexShrink:0 }}>
         <img src={imgs[activeIdx]} alt=""
-          style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', objectPosition:'center' }} />
+          style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', objectFit:'cover', objectPosition:'center', display:'block' }} />
         <div style={{ position:'absolute', bottom:12, right:12, background:'rgba(0,0,0,.55)', color:'#fff', fontSize:11, padding:'4px 10px', borderRadius:20, pointerEvents:'none' }}>
           🔍 Click để phóng to
         </div>
@@ -214,10 +214,10 @@ export default function XeDetail() {
       </div>
 
       {/* Content */}
-      <div style={{ maxWidth:1200, margin:'0 auto', padding:'28px 24px', display:'grid', gridTemplateColumns:'1fr 420px', gap:32, alignItems:'start' }}>
+      <div style={{ maxWidth:1200, margin:'0 auto', padding:'28px 24px', display:'grid', gridTemplateColumns:'minmax(0,1fr) 420px', gap:32, alignItems:'start' }}>
 
         {/* LEFT: Gallery */}
-        <div>
+        <div style={{ minWidth:0, overflow:'hidden' }}>
           <Gallery hinhAnh={xe.hinhAnh || ''} />
         </div>
 
