@@ -105,20 +105,21 @@ export default function App() {
 
   // ── On mount: load stats THEN preload ALL pages in parallel ─────────────────
   useEffect(() => {
+    // Chỉ load data khi đã đăng nhập
+    if (!token || !user) return
+
     loadStats().then(ok => {
       if (!ok) return
-      // Fire all 3 page row fetches simultaneously — no waiting
       PAGE_KEYS.forEach(k => loadPageRows(k))
     })
     const interval = setInterval(() => {
       loadStats()
-      // Re-load rows after stats refresh
       setRowsLoaded({})
       loadingRef.current = {}
       PAGE_KEYS.forEach(k => loadPageRows(k))
     }, 5 * 60 * 1000)
     return () => clearInterval(interval)
-  }, []) // eslint-disable-line
+  }, [token, user]) // re-run khi login/logout
 
   const handleNavChange = useCallback((newPage) => {
     setPage(newPage)
@@ -155,6 +156,9 @@ export default function App() {
   }, [])
 
   if (!user || !token) return <LoginScreen onLogin={(u, t) => { setUser(u); setToken(t) }} />
+  // Chưa đăng nhập → show login, không load data
+  
+  // Đã đăng nhập nhưng đang load data
   if (loading) return <LoadingScreen />
 
   const pageProps = { data, rowsLoaded, loadProgress }
