@@ -24,8 +24,9 @@ export default function App() {
   const [page, setPage]           = useState('overview')
   const isMobile = useIsMobile()
   const [showSidebar, setShowSidebar] = useState(false)
+  const [token, setToken] = useState(() => localStorage.getItem('hsg_token') || null)
   const [user, setUser] = useState(() => {
-    try { return JSON.parse(sessionStorage.getItem('hsg_user')) } catch { return null }
+    try { return JSON.parse(localStorage.getItem('hsg_user')) } catch { return null }
   })
   const [data, setData]           = useState(null)
   const [rowsLoaded, setRowsLoaded] = useState({})
@@ -117,11 +118,13 @@ export default function App() {
   }, [loadStats, loadPageRows])
 
   const handleLogout = () => {
-    sessionStorage.removeItem('hsg_user')
+    localStorage.removeItem('hsg_token')
+    localStorage.removeItem('hsg_user')
+    setToken(null)
     setUser(null)
   }
 
-  if (!user) return <LoginScreen onLogin={setUser} />
+  if (!user || !token) return <LoginScreen onLogin={(u, t) => { setUser(u); setToken(t) }} />
   if (loading) return <LoadingScreen />
 
   const pageProps = { data, rowsLoaded, loadProgress }
