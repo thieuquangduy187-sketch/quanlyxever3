@@ -9,6 +9,7 @@ import PageOverview from './pages/PageOverview'
 import PageXeTai from './pages/PageXeTai'
 import PageOtoCon from './pages/PageOtoCon'
 import PageCuaHang from './pages/PageCuaHang'
+import PageImport from './pages/PageImport'
 import LoadingScreen from './components/LoadingScreen'
 import ErrorBar from './components/ErrorBar'
 
@@ -187,6 +188,7 @@ export default function App() {
           {page === 'xe_tai'    && <PageXeTai     {...pageProps} />}
           {page === 'oto_con'   && <PageOtoCon    {...pageProps} />}
           {page === 'cua_hang'  && <PageCuaHang   {...pageProps} />}
+          {page === 'import'     && <PageImport />}
         </main>
       </div>
     </div>
