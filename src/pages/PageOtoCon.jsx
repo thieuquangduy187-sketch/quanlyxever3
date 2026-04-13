@@ -1,16 +1,18 @@
+import useIsMobile from '../hooks/useIsMobile'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { obj2arr, sortDesc, fmtCur, PIE_COLORS, COLORS } from '../hooks/useCharts'
 
 export default function PageOtoCon({ data, rowsLoaded }) {
   const s = data?.otocon?.stats || {}
   const rows = data?.otocon?.rows || []
-  const nhArr = sortDesc(obj2arr(s.byNhanHieu || {}))
+  const isMobile = useIsMobile()
+  const nhArr = sortDesc(obj2arr(s.byNhanHieu || s.byNhanHieu || {}))
   const dvArr = sortDesc(obj2arr(s.byDonVi || {}))
   const isLoading = !rowsLoaded?.oto_con && rows.length === 0
 
   return (
     <div>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:16 }}>
+      <div style={{ display:'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap:12, marginBottom:16 }}>
         {[
           { icon:'🚗', label:'Tổng ô tô con', value:s.total||0, sub:'Xe đang quản lý', bg:'var(--purple-l)', bar:'var(--purple)' },
           { icon:'💰', label:'GTCL tổng', value:fmtCur(s.tongGTCL||0), sub:'Giá trị còn lại', bg:'var(--teal-l)', bar:'var(--teal)' },
@@ -27,10 +29,10 @@ export default function PageOtoCon({ data, rowsLoaded }) {
         ))}
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:12 }}>
+      <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap:12, marginBottom:12 }}>
         <div style={{ background:'#fff', border:'1px solid var(--border)', borderRadius:12, padding:'15px 18px' }}>
           <div style={{ fontSize:12.5, fontWeight:600, color:'var(--ink2)', marginBottom:8 }}>Theo nhãn hiệu</div>
-          <ResponsiveContainer width="100%" height={180}>
+          <ResponsiveContainer width="100%" {isMobile ? 160 : 180}>
             <PieChart>
               <Pie data={nhArr} dataKey="value" cx="50%" cy="50%" outerRadius={80} innerRadius={40} paddingAngle={3}>
                 {nhArr.map((_, i) => <Cell key={i} fill={PIE_COLORS[i]} />)}
