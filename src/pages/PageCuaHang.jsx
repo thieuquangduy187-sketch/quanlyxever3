@@ -1,3 +1,4 @@
+import useIsMobile from '../hooks/useIsMobile'
 import { useState, useMemo } from 'react'
 import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { obj2arr, sortDesc, COLORS } from '../hooks/useCharts'
@@ -14,6 +15,7 @@ export default function PageCuaHang({ data, rowsLoaded }) {
   const [sortCol, setSortCol] = useState(-1)
   const [sortDir, setSortDir] = useState(1)
   const [pg, setPg] = useState(0)
+  const isMobile = useIsMobile()
   const [editCell, setEditCell] = useState(null)
   const [toast, setToast] = useState(null)
   const isLoading = !rowsLoaded?.cua_hang && rows.length === 0
@@ -77,7 +79,7 @@ export default function PageCuaHang({ data, rowsLoaded }) {
       {toast && <div style={{position:'fixed',bottom:24,right:24,background:toast.err?'var(--red)':'#1A1A1A',color:'#fff',padding:'10px 18px',borderRadius:9,fontSize:13,zIndex:9999}}>{toast.msg}</div>}
 
       {/* KPI */}
-      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:16}}>
+      <div style={{display:'grid',gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap:12, marginBottom:16}}>
         {[
           {icon:'🏪',label:'Tổng cửa hàng',value:s.total||0,sub:'Toàn quốc',bar:'var(--brand)',bg:'var(--brand-l)'},
           {icon:'🗺️',label:'Số vùng',value:Object.keys(s.byVung||{}).length,sub:'Vùng hoạt động',bar:'var(--teal)',bg:'var(--teal-l)'},
@@ -95,10 +97,10 @@ export default function PageCuaHang({ data, rowsLoaded }) {
       </div>
 
       {/* Charts */}
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:12}}>
+      <div style={{display:'grid',gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap:12, marginBottom:12}}>
         <div style={{background:'#fff',border:'1px solid var(--border)',borderRadius:12,padding:'15px 18px'}}>
           <div style={{fontSize:12.5,fontWeight:600,color:'var(--ink2)',marginBottom:12}}>Theo vùng</div>
-          <ResponsiveContainer width="100%" height={200}>
+          <ResponsiveContainer width="100%" height={isMobile ? 160 : 200}>
             <BarChart data={vArr} barSize={50}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false}/>
               <XAxis dataKey="name" tick={{fontSize:12}} axisLine={false} tickLine={false}/>
@@ -145,7 +147,7 @@ export default function PageCuaHang({ data, rowsLoaded }) {
         </div>
 
         {isLoading ? <div style={{textAlign:'center',padding:40,color:'var(--ink3)'}}>Đang tải dữ liệu...</div> : (
-          <div style={{overflowX:'auto',maxHeight:520,overflowY:'auto'}}>
+          <div style={{overflowX:'auto', maxHeight: isMobile ? '60vh' : 520, overflowY:'auto'}}>
             <table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}>
               <thead style={{position:'sticky',top:0,zIndex:10}}>
                 <tr>
