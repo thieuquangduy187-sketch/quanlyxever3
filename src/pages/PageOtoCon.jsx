@@ -32,7 +32,7 @@ export default function PageOtoCon({ data, rowsLoaded }) {
       <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap:12, marginBottom:12 }}>
         <div style={{ background:'#fff', border:'1px solid var(--border)', borderRadius:12, padding:'15px 18px' }}>
           <div style={{ fontSize:12.5, fontWeight:600, color:'var(--ink2)', marginBottom:8 }}>Theo nhãn hiệu</div>
-          <ResponsiveContainer width="100%" {isMobile ? 160 : 180}>
+          <ResponsiveContainer width="100%" height= height={isMobile ? 160 : 180}>
             <PieChart>
               <Pie data={nhArr} dataKey="value" cx="50%" cy="50%" outerRadius={80} innerRadius={40} paddingAngle={3}>
                 {nhArr.map((_, i) => <Cell key={i} fill={PIE_COLORS[i]} />)}
