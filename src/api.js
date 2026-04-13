@@ -6,11 +6,12 @@ function getToken() {
   return localStorage.getItem('hsg_token') || ''
 }
 
-// Xử lý 401 — tự động logout nếu token hết hạn
+// Xử lý 401 — xóa token và redirect về login KHÔNG reload
 function handle401() {
   localStorage.removeItem('hsg_token')
   localStorage.removeItem('hsg_user')
-  window.location.reload()
+  // Dispatch custom event để App.jsx bắt và set user=null
+  window.dispatchEvent(new Event('hsg_logout'))
 }
 
 async function get(path, params = {}) {
