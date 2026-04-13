@@ -82,7 +82,7 @@ export default function PageOtoCon({ data, rowsLoaded }) {
                 {rows.map((r, i) => (
                   <tr key={i} style={{ borderBottom:'1px solid var(--border)' }}>
                     <td style={{ padding:'8px 12px', color:'var(--ink3)', fontSize:11, textAlign:'center' }}>{i+1}</td>
-                    <td style={{ padding:'8px 12px' }}><b>{r.bks}</b></td>
+                    <td style={{ padding:'8px 12px' }}><b>{r.bienSo}</b></td>
                     <td style={{ padding:'8px 12px' }}>{r.nhanHieu}</td>
                     <td style={{ padding:'8px 12px' }}>{r.donViSD}</td>
                     <td style={{ padding:'8px 12px' }}>{r.phapNhan}</td>
