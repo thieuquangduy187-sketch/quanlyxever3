@@ -1,6 +1,4 @@
 // ── API Client — calls Express backend ───────────────────────────────────────
-// Production:  set VITE_API_URL in Netlify env vars
-// Development: http://localhost:3000
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 async function get(path, params = {}) {
@@ -29,34 +27,28 @@ async function put(path, body) {
   return res.json()
 }
 
-// Stats / KPI
 export async function getStats() {
   return get('/api/stats')
 }
 
-// All rows for a page (client-side filtering/sort)
 export async function getAllRows(page) {
   if (page === 'xe_tai')  return get('/api/xe/all')
   if (page === 'oto_con') return get('/api/oto')
   return []
 }
 
-// Xe detail
 export async function getXeDetail(maTaiSan) {
   return get(`/api/xe/${encodeURIComponent(maTaiSan)}`)
 }
 
-// Update xe field
 export async function updateXeRow(maTaiSan, field, value) {
   return put(`/api/xe/${encodeURIComponent(maTaiSan)}`, { field, value })
 }
 
-// Images from Drive folder — via Netlify Function
+// Ảnh Drive — gọi thẳng backend (CORS đã cho phép từ quanlyxehsh.com)
 export async function getImagesFromFolder(folder) {
   try {
-    const res = await fetch(`/.netlify/functions/images?folder=${encodeURIComponent(folder)}`)
-    if (!res.ok) return []
-    const data = await res.json()
+    const data = await get('/api/xe/images', { folder })
     return data.urls || []
   } catch { return [] }
 }
