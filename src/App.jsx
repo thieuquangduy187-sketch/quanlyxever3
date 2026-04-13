@@ -24,8 +24,28 @@ export default function App() {
   const [page, setPage]           = useState('overview')
   const isMobile = useIsMobile()
   const [showSidebar, setShowSidebar] = useState(false)
-  const [token, setToken] = useState(() => localStorage.getItem('hsg_token') || null)
+  const [token, setToken] = useState(() => {
+    const t = localStorage.getItem('hsg_token')
+    if (!t) return null
+    // Check token chưa expire bằng cách decode payload (không cần verify signature)
+    try {
+      const payload = JSON.parse(atob(t.split('.')[1]))
+      if (payload.exp && payload.exp * 1000 < Date.now()) {
+        // Token đã hết hạn — xóa luôn
+        localStorage.removeItem('hsg_token')
+        localStorage.removeItem('hsg_user')
+        return null
+      }
+      return t
+    } catch {
+      localStorage.removeItem('hsg_token')
+      localStorage.removeItem('hsg_user')
+      return null
+    }
+  })
   const [user, setUser] = useState(() => {
+    const t = localStorage.getItem('hsg_token')
+    if (!t) return null
     try { return JSON.parse(localStorage.getItem('hsg_user')) } catch { return null }
   })
   const [data, setData]           = useState(null)
@@ -123,6 +143,16 @@ export default function App() {
     setToken(null)
     setUser(null)
   }
+
+  // Lắng nghe event 401 từ api.js (token hết hạn)
+  useEffect(() => {
+    const onForceLogout = () => {
+      setToken(null)
+      setUser(null)
+    }
+    window.addEventListener('hsg_logout', onForceLogout)
+    return () => window.removeEventListener('hsg_logout', onForceLogout)
+  }, [])
 
   if (!user || !token) return <LoginScreen onLogin={(u, t) => { setUser(u); setToken(t) }} />
   if (loading) return <LoadingScreen />
