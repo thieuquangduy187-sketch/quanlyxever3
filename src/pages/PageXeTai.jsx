@@ -1,3 +1,4 @@
+import useIsMobile from '../hooks/useIsMobile'
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { obj2arr, sortDesc, fmtCur, COLORS, PIE_COLORS } from '../hooks/useCharts'
@@ -60,6 +61,7 @@ export default function PageXeTai({ data, rowsLoaded }) {
   const [visibleKeys, setVisibleKeys] = useState(DEFAULT_VISIBLE)
   const [showColPicker, setShowColPicker] = useState(false)
   const [editCell, setEditCell] = useState(null) // {rowIdx, field, value}
+  const isMobile = useIsMobile()
   const [toast, setToast] = useState(null)
 
   const showToast = (msg, err) => {
@@ -148,7 +150,7 @@ export default function PageXeTai({ data, rowsLoaded }) {
       )}
 
       {/* KPI */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:16 }}>
+      <div style={{ display:'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap:12, marginBottom:16 }}>
         <KpiCard icon="🚛" label="Tổng xe tải" value={s.total||0} sub="Xe đang quản lý" color="or" />
         <KpiCard icon="💰" label="GTCL tổng" value={fmtCur(s.tongGTCL||0)} sub="Giá trị còn lại" color="te" />
         <KpiCard icon="⚠️" label="Có tai nạn" value={s.coTaiNan||0} sub="Xe có lịch sử" color="rd" />
@@ -156,10 +158,10 @@ export default function PageXeTai({ data, rowsLoaded }) {
       </div>
 
       {/* Charts */}
-      <div style={{ display:'grid', gridTemplateColumns:'3fr 2fr', gap:12, marginBottom:12 }}>
+      <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '3fr 2fr', gap:12, marginBottom:12 }}>
         <div style={{ background:'#fff', border:'1px solid var(--border)', borderRadius:12, padding:'15px 18px' }}>
           <div style={{ fontSize:12.5, fontWeight:600, color:'var(--ink2)', marginBottom:12 }}>Xe theo năm sản xuất</div>
-          <ResponsiveContainer width="100%" height={220}>
+          <ResponsiveContainer width="100%" height={isMobile ? 160 : 220}>
             <BarChart data={nArr} barSize={22}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
               <XAxis dataKey="name" tick={{ fontSize:11, fill:'var(--ink3)' }} axisLine={false} tickLine={false} />
@@ -171,7 +173,7 @@ export default function PageXeTai({ data, rowsLoaded }) {
         </div>
         <div style={{ background:'#fff', border:'1px solid var(--border)', borderRadius:12, padding:'15px 18px' }}>
           <div style={{ fontSize:12.5, fontWeight:600, color:'var(--ink2)', marginBottom:8 }}>Loại thùng xe</div>
-          <ResponsiveContainer width="100%" height={160}>
+          <ResponsiveContainer width="100%" height={isMobile ? 140 : 160}>
             <PieChart>
               <Pie data={ltArr} dataKey="value" cx="50%" cy="50%" outerRadius={70} innerRadius={35} paddingAngle={3}>
                 {ltArr.map((_, i) => <Cell key={i} fill={PIE_COLORS[i]} />)}
@@ -193,7 +195,7 @@ export default function PageXeTai({ data, rowsLoaded }) {
       {/* Table card */}
       <div style={{ background:'#fff', border:'1px solid var(--border)', borderRadius:12, overflow:'hidden' }}>
         {/* Filter bar */}
-        <div style={{ display:'flex', alignItems:'center', gap:8, padding:'12px 16px', borderBottom:'1px solid var(--border)', flexWrap:'wrap' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:8, padding: isMobile ? '10px 12px' : '12px 16px', borderBottom:'1px solid var(--border)', flexWrap:'wrap' }}>
           <span style={{ fontSize:11, fontWeight:600, color:'var(--ink3)' }}>Lọc:</span>
           <input placeholder="Biển số, cửa hàng..." value={search}
             onChange={e => { setSearch(e.target.value); setPg(0) }}
@@ -230,7 +232,7 @@ export default function PageXeTai({ data, rowsLoaded }) {
         {isLoading ? (
           <div style={{ textAlign:'center', padding:40, color:'var(--ink3)' }}>Đang tải dữ liệu...</div>
         ) : (
-          <div style={{ overflowX:'auto', maxHeight:520, overflowY:'auto' }}>
+          <div style={{ overflowX:'auto', maxHeight: isMobile ? '60vh' : 520, overflowY:'auto' }}>
             <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
               <thead style={{ position:'sticky', top:0, zIndex:10 }}>
                 <tr>
@@ -310,7 +312,7 @@ export default function PageXeTai({ data, rowsLoaded }) {
 
         {/* Pagination */}
         {filtered.length > PAGE_SIZE && (
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 16px', borderTop:'1px solid var(--border)', background:'var(--bg)' }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding: isMobile ? '10px 12px' : '12px 16px', borderTop:'1px solid var(--border)', background:'var(--bg)', flexWrap:'wrap', gap:8 }}>
             <div style={{ fontSize:12, color:'var(--ink3)' }}>
               Hiển thị {pg*PAGE_SIZE+1}–{Math.min((pg+1)*PAGE_SIZE, filtered.length)} trong {filtered.length} xe
             </div>
