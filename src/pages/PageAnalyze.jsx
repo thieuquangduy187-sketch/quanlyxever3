@@ -57,7 +57,15 @@ export default function PageAnalyze() {
   const [saving, setSaving]       = useState(false)
   const [saveResult, setSaveResult] = useState(null)
   const [drag, setDrag]         = useState(false)
-  const inputRef = useRef()
+  const inputRef    = useRef()
+  const canvasRef   = useRef()
+  const [capturing, setCapturing]   = useState(false)  // đang chọn vùng cắt
+  const [stream, setStream]         = useState(null)    // screen share stream
+  const [captureImg, setCaptureImg] = useState(null)    // full screenshot
+  const [selection, setSelection]   = useState(null)    // { x, y, w, h }
+  const [dragging, setDragging]     = useState(false)
+  const [startPos, setStartPos]     = useState(null)
+  const overlayRef  = useRef()
 
   const addFiles = useCallback(async (files) => {
     const valid = Array.from(files).filter(f => f.type.startsWith('image/'))
@@ -108,7 +116,104 @@ export default function PageAnalyze() {
     setImages([]); setResult(null); setError(''); setSaveResult(null)
   }
 
-  // Get field value (edited or original)
+  // ── SCREEN CAPTURE ────────────────────────────────────────────────────────
+  // ESC to cancel capture
+  useState(() => {
+    const fn = e => { if (e.key === 'Escape' && capturing) cancelCapture() }
+    window.addEventListener('keydown', fn)
+    return () => window.removeEventListener('keydown', fn)
+  })
+
+  const startCapture = async () => {
+    try {
+      // Yêu cầu quyền share màn hình
+      const mediaStream = await navigator.mediaDevices.getDisplayMedia({
+        video: { mediaSource: 'screen', cursor: 'always' },
+        audio: false
+      })
+      setStream(mediaStream)
+
+      // Chụp frame đầu tiên từ video stream
+      const video = document.createElement('video')
+      video.srcObject = mediaStream
+      video.onloadedmetadata = () => {
+        video.play()
+        setTimeout(() => {
+          const canvas = document.createElement('canvas')
+          canvas.width = video.videoWidth
+          canvas.height = video.videoHeight
+          canvas.getContext('2d').drawImage(video, 0, 0)
+          setCaptureImg(canvas.toDataURL('image/png'))
+          setCapturing(true)
+          setSelection(null)
+          // Stop stream
+          mediaStream.getTracks().forEach(t => t.stop())
+          setStream(null)
+        }, 300)
+      }
+    } catch(e) {
+      if (e.name !== 'NotAllowedError') setError('Không thể chụp màn hình: ' + e.message)
+    }
+  }
+
+  const onOverlayMouseDown = (e) => {
+    const rect = overlayRef.current.getBoundingClientRect()
+    setDragging(true)
+    setStartPos({ x: e.clientX - rect.left, y: e.clientY - rect.top })
+    setSelection(null)
+  }
+
+  const onOverlayMouseMove = (e) => {
+    if (!dragging || !startPos) return
+    const rect = overlayRef.current.getBoundingClientRect()
+    const cx = e.clientX - rect.left
+    const cy = e.clientY - rect.top
+    setSelection({
+      x: Math.min(startPos.x, cx),
+      y: Math.min(startPos.y, cy),
+      w: Math.abs(cx - startPos.x),
+      h: Math.abs(cy - startPos.y),
+    })
+  }
+
+  const onOverlayMouseUp = () => { setDragging(false) }
+
+  const confirmCrop = async () => {
+    if (!selection || selection.w < 10 || selection.h < 10) return
+    const img = new Image()
+    img.onload = async () => {
+      // Scale selection theo kích thước thật của ảnh
+      const overlay = overlayRef.current
+      const scaleX = img.naturalWidth  / overlay.clientWidth
+      const scaleY = img.naturalHeight / overlay.clientHeight
+      const canvas = document.createElement('canvas')
+      canvas.width  = selection.w * scaleX
+      canvas.height = selection.h * scaleY
+      canvas.getContext('2d').drawImage(
+        img,
+        selection.x * scaleX, selection.y * scaleY,
+        selection.w * scaleX, selection.h * scaleY,
+        0, 0, canvas.width, canvas.height
+      )
+      const croppedUrl  = canvas.toDataURL('image/jpeg', 0.9)
+      const base64      = croppedUrl.split(',')[1]
+      const name        = 'capture_' + Date.now() + '.jpg'
+      setImages(prev => [...prev, { file: null, preview: croppedUrl, base64, mediaType: 'image/jpeg', name }])
+      setCaptureImg(null)
+      setCapturing(false)
+      setSelection(null)
+    }
+    img.src = captureImg
+  }
+
+  const cancelCapture = () => {
+    setCaptureImg(null)
+    setCapturing(false)
+    setSelection(null)
+    if (stream) { stream.getTracks().forEach(t => t.stop()); setStream(null) }
+  }
+
+  // ── Get field value (edited or original)
   const getVal = (i, field) => editData[i]?.[field] ?? result?.prs?.[i]?.[field] ?? ''
 
   // Set edited value
@@ -160,6 +265,15 @@ export default function PageAnalyze() {
             </div>
             <input ref={inputRef} type="file" accept="image/*" multiple style={{ display: 'none' }}
               onChange={e => addFiles(e.target.files)} />
+            <div style={{ marginTop:12, display:'flex', gap:8, justifyContent:'center' }}>
+              <div style={{ padding:'7px 18px', borderRadius:9, background:'var(--brand)', color:'#fff', fontSize:13, fontWeight:600 }}>
+                📁 Chọn file ảnh
+              </div>
+              <div onClick={e => { e.stopPropagation(); startCapture() }}
+                style={{ padding:'7px 18px', borderRadius:9, background:'#1A1A1A', color:'#fff', fontSize:13, fontWeight:600, cursor:'pointer' }}>
+                ✂️ Cắt màn hình
+              </div>
+            </div>
           </div>
 
           {/* Preview grid */}
@@ -373,6 +487,58 @@ export default function PageAnalyze() {
               style={{ padding: '9px 16px', borderRadius: 9, border: '1px solid var(--border)', background: 'var(--bg)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
               ↺ Phân tích ảnh mới
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── SCREEN CAPTURE OVERLAY ── */}
+      {capturing && captureImg && (
+        <div style={{ position:'fixed', inset:0, zIndex:9999, background:'rgba(0,0,0,.7)', display:'flex', flexDirection:'column' }}>
+          {/* Toolbar */}
+          <div style={{ height:48, background:'#1A1A1A', display:'flex', alignItems:'center', padding:'0 20px', gap:12, flexShrink:0 }}>
+            <div style={{ color:'#fff', fontSize:13, fontWeight:600, flex:1 }}>
+              ✂️ Kéo để chọn vùng cần cắt
+            </div>
+            {selection && selection.w > 10 && (
+              <button onClick={confirmCrop}
+                style={{ padding:'7px 18px', borderRadius:8, border:'none', background:'var(--brand)', color:'#fff', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                ✓ Xác nhận cắt ({Math.round(selection.w)}×{Math.round(selection.h)}px)
+              </button>
+            )}
+            <button onClick={cancelCapture}
+              style={{ padding:'7px 14px', borderRadius:8, border:'1px solid rgba(255,255,255,.2)', background:'transparent', color:'#fff', fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
+              Huỷ
+            </button>
+          </div>
+
+          {/* Image + selection */}
+          <div ref={overlayRef} style={{ flex:1, overflow:'auto', position:'relative', cursor:'crosshair' }}
+            onMouseDown={onOverlayMouseDown}
+            onMouseMove={onOverlayMouseMove}
+            onMouseUp={onOverlayMouseUp}>
+            <img src={captureImg} alt="screenshot"
+              style={{ display:'block', maxWidth:'100%', userSelect:'none', pointerEvents:'none' }}
+              draggable={false} />
+
+            {/* Selection rectangle */}
+            {selection && selection.w > 0 && (
+              <div style={{
+                position:'absolute',
+                left: selection.x, top: selection.y,
+                width: selection.w, height: selection.h,
+                border:'2px solid var(--brand)',
+                background:'rgba(212,66,10,.12)',
+                pointerEvents:'none',
+                boxShadow:'0 0 0 9999px rgba(0,0,0,.45)',
+              }} />
+            )}
+          </div>
+
+          {/* Hint */}
+          <div style={{ height:32, background:'#1A1A1A', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+            <span style={{ color:'rgba(255,255,255,.45)', fontSize:11.5 }}>
+              Kéo chuột để chọn vùng · ESC để huỷ · Có thể chụp lại nhiều lần
+            </span>
           </div>
         </div>
       )}
