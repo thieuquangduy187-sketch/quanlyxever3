@@ -53,7 +53,8 @@ export default function PageAnalyze() {
   const [loading, setLoading]   = useState(false)
   const [result, setResult]     = useState(null)
   const [error, setError]       = useState('')
-  const [saving, setSaving]     = useState(false)
+  const [editData, setEditData]   = useState({})  // { prIndex: { field: value } }
+  const [saving, setSaving]       = useState(false)
   const [saveResult, setSaveResult] = useState(null)
   const [drag, setDrag]         = useState(false)
   const inputRef = useRef()
@@ -95,7 +96,7 @@ export default function PageAnalyze() {
     if (!result?.prs?.length) return
     setSaving(true)
     try {
-      const data = await apiPost('/api/analyze/save', { prs: result.prs })
+      const data = await apiPost('/api/analyze/save', { prs: getMergedPRs() })
       setSaveResult(data)
     } catch(e) {
       setError('Lỗi lưu: ' + e.message)
@@ -106,6 +107,23 @@ export default function PageAnalyze() {
   const reset = () => {
     setImages([]); setResult(null); setError(''); setSaveResult(null)
   }
+
+  // Get field value (edited or original)
+  const getVal = (i, field) => editData[i]?.[field] ?? result?.prs?.[i]?.[field] ?? ''
+
+  // Set edited value
+  const setVal = (i, field, val) => {
+    setEditData(prev => ({
+      ...prev,
+      [i]: { ...prev[i], [field]: val }
+    }))
+  }
+
+  // Merge edits into result before saving
+  const getMergedPRs = () => result?.prs?.map((pr, i) => ({
+    ...pr,
+    ...editData[i]
+  })) || []
 
   return (
     <div style={{ maxWidth: 960, margin: '0 auto' }}>
@@ -241,30 +259,76 @@ export default function PageAnalyze() {
                     )}
                   </div>
 
+                  {/* Edit hint */}
+                  {Object.keys(editData[i] || {}).length > 0 && (
+                    <div style={{ padding:'4px 16px', background:'var(--brand-l)', fontSize:11, color:'var(--brand)', fontWeight:600 }}>
+                      ✏️ Đã chỉnh sửa {Object.keys(editData[i]).length} trường — nhớ lưu vào MongoDB
+                    </div>
+                  )}
                   {/* Card body */}
                   <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 0 }}>
                     <div style={{ padding: '12px 16px', borderRight: isMobile ? 'none' : '1px solid var(--border)' }}>
                       {[
-                        ['🏪 Cửa hàng', pr.cuaHang],
-                        ['🚛 Biển số', pr.bienSo],
-                        ['🔧 Hạng mục', pr.hangMuc],
-                        ['📅 Ngày gửi', pr.ngayGui],
-                        ['👤 Người gửi', pr.nguoiGui],
-                        pr.kmHienTai ? ['🛣️ Số KM', pr.kmHienTai?.toLocaleString('vi-VN') + ' km'] : null,
-                      ].filter(Boolean).map(([k, v]) => (
-                        <div key={k} style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
-                          <div style={{ fontSize: 12, color: 'var(--ink3)', minWidth: 110, flexShrink: 0 }}>{k}</div>
-                          <div style={{ fontSize: 12.5, fontWeight: 500 }}>{v || '—'}</div>
-                        </div>
-                      ))}
+                        ['🏪 Cửa hàng', 'cuaHang'],
+                        ['🚛 Biển số',  'bienSo'],
+                        ['🔧 Hạng mục', 'hangMuc'],
+                        ['📅 Ngày gửi', 'ngayGui'],
+                        ['👤 Người gửi', 'nguoiGui'],
+                        ['🛣️ Số KM',    'kmHienTai'],
+                      ].map(([label, field]) => {
+                        const val = getVal(i, field)
+                        const isEditing = editData[i]?.[field] !== undefined
+                        return (
+                          <div key={field} style={{ display:'flex', gap:8, marginBottom:6, alignItems:'center' }}>
+                            <div style={{ fontSize:12, color:'var(--ink3)', minWidth:110, flexShrink:0 }}>{label}</div>
+                            <input
+                              value={val}
+                              onChange={e => setVal(i, field, e.target.value)}
+                              style={{
+                                fontSize:12.5, fontWeight:500, flex:1,
+                                border: isEditing ? '1.5px solid var(--brand)' : '1.5px solid transparent',
+                                borderRadius:6, padding:'2px 6px',
+                                background: isEditing ? 'var(--brand-l)' : 'transparent',
+                                outline:'none', fontFamily:'inherit',
+                                cursor:'text', minWidth:0,
+                                transition:'all .12s'
+                              }}
+                              onFocus={e => e.target.style.border='1.5px solid var(--brand)'}
+                              onBlur={e => {
+                                if (!editData[i]?.[field]) e.target.style.border='1.5px solid transparent'
+                              }}
+                              placeholder="—"
+                            />
+                            {isEditing && (
+                              <button onClick={() => {
+                                setEditData(prev => {
+                                  const next = { ...prev }
+                                  if (next[i]) { delete next[i][field]; if (!Object.keys(next[i]).length) delete next[i] }
+                                  return next
+                                })
+                              }} style={{ border:'none', background:'none', cursor:'pointer', color:'var(--ink3)', fontSize:14, padding:'0 2px', flexShrink:0 }} title="Hoàn tác">↺</button>
+                            )}
+                          </div>
+                        )
+                      })}
                     </div>
                     <div style={{ padding: '12px 16px' }}>
                       {/* Chi phí */}
                       <div style={{ marginBottom: 12 }}>
-                        <div style={{ fontSize: 11, color: 'var(--ink3)', marginBottom: 3 }}>CHI PHÍ</div>
-                        <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--brand)' }}>
-                          {fmtCur(pr.chiPhi)}
-                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--ink3)', marginBottom: 3 }}>CHI PHÍ (click để sửa)</div>
+                        <input
+                          value={getVal(i, 'chiPhi')}
+                          onChange={e => setVal(i, 'chiPhi', e.target.value)}
+                          style={{
+                            fontSize:22, fontWeight:700, color:'var(--brand)',
+                            border: editData[i]?.chiPhi !== undefined ? '1.5px solid var(--brand)' : '1.5px solid transparent',
+                            borderRadius:8, padding:'2px 6px', background:'transparent',
+                            outline:'none', fontFamily:'inherit', width:'100%',
+                            transition:'all .12s'
+                          }}
+                          onFocus={e => e.target.style.border='1.5px solid var(--brand)'}
+                          onBlur={e => { if (editData[i]?.chiPhi === undefined) e.target.style.border='1.5px solid transparent' }}
+                        />
                       </div>
 
                       {/* Bất thường */}
