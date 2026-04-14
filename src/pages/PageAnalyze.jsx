@@ -58,12 +58,7 @@ export default function PageAnalyze() {
   const [saveResult, setSaveResult] = useState(null)
   const [drag, setDrag]         = useState(false)
   const inputRef    = useRef()
-  const overlayRef  = useRef()
-  const [capturing, setCapturing]   = useState(false)
-  const [captureImg, setCaptureImg] = useState(null)
-  const [selection, setSelection]   = useState(null)
-  const [dragging, setDragging]     = useState(false)
-  const [startPos, setStartPos]     = useState(null)
+  const [pasteMode, setPasteMode] = useState(false)  // hiện overlay paste
 
   const addFiles = useCallback(async (files) => {
     const valid = Array.from(files).filter(f => f.type.startsWith('image/'))
@@ -115,75 +110,7 @@ export default function PageAnalyze() {
   }
 
   // ── SCREEN CAPTURE ────────────────────────────────────────────────────────
-  // ESC to cancel
-  useState(() => {
-    const fn = e => { if (e.key === 'Escape') cancelCapture() }
-    window.addEventListener('keydown', fn)
-    return () => window.removeEventListener('keydown', fn)
-  })
-
-  const startCapture = () => {
-    // Hướng dẫn user paste ảnh
-    setCapturing(true)
-    setCaptureImg(null)
-    setSelection(null)
-  }
-
-  const onOverlayMouseDown = (e) => {
-    const rect = overlayRef.current.getBoundingClientRect()
-    setDragging(true)
-    setStartPos({ x: e.clientX - rect.left, y: e.clientY - rect.top })
-    setSelection(null)
-  }
-
-  const onOverlayMouseMove = (e) => {
-    if (!dragging || !startPos) return
-    const rect = overlayRef.current.getBoundingClientRect()
-    const cx = e.clientX - rect.left
-    const cy = e.clientY - rect.top
-    setSelection({
-      x: Math.min(startPos.x, cx),
-      y: Math.min(startPos.y, cy),
-      w: Math.abs(cx - startPos.x),
-      h: Math.abs(cy - startPos.y),
-    })
-  }
-
-  const onOverlayMouseUp = () => { setDragging(false) }
-
-  const confirmCrop = async () => {
-    if (!selection || selection.w < 10 || selection.h < 10) return
-    const img = new Image()
-    img.onload = async () => {
-      // Scale selection theo kích thước thật của ảnh
-      const overlay = overlayRef.current
-      const scaleX = img.naturalWidth  / overlay.clientWidth
-      const scaleY = img.naturalHeight / overlay.clientHeight
-      const canvas = document.createElement('canvas')
-      canvas.width  = selection.w * scaleX
-      canvas.height = selection.h * scaleY
-      canvas.getContext('2d').drawImage(
-        img,
-        selection.x * scaleX, selection.y * scaleY,
-        selection.w * scaleX, selection.h * scaleY,
-        0, 0, canvas.width, canvas.height
-      )
-      const croppedUrl  = canvas.toDataURL('image/jpeg', 0.9)
-      const base64      = croppedUrl.split(',')[1]
-      const name        = 'capture_' + Date.now() + '.jpg'
-      setImages(prev => [...prev, { file: null, preview: croppedUrl, base64, mediaType: 'image/jpeg', name }])
-      setCaptureImg(null)
-      setCapturing(false)
-      setSelection(null)
-    }
-    img.src = captureImg
-  }
-
-  const cancelCapture = () => {
-    setCaptureImg(null)
-    setCapturing(false)
-    setSelection(null)
-  }
+  const startCapture = () => setPasteMode(true)
 
   // ── Get field value (edited or original)
   const getVal = (i, field) => editData[i]?.[field] ?? result?.prs?.[i]?.[field] ?? ''
@@ -243,7 +170,7 @@ export default function PageAnalyze() {
               </div>
               <div onClick={e => { e.stopPropagation(); startCapture() }}
                 style={{ padding:'7px 18px', borderRadius:9, background:'#1A1A1A', color:'#fff', fontSize:13, fontWeight:600, cursor:'pointer' }}>
-                ✂️ Cắt màn hình
+                ✂️ Snipping Tool
               </div>
             </div>
           </div>
@@ -463,94 +390,44 @@ export default function PageAnalyze() {
         </div>
       )}
 
-      {/* ── CAPTURE: Paste ảnh hoặc crop ── */}
-      {capturing && !captureImg && (
-        <div style={{ position:'fixed', inset:0, zIndex:9999, background:'rgba(0,0,0,.85)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:20 }}
+      {/* ── PASTE OVERLAY ── */}
+      {pasteMode && (
+        <div
+          style={{ position:'fixed', inset:0, zIndex:9999, background:'rgba(0,0,0,.88)',
+            display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:20 }}
           onPaste={async e => {
             const items = e.clipboardData?.items
             if (!items) return
             for (const item of items) {
               if (item.type.startsWith('image/')) {
                 const file = item.getAsFile()
-                const reader = new FileReader()
-                reader.onload = ev => {
-                  setCaptureImg(ev.target.result)
-                }
-                reader.readAsDataURL(file)
+                const base64 = await compressAndBase64(file)
+                const preview = URL.createObjectURL(file)
+                setImages(prev => [...prev, {
+                  file, preview, base64,
+                  mediaType: 'image/jpeg',
+                  name: 'snip_' + Date.now() + '.jpg'
+                }])
+                setPasteMode(false)
                 break
               }
             }
           }}
           tabIndex={0}
           ref={el => el?.focus()}
+          onClick={e => { if(e.target===e.currentTarget) setPasteMode(false) }}
         >
-          <div style={{ fontSize:52 }}>✂️</div>
-          <div style={{ color:'#fff', fontSize:18, fontWeight:700 }}>Chụp màn hình rồi Paste vào đây</div>
-          <div style={{ color:'rgba(255,255,255,.6)', fontSize:14, textAlign:'center', lineHeight:1.8 }}>
-            1. Mở Oracle EBS ở tab khác<br/>
-            2. Nhấn <kbd style={{ background:'rgba(255,255,255,.15)', padding:'2px 8px', borderRadius:4, fontFamily:'monospace' }}>Ctrl + PrintScreen</kbd> hoặc dùng Snipping Tool<br/>
-            3. Quay lại tab này và nhấn <kbd style={{ background:'rgba(255,255,255,.15)', padding:'2px 8px', borderRadius:4, fontFamily:'monospace' }}>Ctrl + V</kbd>
+          <div style={{ fontSize:56 }}>📋</div>
+          <div style={{ color:'#fff', fontSize:20, fontWeight:700 }}>Nhấn Ctrl+V để dán ảnh</div>
+          <div style={{ color:'rgba(255,255,255,.55)', fontSize:14, textAlign:'center', lineHeight:2 }}>
+            Dùng <b style={{color:'#fff'}}>Snipping Tool</b> (Win+Shift+S) chụp vùng PR trên Oracle EBS<br/>
+            Sau đó quay lại đây và nhấn <kbd style={{background:'rgba(255,255,255,.15)',padding:'3px 10px',borderRadius:5,fontFamily:'monospace',fontSize:13}}>Ctrl + V</kbd>
           </div>
-          <button onClick={cancelCapture}
-            style={{ padding:'8px 20px', borderRadius:9, border:'1px solid rgba(255,255,255,.3)', background:'transparent', color:'#fff', fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
-            Huỷ (ESC)
-          </button>
+          <div style={{ color:'rgba(255,255,255,.3)', fontSize:12 }}>Click ra ngoài hoặc ESC để huỷ</div>
         </div>
       )}
 
-      {/* ── CROP OVERLAY sau khi paste ── */}
-      {capturing && captureImg && (
-        <div style={{ position:'fixed', inset:0, zIndex:9999, background:'rgba(0,0,0,.7)', display:'flex', flexDirection:'column' }}>
-          {/* Toolbar */}
-          <div style={{ height:48, background:'#1A1A1A', display:'flex', alignItems:'center', padding:'0 20px', gap:12, flexShrink:0 }}>
-            <div style={{ color:'#fff', fontSize:13, fontWeight:600, flex:1 }}>
-              ✂️ Kéo để chọn vùng cần cắt
-            </div>
-            {selection && selection.w > 10 && (
-              <button onClick={confirmCrop}
-                style={{ padding:'7px 18px', borderRadius:8, border:'none', background:'var(--brand)', color:'#fff', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
-                ✓ Xác nhận cắt ({Math.round(selection.w)}×{Math.round(selection.h)}px)
-              </button>
-            )}
-            <button onClick={cancelCapture}
-              style={{ padding:'7px 14px', borderRadius:8, border:'1px solid rgba(255,255,255,.2)', background:'transparent', color:'#fff', fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
-              Huỷ
-            </button>
-          </div>
-
-          {/* Image + selection */}
-          <div ref={overlayRef} style={{ flex:1, overflow:'auto', position:'relative', cursor:'crosshair' }}
-            onMouseDown={onOverlayMouseDown}
-            onMouseMove={onOverlayMouseMove}
-            onMouseUp={onOverlayMouseUp}>
-            <img src={captureImg} alt="screenshot"
-              style={{ display:'block', maxWidth:'100%', userSelect:'none', pointerEvents:'none' }}
-              draggable={false} />
-
-            {/* Selection rectangle */}
-            {selection && selection.w > 0 && (
-              <div style={{
-                position:'absolute',
-                left: selection.x, top: selection.y,
-                width: selection.w, height: selection.h,
-                border:'2px solid var(--brand)',
-                background:'rgba(212,66,10,.12)',
-                pointerEvents:'none',
-                boxShadow:'0 0 0 9999px rgba(0,0,0,.45)',
-              }} />
-            )}
-          </div>
-
-          {/* Hint */}
-          <div style={{ height:32, background:'#1A1A1A', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-            <span style={{ color:'rgba(255,255,255,.45)', fontSize:11.5 }}>
-              Kéo chuột để chọn vùng · ESC để huỷ · Có thể chụp lại nhiều lần
-            </span>
-          </div>
-        </div>
-      )}
-
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+            <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   )
 }
