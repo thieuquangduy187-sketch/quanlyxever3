@@ -6,6 +6,7 @@ const NAV = [
   { id: 'oto_con',   icon: '🚗', label: 'Ô tô con',  badgeKey: 'otocon',  rowKey: 'oto_con' },
   { id: 'cua_hang',  icon: '🏪', label: 'Cửa hàng',  badgeKey: 'cuaHang', rowKey: 'cua_hang' },
   { id: 'import',    icon: '📥', label: 'Import Excel' },
+  { id: 'analyze',   icon: '🤖', label: 'Phân tích PR' },
 ]
 
 export default function Sidebar({ page, onNav, data, refreshing, onRefresh, lastUpdated, loadProgress = {}, isMobile, showSidebar, onCloseSidebar }) {
