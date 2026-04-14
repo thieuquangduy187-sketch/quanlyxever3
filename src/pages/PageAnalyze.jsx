@@ -58,14 +58,12 @@ export default function PageAnalyze() {
   const [saveResult, setSaveResult] = useState(null)
   const [drag, setDrag]         = useState(false)
   const inputRef    = useRef()
-  const canvasRef   = useRef()
-  const [capturing, setCapturing]   = useState(false)  // đang chọn vùng cắt
-  const [stream, setStream]         = useState(null)    // screen share stream
-  const [captureImg, setCaptureImg] = useState(null)    // full screenshot
-  const [selection, setSelection]   = useState(null)    // { x, y, w, h }
+  const overlayRef  = useRef()
+  const [capturing, setCapturing]   = useState(false)
+  const [captureImg, setCaptureImg] = useState(null)
+  const [selection, setSelection]   = useState(null)
   const [dragging, setDragging]     = useState(false)
   const [startPos, setStartPos]     = useState(null)
-  const overlayRef  = useRef()
 
   const addFiles = useCallback(async (files) => {
     const valid = Array.from(files).filter(f => f.type.startsWith('image/'))
@@ -117,43 +115,18 @@ export default function PageAnalyze() {
   }
 
   // ── SCREEN CAPTURE ────────────────────────────────────────────────────────
-  // ESC to cancel capture
+  // ESC to cancel
   useState(() => {
-    const fn = e => { if (e.key === 'Escape' && capturing) cancelCapture() }
+    const fn = e => { if (e.key === 'Escape') cancelCapture() }
     window.addEventListener('keydown', fn)
     return () => window.removeEventListener('keydown', fn)
   })
 
-  const startCapture = async () => {
-    try {
-      // Yêu cầu quyền share màn hình
-      const mediaStream = await navigator.mediaDevices.getDisplayMedia({
-        video: { mediaSource: 'screen', cursor: 'always' },
-        audio: false
-      })
-      setStream(mediaStream)
-
-      // Chụp frame đầu tiên từ video stream
-      const video = document.createElement('video')
-      video.srcObject = mediaStream
-      video.onloadedmetadata = () => {
-        video.play()
-        setTimeout(() => {
-          const canvas = document.createElement('canvas')
-          canvas.width = video.videoWidth
-          canvas.height = video.videoHeight
-          canvas.getContext('2d').drawImage(video, 0, 0)
-          setCaptureImg(canvas.toDataURL('image/png'))
-          setCapturing(true)
-          setSelection(null)
-          // Stop stream
-          mediaStream.getTracks().forEach(t => t.stop())
-          setStream(null)
-        }, 300)
-      }
-    } catch(e) {
-      if (e.name !== 'NotAllowedError') setError('Không thể chụp màn hình: ' + e.message)
-    }
+  const startCapture = () => {
+    // Hướng dẫn user paste ảnh
+    setCapturing(true)
+    setCaptureImg(null)
+    setSelection(null)
   }
 
   const onOverlayMouseDown = (e) => {
@@ -210,7 +183,6 @@ export default function PageAnalyze() {
     setCaptureImg(null)
     setCapturing(false)
     setSelection(null)
-    if (stream) { stream.getTracks().forEach(t => t.stop()); setStream(null) }
   }
 
   // ── Get field value (edited or original)
@@ -491,7 +463,42 @@ export default function PageAnalyze() {
         </div>
       )}
 
-      {/* ── SCREEN CAPTURE OVERLAY ── */}
+      {/* ── CAPTURE: Paste ảnh hoặc crop ── */}
+      {capturing && !captureImg && (
+        <div style={{ position:'fixed', inset:0, zIndex:9999, background:'rgba(0,0,0,.85)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:20 }}
+          onPaste={async e => {
+            const items = e.clipboardData?.items
+            if (!items) return
+            for (const item of items) {
+              if (item.type.startsWith('image/')) {
+                const file = item.getAsFile()
+                const reader = new FileReader()
+                reader.onload = ev => {
+                  setCaptureImg(ev.target.result)
+                }
+                reader.readAsDataURL(file)
+                break
+              }
+            }
+          }}
+          tabIndex={0}
+          ref={el => el?.focus()}
+        >
+          <div style={{ fontSize:52 }}>✂️</div>
+          <div style={{ color:'#fff', fontSize:18, fontWeight:700 }}>Chụp màn hình rồi Paste vào đây</div>
+          <div style={{ color:'rgba(255,255,255,.6)', fontSize:14, textAlign:'center', lineHeight:1.8 }}>
+            1. Mở Oracle EBS ở tab khác<br/>
+            2. Nhấn <kbd style={{ background:'rgba(255,255,255,.15)', padding:'2px 8px', borderRadius:4, fontFamily:'monospace' }}>Ctrl + PrintScreen</kbd> hoặc dùng Snipping Tool<br/>
+            3. Quay lại tab này và nhấn <kbd style={{ background:'rgba(255,255,255,.15)', padding:'2px 8px', borderRadius:4, fontFamily:'monospace' }}>Ctrl + V</kbd>
+          </div>
+          <button onClick={cancelCapture}
+            style={{ padding:'8px 20px', borderRadius:9, border:'1px solid rgba(255,255,255,.3)', background:'transparent', color:'#fff', fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
+            Huỷ (ESC)
+          </button>
+        </div>
+      )}
+
+      {/* ── CROP OVERLAY sau khi paste ── */}
       {capturing && captureImg && (
         <div style={{ position:'fixed', inset:0, zIndex:9999, background:'rgba(0,0,0,.7)', display:'flex', flexDirection:'column' }}>
           {/* Toolbar */}
