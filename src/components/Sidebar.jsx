@@ -119,3 +119,4 @@ function SidebarContent({ page, onNav, data, refreshing, onRefresh, lastUpdated,
     </>
   )
 }
+  { id: 'graph', icon: '🕸️', label: 'Sơ đồ mạng' },
