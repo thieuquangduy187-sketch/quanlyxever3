@@ -9,6 +9,7 @@ import PageOverview from './pages/PageOverview'
 import PageXeTai from './pages/PageXeTai'
 import PageOtoCon from './pages/PageOtoCon'
 import PageCuaHang from './pages/PageCuaHang'
+import PageGraph    from './pages/PageGraph'
 import PageImport from './pages/PageImport'
 import PageAnalyze from './pages/PageAnalyze'
 import LoadingScreen from './components/LoadingScreen'
@@ -189,6 +190,7 @@ export default function App() {
           {page === 'xe_tai'    && <PageXeTai     {...pageProps} />}
           {page === 'oto_con'   && <PageOtoCon    {...pageProps} />}
           {page === 'cua_hang'  && <PageCuaHang   {...pageProps} />}
+          {page === 'graph'     && <PageGraph     {...pageProps} />}
           {page === 'import'     && <PageImport />}
           {page === 'analyze'    && <PageAnalyze />}
         </main>
