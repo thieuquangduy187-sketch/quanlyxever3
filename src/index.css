@@ -1,0 +1,82 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* Apple System Colors */
+  --apple-red:     #FF3B30;
+  --apple-orange:  #FF9500;
+  --apple-yellow:  #FFCC00;
+  --apple-green:   #34C759;
+  --apple-teal:    #5AC8FA;
+  --apple-blue:    #007AFF;
+  --apple-indigo:  #5856D6;
+  --apple-purple:  #AF52DE;
+  --apple-pink:    #FF2D55;
+
+  /* Semantic */
+  --brand:         #FF3B30;
+  --brand-l:       #FFF1F0;
+
+  /* Backgrounds - Apple layered system */
+  --bg-primary:    #F2F2F7;
+  --bg-secondary:  #FFFFFF;
+  --bg-tertiary:   #F2F2F7;
+  --bg-grouped:    #F2F2F7;
+  --bg-card:       #FFFFFF;
+
+  /* Labels */
+  --label-primary:   rgba(0,0,0,0.85);
+  --label-secondary: rgba(0,0,0,0.5);
+  --label-tertiary:  rgba(0,0,0,0.3);
+  --label-quaternary:rgba(0,0,0,0.18);
+
+  /* Fills */
+  --fill-primary:   rgba(120,120,128,0.2);
+  --fill-secondary: rgba(120,120,128,0.16);
+  --fill-tertiary:  rgba(118,118,128,0.12);
+
+  /* Separators */
+  --sep:        rgba(60,60,67,0.29);
+  --sep-opaque: #C6C6C8;
+
+  /* Sidebar */
+  --sw: 240px;
+
+  font-family: -apple-system, "SF Pro Text", "SF Pro Display", "Helvetica Neue", sans-serif;
+  font-size: 14px;
+  color: var(--label-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-primary:    #000000;
+    --bg-secondary:  #1C1C1E;
+    --bg-tertiary:   #2C2C2E;
+    --bg-grouped:    #000000;
+    --bg-card:       #1C1C1E;
+    --label-primary:   rgba(255,255,255,0.85);
+    --label-secondary: rgba(255,255,255,0.55);
+    --label-tertiary:  rgba(255,255,255,0.3);
+    --label-quaternary:rgba(255,255,255,0.18);
+    --fill-primary:   rgba(120,120,128,0.36);
+    --fill-secondary: rgba(120,120,128,0.32);
+    --fill-tertiary:  rgba(118,118,128,0.24);
+    --sep:        rgba(84,84,88,0.65);
+    --sep-opaque: #38383A;
+    --bg-secondary: #1C1C1E;
+    --bg-card:      #1C1C1E;
+  }
+}
+
+body {
+  background: var(--bg-grouped);
+  min-height: 100vh;
+  color: var(--label-primary);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--fill-primary); border-radius: 10px; }
