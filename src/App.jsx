@@ -184,7 +184,7 @@ export default function App() {
       />
       <div style={{ marginLeft: isMobile ? 0 : 'var(--sw)', flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
         <Topbar page={page} refreshing={refreshing} loadProgress={loadProgress} isMobile={isMobile} onMenuClick={() => setShowSidebar(s => !s)} user={user} onLogout={handleLogout} />
-        <main style={{ padding: '20px 20px 32px', flex: 1 }}>
+        <main style={{ padding: 20, flex: 1 }}>
           {error && <ErrorBar message={error} onClose={() => setError(null)} />}
           {page === 'overview'  && <PageOverview  {...pageProps} />}
           {page === 'xe_tai'    && <PageXeTai     {...pageProps} />}

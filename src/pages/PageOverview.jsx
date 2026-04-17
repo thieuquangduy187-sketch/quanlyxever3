@@ -12,14 +12,14 @@ function KpiCard({ icon, label, value, sub, color }) {
   const c = colors[color] || colors.or
   return (
     <div style={{
-      background: 'var(--bg-card)', border: '0.5px solid var(--sep)', borderRadius: 14,
+      background: '#fff', border: '1px solid var(--border)', borderRadius: 12,
       padding: '16px 18px', position: 'relative', overflow: 'hidden'
     }}>
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: c.bar }} />
       <div style={{ width: 34, height: 34, borderRadius: 8, background: c.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, marginBottom: 10 }}>{icon}</div>
-      <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--label-secondary)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 3 }}>{label}</div>
+      <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--ink3)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 3 }}>{label}</div>
       <div style={{ fontSize: 24, fontWeight: 700, lineHeight: 1 }}>{value}</div>
-      {sub && <div style={{ fontSize: 11, color: 'var(--label-secondary)', marginTop: 3 }}>{sub}</div>}
+      {sub && <div style={{ fontSize: 11, color: 'var(--ink3)', marginTop: 3 }}>{sub}</div>}
     </div>
   )
 }
@@ -47,8 +47,8 @@ export default function PageOverview({ data }) {
 
       {/* Charts row 1 */}
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '3fr 2fr', gap: 12, marginBottom: 12 }}>
-        <div style={{ background: 'var(--bg-card)', border: '0.5px solid var(--sep)', borderRadius: 14, padding: '15px 18px' }}>
-          <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--label-primary)', marginBottom: 12 }}>Xe tải theo năm sản xuất</div>
+        <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, padding: '15px 18px' }}>
+          <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ink2)', marginBottom: 12 }}>Xe tải theo năm sản xuất</div>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={nArr} barSize={22}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
@@ -59,8 +59,8 @@ export default function PageOverview({ data }) {
             </BarChart>
           </ResponsiveContainer>
         </div>
-        <div style={{ background: 'var(--bg-card)', border: '0.5px solid var(--sep)', borderRadius: 14, padding: '15px 18px' }}>
-          <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--label-primary)', marginBottom: 8 }}>Loại thùng xe tải</div>
+        <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, padding: '15px 18px' }}>
+          <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ink2)', marginBottom: 8 }}>Loại thùng xe tải</div>
           <ResponsiveContainer width="100%" height={180}>
             <PieChart>
               <Pie data={ltArr} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} innerRadius={40} paddingAngle={3}>
@@ -81,8 +81,8 @@ export default function PageOverview({ data }) {
 
       {/* Charts row 2 */}
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12 }}>
-        <div style={{ background: 'var(--bg-card)', border: '0.5px solid var(--sep)', borderRadius: 14, padding: '15px 18px' }}>
-          <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--label-primary)', marginBottom: 12 }}>Xe tải theo miền</div>
+        <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, padding: '15px 18px' }}>
+          <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ink2)', marginBottom: 12 }}>Xe tải theo miền</div>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={mArr} barSize={50}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
@@ -95,13 +95,13 @@ export default function PageOverview({ data }) {
             </BarChart>
           </ResponsiveContainer>
         </div>
-        <div style={{ background: 'var(--bg-card)', border: '0.5px solid var(--sep)', borderRadius: 14, padding: '15px 18px' }}>
-          <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--label-primary)', marginBottom: 12 }}>Pháp nhân đứng tên</div>
+        <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, padding: '15px 18px' }}>
+          <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ink2)', marginBottom: 12 }}>Pháp nhân đứng tên</div>
           {pnArr.map((p, i) => {
             const max = Math.max(...pnArr.map(x => x.value), 1)
             return (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <div style={{ fontSize: 12, color: 'var(--label-primary)', minWidth: 40 }}>{p.name}</div>
+                <div style={{ fontSize: 12, color: 'var(--ink2)', minWidth: 40 }}>{p.name}</div>
                 <div style={{ flex: 1, height: 7, background: 'var(--bg)', borderRadius: 4, overflow: 'hidden' }}>
                   <div style={{ height: '100%', borderRadius: 4, background: COLORS[i % COLORS.length], width: `${p.value / max * 100}%` }} />
                 </div>

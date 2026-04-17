@@ -1,4 +1,5 @@
 import { useState } from 'react'
+
 const LOGO_URL = 'https://lh3.googleusercontent.com/d/1gnI72gZVm9cegVnbAWjRInk3_3Ouigqm'
 
 export default function LoginScreen({ onLogin }) {
@@ -8,117 +9,121 @@ export default function LoginScreen({ onLogin }) {
   const [error,    setError]    = useState('')
   const [loading,  setLoading]  = useState(false)
 
-  const submit = async () => {
-    if (!username.trim() || !password) { setError('Vui lòng nhập đầy đủ thông tin.'); return }
-    setLoading(true); setError('')
+  const handleSubmit = async () => {
+    if (!username.trim() || !password) {
+      setError('Vui lòng nhập đầy đủ thông tin.')
+      return
+    }
+    setLoading(true)
+    setError('')
+
     try {
       const API = import.meta.env.VITE_API_URL || 'http://localhost:3000'
-      const res  = await fetch(`${API}/api/auth/login`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: username.trim(), password })
+      const res = await fetch(`${API}/api/auth/login`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ username: username.trim(), password })
       })
       const data = await res.json()
-      if (!res.ok) { setError(data.error || 'Đăng nhập thất bại.'); setLoading(false); return }
+
+      if (!res.ok) {
+        setError(data.error || 'Đăng nhập thất bại.')
+        setLoading(false)
+        return
+      }
+
+      // Lưu token + user vào localStorage
       localStorage.setItem('hsg_token', data.token)
       localStorage.setItem('hsg_user',  JSON.stringify(data.user))
       onLogin(data.user, data.token)
-    } catch {
-      setError('Không thể kết nối server.')
+
+    } catch(e) {
+      setError('Không thể kết nối server. Vui lòng thử lại.')
       setLoading(false)
     }
   }
 
-  const inp = (extra = {}) => ({
-    width: '100%', padding: '12px 14px',
-    background: 'var(--fill-tertiary)',
-    border: '0.5px solid var(--sep)',
-    borderRadius: 10, fontSize: 16,
-    color: 'var(--label-primary)',
-    outline: 'none', fontFamily: 'inherit',
-    boxSizing: 'border-box', transition: 'border-color .15s',
-    ...extra,
-  })
-
   return (
     <div style={{
-      position: 'fixed', inset: 0,
-      background: 'var(--bg-grouped)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: 20, zIndex: 9999,
-      fontFamily: '-apple-system,"SF Pro Text","Helvetica Neue",sans-serif',
+      position:'fixed', inset:0, background:'#F5F3EF',
+      display:'flex', alignItems:'center', justifyContent:'center',
+      fontFamily:"'Be Vietnam Pro',sans-serif", padding:20, zIndex:9999
     }}>
-      <div style={{ width: '100%', maxWidth: 360 }}>
+      {/* Dot pattern */}
+      <div style={{ position:'absolute', inset:0, opacity:.04,
+        backgroundImage:'radial-gradient(#D4420A 1px,transparent 1px)',
+        backgroundSize:'24px 24px' }} />
 
-        {/* Logo */}
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{
-            width: 72, height: 72, borderRadius: 20,
-            background: '#fff', margin: '0 auto 14px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
-            overflow: 'hidden', padding: 8,
-          }}>
-            <img src={LOGO_URL} alt="HSG"
-              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-              onError={e => { e.target.style.display='none'; e.target.parentElement.innerHTML='<span style="font-size:22px;font-weight:700;color:#FF3B30">HSG</span>' }}
-            />
-          </div>
-          <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: -0.5, color: 'var(--label-primary)' }}>
-            Danh sách xe
-          </div>
-          <div style={{ fontSize: 13, color: 'var(--label-secondary)', marginTop: 3 }}>
-            Hoa Sen Home
-          </div>
-        </div>
+      <div style={{
+        background:'#fff', borderRadius:18, width:'100%', maxWidth:400,
+        boxShadow:'0 20px 60px rgba(0,0,0,.12)', overflow:'hidden',
+        position:'relative', animation:'loginSlide .3s ease'
+      }}>
+        <div style={{ height:5, background:'linear-gradient(90deg,#D4420A,#F26430)' }} />
 
-        {/* Form card */}
-        <div style={{
-          background: 'var(--bg-card)',
-          border: '0.5px solid var(--sep)',
-          borderRadius: 18, padding: '24px 22px',
-          boxShadow: '0 2px 20px rgba(0,0,0,0.06)',
-        }}>
+        <div style={{ padding:'32px 32px 28px' }}>
+          {/* Logo */}
+          <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:28 }}>
+            <div style={{ width:44, height:44, borderRadius:10, background:'#F5F3EF',
+              display:'flex', alignItems:'center', justifyContent:'center',
+              overflow:'hidden', padding:4, flexShrink:0 }}>
+              <img src={LOGO_URL} alt="HSG"
+                style={{ width:'100%', height:'100%', objectFit:'contain' }}
+                onError={e => { e.target.style.display='none'; e.target.parentElement.innerHTML='<span style="font-size:14px;font-weight:700;color:#D4420A">HSG</span>' }}
+              />
+            </div>
+            <div>
+              <div style={{ fontSize:15, fontWeight:700, color:'#1C1C1C', lineHeight:1.3 }}>Danh sách xe</div>
+              <div style={{ fontSize:11, color:'#909090' }}>Hoa Sen Home</div>
+            </div>
+          </div>
+
+          <div style={{ fontSize:20, fontWeight:700, color:'#1C1C1C', marginBottom:4 }}>Đăng nhập</div>
+          <div style={{ fontSize:13, color:'#909090', marginBottom:24 }}>Vui lòng đăng nhập để tiếp tục.</div>
 
           {/* Username */}
-          <div style={{ marginBottom: 12 }}>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--label-secondary)', marginBottom: 6 }}>
+          <div style={{ marginBottom:14 }}>
+            <label style={{ display:'block', fontSize:12, fontWeight:600, color:'#4A4A4A', marginBottom:6 }}>
               Tên đăng nhập
             </label>
             <input
               value={username}
               onChange={e => { setUsername(e.target.value); setError('') }}
-              onKeyDown={e => e.key==='Enter' && submit()}
+              onKeyDown={e => e.key === 'Enter' && handleSubmit()}
               placeholder="Nhập tên đăng nhập"
               autoFocus autoComplete="username"
-              style={inp()}
-              onFocus={e => e.target.style.borderColor='var(--apple-blue)'}
-              onBlur={e  => e.target.style.borderColor='var(--sep)'}
+              style={{ width:'100%', padding:'11px 14px', borderRadius:9,
+                border:`1.5px solid ${error?'#FCA5A5':'#E6E2DC'}`,
+                fontSize:13, outline:'none', fontFamily:'inherit',
+                background:'#FAFAF8', boxSizing:'border-box' }}
+              onFocus={e => e.target.style.borderColor='#D4420A'}
+              onBlur={e => e.target.style.borderColor=error?'#FCA5A5':'#E6E2DC'}
             />
           </div>
 
           {/* Password */}
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--label-secondary)', marginBottom: 6 }}>
+          <div style={{ marginBottom:20 }}>
+            <label style={{ display:'block', fontSize:12, fontWeight:600, color:'#4A4A4A', marginBottom:6 }}>
               Mật khẩu
             </label>
-            <div style={{ position: 'relative' }}>
+            <div style={{ position:'relative' }}>
               <input
                 type={showPw ? 'text' : 'password'}
                 value={password}
                 onChange={e => { setPassword(e.target.value); setError('') }}
-                onKeyDown={e => e.key==='Enter' && submit()}
+                onKeyDown={e => e.key === 'Enter' && handleSubmit()}
                 placeholder="Nhập mật khẩu"
                 autoComplete="current-password"
-                style={inp({ paddingRight: 44 })}
-                onFocus={e => e.target.style.borderColor='var(--apple-blue)'}
-                onBlur={e  => e.target.style.borderColor='var(--sep)'}
+                style={{ width:'100%', padding:'11px 42px 11px 14px', borderRadius:9,
+                  border:`1.5px solid ${error?'#FCA5A5':'#E6E2DC'}`,
+                  fontSize:13, outline:'none', fontFamily:'inherit',
+                  background:'#FAFAF8', boxSizing:'border-box' }}
+                onFocus={e => e.target.style.borderColor='#D4420A'}
+                onBlur={e => e.target.style.borderColor=error?'#FCA5A5':'#E6E2DC'}
               />
               <button onClick={() => setShowPw(s=>!s)}
-                style={{
-                  position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
-                  border: 'none', background: 'none', cursor: 'pointer',
-                  color: 'var(--label-tertiary)', fontSize: 15, padding: 2,
-                }}>
+                style={{ position:'absolute', right:12, top:'50%', transform:'translateY(-50%)',
+                  border:'none', background:'none', cursor:'pointer', color:'#909090', fontSize:16, padding:2 }}>
                 {showPw ? '🙈' : '👁️'}
               </button>
             </div>
@@ -126,51 +131,43 @@ export default function LoginScreen({ onLogin }) {
 
           {/* Error */}
           {error && (
-            <div style={{
-              background: 'rgba(255,59,48,0.08)',
-              border: '0.5px solid rgba(255,59,48,0.3)',
-              color: 'var(--apple-red)', fontSize: 13,
-              padding: '10px 12px', borderRadius: 10, marginBottom: 14,
-            }}>
-              {error}
+            <div style={{ background:'#FEE2E2', color:'#B91C1C', fontSize:12.5,
+              padding:'9px 12px', borderRadius:8, marginBottom:16,
+              display:'flex', alignItems:'center', gap:6 }}>
+              ⚠ {error}
             </div>
           )}
 
           {/* Submit */}
-          <button onClick={submit} disabled={loading}
-            style={{
-              width: '100%', padding: '13px', borderRadius: 12,
-              border: 'none',
-              background: loading ? 'rgba(0,122,255,0.5)' : 'var(--apple-blue)',
-              color: '#fff', fontSize: 16, fontWeight: 600,
+          <button onClick={handleSubmit} disabled={loading}
+            style={{ width:'100%', padding:12, borderRadius:10, border:'none',
+              background: loading ? '#F0A080' : 'linear-gradient(135deg,#D4420A,#F26430)',
+              color:'#fff', fontSize:14, fontWeight:700,
               cursor: loading ? 'not-allowed' : 'pointer',
-              fontFamily: 'inherit', letterSpacing: -0.2,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              transition: 'background .15s, transform .1s',
-            }}
-            onMouseDown={e => { if (!loading) e.currentTarget.style.transform='scale(0.98)' }}
-            onMouseUp={e   => e.currentTarget.style.transform='scale(1)'}
-          >
+              fontFamily:'inherit', display:'flex', alignItems:'center',
+              justifyContent:'center', gap:8 }}>
             {loading ? (
               <>
-                <span style={{
-                  width: 14, height: 14,
-                  border: '2px solid rgba(255,255,255,0.3)',
-                  borderTopColor: '#fff', borderRadius: '50%',
-                  animation: 'spin .65s linear infinite',
-                }} />
+                <span style={{ width:14, height:14, border:'2px solid rgba(255,255,255,.3)',
+                  borderTopColor:'#fff', borderRadius:'50%',
+                  animation:'spin .65s linear infinite', display:'inline-block' }} />
                 Đang xác thực...
               </>
-            ) : 'Đăng nhập'}
+            ) : 'Đăng nhập →'}
           </button>
         </div>
 
-        <div style={{ textAlign: 'center', marginTop: 20, fontSize: 12, color: 'var(--label-tertiary)' }}>
-          Hoa Sen Group · Hệ thống quản lý phương tiện
+        <div style={{ padding:'12px 32px 20px', background:'#FAFAF8',
+          borderTop:'1px solid #F0EDE8', textAlign:'center',
+          fontSize:11.5, color:'#C0B8B0' }}>
+          Hoa Sen Group © 2025 · Hệ thống quản lý phương tiện
         </div>
       </div>
 
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      <style>{`
+        @keyframes loginSlide{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes spin{to{transform:rotate(360deg)}}
+      `}</style>
     </div>
   )
 }

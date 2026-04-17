@@ -1,110 +1,57 @@
-const TITLES = {
-  overview: 'Tổng quan', xe_tai: 'Xe tải',
-  oto_con: 'Ô tô con', cua_hang: 'Cửa hàng', graph: 'Sơ đồ mạng'
-}
+const TITLES = { overview:'Tổng quan', xe_tai:'Xe tải', oto_con:'Ô tô con', cua_hang:'Cửa hàng' }
 
 export default function Topbar({ page, refreshing, loadProgress = {}, isMobile, onMenuClick, user, onLogout }) {
-  const isLoading = Object.values(loadProgress).some(v => v === 'loading')
-
+  const isLoadingRows = Object.values(loadProgress).some(v => v === 'loading')
   return (
     <header style={{
-      height: 52,
-      background: 'rgba(249,249,249,0.94)',
-      backdropFilter: 'blur(20px) saturate(1.8)',
-      WebkitBackdropFilter: 'blur(20px) saturate(1.8)',
-      borderBottom: '0.5px solid var(--sep)',
-      display: 'flex', alignItems: 'center',
-      padding: '0 20px', gap: 12,
-      position: 'sticky', top: 0, zIndex: 50,
+      height: 54, background: '#fff', borderBottom: '1px solid var(--border)',
+      display: 'flex', alignItems: 'center', padding: '0 16px', gap: 10,
+      position: 'sticky', top: 0, zIndex: 50
     }}>
-
-      {/* Hamburger (mobile) */}
       {isMobile && (
-        <button onClick={onMenuClick} style={{
-          border: 'none', background: 'none', cursor: 'pointer',
-          padding: '4px 6px', borderRadius: 7, fontSize: 18,
-          color: 'var(--apple-blue)', display: 'flex', alignItems: 'center',
-          flexShrink: 0, fontFamily: 'inherit',
-        }}>☰</button>
+        <button onClick={onMenuClick} style={{ border:'none', background:'none', cursor:'pointer', padding:'6px 8px', borderRadius:7, fontSize:18, color:'var(--ink2)', display:'flex', alignItems:'center', flexShrink:0 }}>☰</button>
       )}
 
-      {/* Title */}
-      <div style={{
-        fontSize: isMobile ? 16 : 17,
-        fontWeight: 600, flex: 1,
-        letterSpacing: -0.4, color: 'var(--label-primary)',
-      }}>
-        {TITLES[page] || page}
+      <div style={{ fontSize: 15, fontWeight: 600, flex: 1 }}>{TITLES[page] || page}</div>
+
+      {(refreshing || isLoadingRows) && (
+        <span style={{ fontSize: 11, color: 'var(--ink3)', display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ width:10, height:10, border:'2px solid var(--border)', borderTopColor:'var(--brand)', borderRadius:'50%', animation:'spin .65s linear infinite', display:'inline-block' }} />
+          {refreshing ? 'Làm mới...' : 'Đang tải...'}
+        </span>
+      )}
+
+      {/* Live badge */}
+      <div style={{ display:'inline-flex', alignItems:'center', gap:5, background:'var(--brand-l)', color:'var(--brand)', fontSize:11, fontWeight:600, padding:'4px 10px', borderRadius:20, flexShrink:0 }}>
+        <div style={{ width:6, height:6, borderRadius:'50%', background:'var(--green)', animation:'pulse 2s infinite' }} />
+        Live
       </div>
 
-      {/* Loading indicator */}
-      {(refreshing || isLoading) && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 6,
-          fontSize: 12, color: 'var(--label-secondary)',
-        }}>
-          <div style={{
-            width: 14, height: 14,
-            border: '1.5px solid var(--fill-primary)',
-            borderTopColor: 'var(--apple-blue)',
-            borderRadius: '50%',
-            animation: 'spin .65s linear infinite',
-          }} />
-          {!isMobile && (refreshing ? 'Đang làm mới...' : 'Đang tải...')}
-        </div>
-      )}
-
-      {/* User pill */}
+      {/* User info + logout */}
       {user && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 8,
-          borderLeft: '0.5px solid var(--sep)', paddingLeft: 12,
-          flexShrink: 0,
-        }}>
-          {/* Avatar */}
-          <div style={{
-            width: 28, height: 28, borderRadius: '50%',
-            background: 'var(--apple-blue)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 12, fontWeight: 600, color: '#fff', flexShrink: 0,
-            letterSpacing: -0.3,
-          }}>
-            {(user.displayName || user.username || '?').charAt(0).toUpperCase()}
-          </div>
-
-          {/* Name (desktop only) */}
+        <div style={{ display:'flex', alignItems:'center', gap:8, paddingLeft:8, borderLeft:'1px solid var(--border)', flexShrink:0 }}>
           {!isMobile && (
-            <div style={{ lineHeight: 1.3 }}>
-              <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--label-primary)' }}>
-                {user.displayName || user.username}
+            <div style={{ display:'flex', alignItems:'center', gap:7 }}>
+              <div style={{ width:28, height:28, borderRadius:'50%', background:'var(--brand)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:700, color:'#fff', flexShrink:0 }}>
+                {user.display ? user.display.charAt(0).toUpperCase() : 'U'}
               </div>
-              <div style={{ fontSize: 11, color: 'var(--label-tertiary)' }}>
-                @{user.username}
+              <div>
+                <div style={{ fontSize:12, fontWeight:600, color:'var(--ink)', lineHeight:1.2 }}>{user.display || user.username}</div>
+                <div style={{ fontSize:10, color:'var(--ink3)' }}>@{user.username}</div>
               </div>
             </div>
           )}
-
-          {/* Logout */}
           <button onClick={onLogout}
-            style={{
-              padding: '5px 12px', borderRadius: 8,
-              border: '0.5px solid var(--sep)',
-              background: 'transparent',
-              fontSize: 12, fontWeight: 500,
-              color: 'var(--apple-red)',
-              cursor: 'pointer', fontFamily: 'inherit',
-              transition: 'background .15s',
-              flexShrink: 0,
-            }}
-            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,59,48,0.08)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            style={{ padding:'5px 11px', borderRadius:7, border:'1px solid var(--border)', background:'var(--bg)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:'var(--ink2)', transition:'all .12s', flexShrink:0 }}
+            onMouseEnter={e => { e.target.style.background='#FEE2E2'; e.target.style.color='#B91C1C'; e.target.style.borderColor='#FCA5A5' }}
+            onMouseLeave={e => { e.target.style.background='var(--bg)'; e.target.style.color='var(--ink2)'; e.target.style.borderColor='var(--border)' }}
           >
-            {isMobile ? '↩' : '↩ Đăng xuất'}
+            {isMobile ? '⎋' : '↩ Đăng xuất'}
           </button>
         </div>
       )}
 
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}`}</style>
     </header>
   )
 }

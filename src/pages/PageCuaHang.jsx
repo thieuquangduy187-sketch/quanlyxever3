@@ -86,20 +86,20 @@ export default function PageCuaHang({ data, rowsLoaded }) {
           {icon:'📊',label:'Mô hình 2B',value:(s.byMoHinh||{})['2B']||0,sub:'Cửa hàng',bar:'var(--purple)',bg:'var(--purple-l)'},
           {icon:'📊',label:'Mô hình 2A',value:(s.byMoHinh||{})['2A']||0,sub:'Cửa hàng',bar:'var(--green)',bg:'var(--green-l)'},
         ].map((kpi,i)=>(
-          <div key={i} style={{background:'var(--bg-card)',border:'0.5px solid var(--sep)',borderRadius:14,padding:'16px 18px',position:'relative',overflow:'hidden'}}>
+          <div key={i} style={{background:'#fff',border:'1px solid var(--border)',borderRadius:12,padding:'16px 18px',position:'relative',overflow:'hidden'}}>
             <div style={{position:'absolute',top:0,left:0,right:0,height:3,background:kpi.bar}}/>
-            <div style={{width:34,height:34,borderRadius:8,background:kpi.bg+'18',display:'flex',alignItems:'center',justifyContent:'center',fontSize:15,marginBottom:10}}>{kpi.icon}</div>
-            <div style={{fontSize:10.5,fontWeight:700,color:'var(--label-secondary)',textTransform:'uppercase',letterSpacing:'.06em',marginBottom:3}}>{kpi.label}</div>
+            <div style={{width:34,height:34,borderRadius:8,background:kpi.bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:15,marginBottom:10}}>{kpi.icon}</div>
+            <div style={{fontSize:10.5,fontWeight:700,color:'var(--ink3)',textTransform:'uppercase',letterSpacing:'.06em',marginBottom:3}}>{kpi.label}</div>
             <div style={{fontSize:24,fontWeight:700,lineHeight:1}}>{kpi.value}</div>
-            <div style={{fontSize:11,color:'var(--label-secondary)',marginTop:3}}>{kpi.sub}</div>
+            <div style={{fontSize:11,color:'var(--ink3)',marginTop:3}}>{kpi.sub}</div>
           </div>
         ))}
       </div>
 
       {/* Charts */}
       <div style={{display:'grid',gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap:12, marginBottom:12}}>
-        <div style={{background:'var(--bg-card)',border:'0.5px solid var(--sep)',borderRadius:14,padding:'15px 18px'}}>
-          <div style={{fontSize:12.5,fontWeight:600,color:'var(--label-primary)',marginBottom:12}}>Theo vùng</div>
+        <div style={{background:'#fff',border:'1px solid var(--border)',borderRadius:12,padding:'15px 18px'}}>
+          <div style={{fontSize:12.5,fontWeight:600,color:'var(--ink2)',marginBottom:12}}>Theo vùng</div>
           <ResponsiveContainer width="100%" height={isMobile ? 160 : 200}>
             <BarChart data={vArr} barSize={50}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false}/>
@@ -110,18 +110,18 @@ export default function PageCuaHang({ data, rowsLoaded }) {
             </BarChart>
           </ResponsiveContainer>
         </div>
-        <div style={{background:'var(--bg-card)',border:'0.5px solid var(--sep)',borderRadius:14,padding:'15px 18px'}}>
-          <div style={{fontSize:12.5,fontWeight:600,color:'var(--label-primary)',marginBottom:12}}>Theo mô hình hoạt động</div>
+        <div style={{background:'#fff',border:'1px solid var(--border)',borderRadius:12,padding:'15px 18px'}}>
+          <div style={{fontSize:12.5,fontWeight:600,color:'var(--ink2)',marginBottom:12}}>Theo mô hình hoạt động</div>
           {mhArr.map((d,i)=>{
             const max=Math.max(...mhArr.map(x=>x.value),1)
             return(
               <div key={i} style={{display:'flex',alignItems:'center',gap:8,marginBottom:9}}>
-                <div style={{fontSize:12,color:'var(--label-primary)',minWidth:40}}>{d.name}</div>
-                <div style={{flex:1,height:7,background:'var(--fill-tertiary)',borderRadius:4,overflow:'hidden'}}>
+                <div style={{fontSize:12,color:'var(--ink2)',minWidth:40}}>{d.name}</div>
+                <div style={{flex:1,height:7,background:'var(--bg)',borderRadius:4,overflow:'hidden'}}>
                   <div style={{height:'100%',borderRadius:4,background:COLORS[i%COLORS.length],width:`${d.value/max*100}%`}}/>
                 </div>
                 <b style={{fontSize:12,minWidth:28,textAlign:'right'}}>{d.value}</b>
-                <span style={{fontSize:11,color:'var(--label-secondary)',minWidth:32}}>{s.total?Math.round(d.value/s.total*100):0}%</span>
+                <span style={{fontSize:11,color:'var(--ink3)',minWidth:32}}>{s.total?Math.round(d.value/s.total*100):0}%</span>
               </div>
             )
           })}
@@ -129,31 +129,31 @@ export default function PageCuaHang({ data, rowsLoaded }) {
       </div>
 
       {/* Table */}
-      <div style={{background:'var(--bg-card)',border:'0.5px solid var(--sep)',borderRadius:14,overflow:'hidden'}}>
+      <div style={{background:'#fff',border:'1px solid var(--border)',borderRadius:12,overflow:'hidden'}}>
         <div style={{display:'flex',alignItems:'center',gap:8,padding:'12px 16px',borderBottom:'1px solid var(--border)',flexWrap:'wrap'}}>
-          <span style={{fontSize:11,fontWeight:600,color:'var(--label-secondary)'}}>Lọc:</span>
+          <span style={{fontSize:11,fontWeight:600,color:'var(--ink3)'}}>Lọc:</span>
           <input placeholder="Tên hoặc mã CH..." value={search} onChange={e=>{setSearch(e.target.value);setPg(0)}}
-            style={{border:'0.5px solid var(--sep)',background:'var(--fill-tertiary)',borderRadius:7,padding:'5px 9px',fontSize:12,outline:'none',minWidth:180}}/>
+            style={{border:'1px solid var(--border)',background:'var(--bg)',borderRadius:7,padding:'5px 9px',fontSize:12,outline:'none',minWidth:180}}/>
           <select value={filterVung} onChange={e=>{setFilterVung(e.target.value);setPg(0)}}
-            style={{border:'0.5px solid var(--sep)',background:'var(--fill-tertiary)',borderRadius:7,padding:'5px 9px',fontSize:12}}>
+            style={{border:'1px solid var(--border)',background:'var(--bg)',borderRadius:7,padding:'5px 9px',fontSize:12}}>
             <option value="">Tất cả vùng</option>
             {['Vùng 1','Vùng 2','Vùng 3','Vùng 4'].map(v=><option key={v} value={v}>{v}</option>)}
           </select>
-          <span style={{fontSize:11,color:'var(--label-secondary)'}}>{filtered.length} / {rows.length} cửa hàng</span>
+          <span style={{fontSize:11,color:'var(--ink3)'}}>{filtered.length} / {rows.length} cửa hàng</span>
           <div style={{marginLeft:'auto',display:'flex',gap:6}}>
-            <button onClick={()=>window.open(SHEET_URL,'_blank')} style={{padding:'5px 11px',borderRadius:7,border:'0.5px solid var(--sep)',background:'var(--card)',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>📊 Mở Sheet</button>
+            <button onClick={()=>window.open(SHEET_URL,'_blank')} style={{padding:'5px 11px',borderRadius:7,border:'1px solid var(--border)',background:'var(--card)',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>📊 Mở Sheet</button>
             <button onClick={exportExcel} style={{padding:'5px 11px',borderRadius:7,border:'none',background:'var(--teal)',color:'#fff',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>⬇ Tải Excel</button>
           </div>
         </div>
 
-        {isLoading ? <div style={{textAlign:'center',padding:40,color:'var(--label-secondary)'}}>Đang tải dữ liệu...</div> : (
+        {isLoading ? <div style={{textAlign:'center',padding:40,color:'var(--ink3)'}}>Đang tải dữ liệu...</div> : (
           <div style={{overflowX:'auto', maxHeight: isMobile ? '60vh' : 520, overflowY:'auto'}}>
             <table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}>
               <thead style={{position:'sticky',top:0,zIndex:10}}>
                 <tr>
                   {COLS.map((col,i)=>(
                     <th key={col.k} onClick={()=>col.sort&&(sortCol===i?setSortDir(d=>d*-1):(setSortCol(i),setSortDir(1)))}
-                      style={{padding:'9px 10px',background:'var(--fill-tertiary)',borderBottom:'2px solid var(--border)',fontWeight:600,fontSize:10.5,color:'var(--label-secondary)',textTransform:'uppercase',letterSpacing:'.05em',whiteSpace:'nowrap',cursor:col.sort?'pointer':'default',textAlign:'left'}}>
+                      style={{padding:'9px 10px',background:'var(--bg)',borderBottom:'2px solid var(--border)',fontWeight:600,fontSize:10.5,color:'var(--ink3)',textTransform:'uppercase',letterSpacing:'.05em',whiteSpace:'nowrap',cursor:col.sort?'pointer':'default',textAlign:'left'}}>
                       {col.l}{col.sort&&<span style={{marginLeft:3,opacity:.5,fontSize:10}}>{sortCol===i?(sortDir===1?'▲':'▼'):'⇅'}</span>}
                     </th>
                   ))}
@@ -165,11 +165,11 @@ export default function PageCuaHang({ data, rowsLoaded }) {
                   return(
                     <tr key={r.maCH||idx} style={{borderBottom:'1px solid var(--border)'}}>
                       {COLS.map(col=>{
-                        if(col.k==='stt') return <td key="stt" style={{padding:'8px 10px',color:'var(--label-secondary)',fontSize:11,textAlign:'center'}}>{globalIdx+1}</td>
+                        if(col.k==='stt') return <td key="stt" style={{padding:'8px 10px',color:'var(--ink3)',fontSize:11,textAlign:'center'}}>{globalIdx+1}</td>
                         if(col.k==='maCH') return <td key="maCH" style={{padding:'8px 10px'}}><b>{r.maCH}</b></td>
                         const isEditing=editCell?.rowIdx===globalIdx&&editCell?.field===col.k
                         return(
-                          <td key={col.k} style={{padding:isEditing?0:'8px 10px',color:'var(--label-primary)',whiteSpace:'nowrap',maxWidth:200,overflow:'hidden',textOverflow:'ellipsis',cursor:col.edit?'text':'default'}}
+                          <td key={col.k} style={{padding:isEditing?0:'8px 10px',color:'var(--ink2)',whiteSpace:'nowrap',maxWidth:200,overflow:'hidden',textOverflow:'ellipsis',cursor:col.edit?'text':'default'}}
                             onDoubleClick={()=>col.edit&&setEditCell({rowIdx:globalIdx,field:col.k,value:r[col.k]||''})}>
                             {isEditing?(
                               <input autoFocus value={editCell.value} onChange={e=>setEditCell(ec=>({...ec,value:e.target.value}))}
@@ -189,17 +189,17 @@ export default function PageCuaHang({ data, rowsLoaded }) {
         )}
 
         {filtered.length > PAGE_SIZE && (
-          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 16px',borderTop:'1px solid var(--border)',background:'var(--fill-tertiary)'}}>
-            <div style={{fontSize:12,color:'var(--label-secondary)'}}>Hiển thị {pg*PAGE_SIZE+1}–{Math.min((pg+1)*PAGE_SIZE,filtered.length)} trong {filtered.length}</div>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 16px',borderTop:'1px solid var(--border)',background:'var(--bg)'}}>
+            <div style={{fontSize:12,color:'var(--ink3)'}}>Hiển thị {pg*PAGE_SIZE+1}–{Math.min((pg+1)*PAGE_SIZE,filtered.length)} trong {filtered.length}</div>
             <div style={{display:'flex',gap:6}}>
-              <button disabled={pg===0} onClick={()=>setPg(0)} style={{padding:'5px 10px',borderRadius:7,border:'0.5px solid var(--sep)',background:'#fff',cursor:'pointer'}}>«</button>
-              <button disabled={pg===0} onClick={()=>setPg(p=>p-1)} style={{padding:'5px 10px',borderRadius:7,border:'0.5px solid var(--sep)',background:'#fff',cursor:'pointer'}}>‹</button>
+              <button disabled={pg===0} onClick={()=>setPg(0)} style={{padding:'5px 10px',borderRadius:7,border:'1px solid var(--border)',background:'#fff',cursor:'pointer'}}>«</button>
+              <button disabled={pg===0} onClick={()=>setPg(p=>p-1)} style={{padding:'5px 10px',borderRadius:7,border:'1px solid var(--border)',background:'#fff',cursor:'pointer'}}>‹</button>
               {Array.from({length:Math.min(5,totalPg)},(_,i)=>{
                 const start=Math.max(0,Math.min(pg-2,totalPg-5)); const pi=start+i
-                return <button key={pi} onClick={()=>setPg(pi)} style={{padding:'5px 10px',borderRadius:7,border:'0.5px solid var(--sep)',background:pi===pg?'var(--brand)':'#fff',color:pi===pg?'#fff':'inherit',cursor:'pointer'}}>{pi+1}</button>
+                return <button key={pi} onClick={()=>setPg(pi)} style={{padding:'5px 10px',borderRadius:7,border:'1px solid var(--border)',background:pi===pg?'var(--brand)':'#fff',color:pi===pg?'#fff':'inherit',cursor:'pointer'}}>{pi+1}</button>
               })}
-              <button disabled={pg>=totalPg-1} onClick={()=>setPg(p=>p+1)} style={{padding:'5px 10px',borderRadius:7,border:'0.5px solid var(--sep)',background:'#fff',cursor:'pointer'}}>›</button>
-              <button disabled={pg>=totalPg-1} onClick={()=>setPg(totalPg-1)} style={{padding:'5px 10px',borderRadius:7,border:'0.5px solid var(--sep)',background:'#fff',cursor:'pointer'}}>»</button>
+              <button disabled={pg>=totalPg-1} onClick={()=>setPg(p=>p+1)} style={{padding:'5px 10px',borderRadius:7,border:'1px solid var(--border)',background:'#fff',cursor:'pointer'}}>›</button>
+              <button disabled={pg>=totalPg-1} onClick={()=>setPg(totalPg-1)} style={{padding:'5px 10px',borderRadius:7,border:'1px solid var(--border)',background:'#fff',cursor:'pointer'}}>»</button>
             </div>
           </div>
         )}

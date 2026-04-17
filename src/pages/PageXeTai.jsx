@@ -35,22 +35,15 @@ const ALL_COLS = [
 const DEFAULT_VISIBLE = ['stt','bienSo','tenTaiSan','loaiThung','loaiXe','taiTrong','mien','tinhMoi','cuaHang','namSX','gtcl','phapNhan']
 
 function KpiCard({ icon, label, value, sub, color }) {
-  const accents = { or:'#FF9500', te:'#5AC8FA', rd:'#FF3B30', am:'#FFCC00' }
-  const accent = accents[color] || '#007AFF'
+  const bars = { or:'var(--brand)', te:'var(--teal)', rd:'var(--red)', am:'var(--amber)' }
+  const bgs = { or:'var(--brand-l)', te:'var(--teal-l)', rd:'var(--red-l)', am:'var(--amber-l)' }
   return (
-    <div style={{
-      background: 'var(--bg-card)', border: '0.5px solid var(--sep)',
-      borderRadius: 14, padding: '16px 18px',
-    }}>
-      <div style={{
-        width: 36, height: 36, borderRadius: 10,
-        background: accent + '18',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 16, marginBottom: 10,
-      }}>{icon}</div>
-      <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--label-secondary)', marginBottom: 4, letterSpacing: 0.1 }}>{label}</div>
-      <div style={{ fontSize: 26, fontWeight: 700, lineHeight: 1, letterSpacing: -0.5, color: 'var(--label-primary)' }}>{value}</div>
-      {sub && <div style={{ fontSize: 12, color: 'var(--label-tertiary)', marginTop: 4 }}>{sub}</div>}
+    <div style={{ background:'#fff', border:'1px solid var(--border)', borderRadius:12, padding:'16px 18px', position:'relative', overflow:'hidden' }}>
+      <div style={{ position:'absolute', top:0, left:0, right:0, height:3, background:bars[color] }} />
+      <div style={{ width:34, height:34, borderRadius:8, background:bgs[color], display:'flex', alignItems:'center', justifyContent:'center', fontSize:15, marginBottom:10 }}>{icon}</div>
+      <div style={{ fontSize:10.5, fontWeight:700, color:'var(--ink3)', textTransform:'uppercase', letterSpacing:'.06em', marginBottom:3 }}>{label}</div>
+      <div style={{ fontSize:24, fontWeight:700, lineHeight:1 }}>{value}</div>
+      {sub && <div style={{ fontSize:11, color:'var(--ink3)', marginTop:3 }}>{sub}</div>}
     </div>
   )
 }
@@ -200,21 +193,21 @@ export default function PageXeTai({ data, rowsLoaded }) {
       </div>
 
       {/* Table card */}
-      <div style={{ background:'var(--bg-card)', border:'0.5px solid var(--sep)', borderRadius:14, overflow:'hidden' }}>
+      <div style={{ background:'#fff', border:'1px solid var(--border)', borderRadius:12, overflow:'hidden' }}>
         {/* Filter bar */}
         <div style={{ display:'flex', alignItems:'center', gap:8, padding: isMobile ? '10px 12px' : '12px 16px', borderBottom:'1px solid var(--border)', flexWrap:'wrap' }}>
           <span style={{ fontSize:11, fontWeight:600, color:'var(--ink3)' }}>Lọc:</span>
           <input placeholder="Biển số, cửa hàng..." value={search}
             onChange={e => { setSearch(e.target.value); setPg(0) }}
-            style={{ border:'0.5px solid var(--sep)', background:'var(--fill-tertiary)', borderRadius:7, padding:'5px 9px', fontSize:12, outline:'none', minWidth:180 }}
+            style={{ border:'1px solid var(--border)', background:'var(--bg)', borderRadius:7, padding:'5px 9px', fontSize:12, outline:'none', minWidth:180 }}
           />
           <select value={filterMien} onChange={e => { setFilterMien(e.target.value); setPg(0) }}
-            style={{ border:'0.5px solid var(--sep)', background:'var(--fill-tertiary)', borderRadius:7, padding:'5px 9px', fontSize:12 }}>
+            style={{ border:'1px solid var(--border)', background:'var(--bg)', borderRadius:7, padding:'5px 9px', fontSize:12 }}>
             <option value="">Tất cả miền</option>
             {['Miền Nam','Miền Bắc','Miền Trung'].map(v => <option key={v} value={v}>{v}</option>)}
           </select>
           <select value={filterLT} onChange={e => { setFilterLT(e.target.value); setPg(0) }}
-            style={{ border:'0.5px solid var(--sep)', background:'var(--fill-tertiary)', borderRadius:7, padding:'5px 9px', fontSize:12 }}>
+            style={{ border:'1px solid var(--border)', background:'var(--bg)', borderRadius:7, padding:'5px 9px', fontSize:12 }}>
             <option value="">Tất cả loại thùng</option>
             {['Thùng lửng, có cẩu','Thùng lửng','Thùng mui bạt','Thùng kín'].map(v => <option key={v} value={v}>{v}</option>)}
           </select>
@@ -247,7 +240,7 @@ export default function PageXeTai({ data, rowsLoaded }) {
                     <th key={col.k}
                       onClick={() => col.sort && handleSort(i)}
                       style={{
-                        padding:'9px 10px', background:'var(--bg-grouped)', borderBottom:'0.5px solid var(--sep)',
+                        padding:'9px 10px', background:'var(--bg)', borderBottom:'2px solid var(--border)',
                         fontWeight:600, fontSize:10.5, color:'var(--ink3)', textTransform:'uppercase',
                         letterSpacing:'.05em', whiteSpace:'nowrap', cursor: col.sort ? 'pointer' : 'default',
                         textAlign:'left'
@@ -381,8 +374,8 @@ export default function PageXeTai({ data, rowsLoaded }) {
               })}
             </div>
             <div style={{ padding:'12px 20px', borderTop:'1px solid var(--border)', display:'flex', gap:8, justifyContent:'flex-end' }}>
-              <button onClick={() => setVisibleKeys(ALL_COLS.map(c => c.k))} style={{ padding:'6px 14px', borderRadius:7, border:'0.5px solid var(--sep)', background:'var(--fill-tertiary)', cursor:'pointer', fontSize:12, fontFamily:'inherit' }}>Chọn tất cả</button>
-              <button onClick={() => setVisibleKeys(DEFAULT_VISIBLE)} style={{ padding:'6px 14px', borderRadius:7, border:'0.5px solid var(--sep)', background:'var(--fill-tertiary)', cursor:'pointer', fontSize:12, fontFamily:'inherit' }}>Mặc định</button>
+              <button onClick={() => setVisibleKeys(ALL_COLS.map(c => c.k))} style={{ padding:'6px 14px', borderRadius:7, border:'1px solid var(--border)', background:'var(--bg)', cursor:'pointer', fontSize:12, fontFamily:'inherit' }}>Chọn tất cả</button>
+              <button onClick={() => setVisibleKeys(DEFAULT_VISIBLE)} style={{ padding:'6px 14px', borderRadius:7, border:'1px solid var(--border)', background:'var(--bg)', cursor:'pointer', fontSize:12, fontFamily:'inherit' }}>Mặc định</button>
               <button onClick={() => setShowColPicker(false)} style={{ padding:'6px 14px', borderRadius:7, border:'none', background:'var(--brand)', color:'#fff', cursor:'pointer', fontSize:12, fontFamily:'inherit' }}>Xong</button>
             </div>
           </div>
