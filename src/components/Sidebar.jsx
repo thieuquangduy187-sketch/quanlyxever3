@@ -7,6 +7,7 @@ const NAV = [
   { id: 'cua_hang',  icon: '🏪', label: 'Cửa hàng',  badgeKey: 'cuaHang', rowKey: 'cua_hang' },
   { id: 'import',    icon: '📥', label: 'Import Excel' },
   { id: 'analyze',   icon: '🤖', label: 'Phân tích PR' },
+  { id: 'graph',     icon: '🕸',  label: 'Sơ đồ mạng' },
 ]
 
 export default function Sidebar({ page, onNav, data, refreshing, onRefresh, lastUpdated, loadProgress = {}, isMobile, showSidebar, onCloseSidebar }) {
@@ -119,4 +120,3 @@ function SidebarContent({ page, onNav, data, refreshing, onRefresh, lastUpdated,
     </>
   )
 }
-  { id: 'graph', icon: '🕸️', label: 'Sơ đồ mạng' },
