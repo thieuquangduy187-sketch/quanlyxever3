@@ -121,8 +121,8 @@ export default function PageXeTai({ data, rowsLoaded }) {
       const mm = !filterMien || row.mien === filterMien
       const ml = !filterLT || row.loaiThung === filterLT
       const mh = !filterLoaiHinh || (() => {
-        const ma = String(row.maHienTai||'').trim()
-        const isTK = /^TK/i.test(ma) && !/^TK04$/i.test(ma)
+        const ch = String(row.cuaHang||'').trim()
+        const isTK = /^TK/i.test(ch)
         return filterLoaiHinh === 'tonkho' ? isTK : !isTK
       })()
       return ms && mm && ml && mh
