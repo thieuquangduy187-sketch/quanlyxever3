@@ -1,0 +1,61 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* Apple System Colors */
+  --apple-red:     #D70015;
+  --apple-orange:  #C25000;
+  --apple-yellow:  #946800;
+  --apple-green:   #1A7F37;
+  --apple-teal:    #007B8F;
+  --apple-blue:    #0066CC;
+  --apple-indigo:  #3634A3;
+  --apple-purple:  #7B3AB9;
+  --apple-pink:    #C4134E;
+
+  /* Semantic */
+  --brand:   #0066CC;
+  --brand-l: rgba(0,102,204,0.12);
+
+  /* Backgrounds — Light */
+  --bg-primary:   #F2F2F7;
+  --bg-secondary: #FFFFFF;
+  --bg-tertiary:  #F2F2F7;
+  --bg-grouped:   #F2F2F7;
+  --bg-card:      #FFFFFF;
+
+  /* Labels */
+  --label-primary:    rgba(0,0,0,0.85);
+  --label-secondary:  rgba(0,0,0,0.55);
+  --label-tertiary:   rgba(0,0,0,0.30);
+  --label-quaternary: rgba(0,0,0,0.14);
+
+  /* Fills */
+  --fill-primary:   rgba(120,120,128,0.20);
+  --fill-secondary: rgba(120,120,128,0.14);
+  --fill-tertiary:  rgba(118,118,128,0.10);
+
+  /* Separators */
+  --sep:        rgba(60,60,67,0.20);
+  --sep-opaque: #D1D1D6;
+
+  /* Sidebar width */
+  --sw: 240px;
+
+  font-family: -apple-system, "SF Pro Text", "SF Pro Display", "Helvetica Neue", sans-serif;
+  font-size: 14px;
+  color: var(--label-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color-scheme: light;
+}
+
+body {
+  background: var(--bg-grouped);
+  min-height: 100vh;
+  color: var(--label-primary);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--fill-primary); border-radius: 10px; }
