@@ -57,14 +57,7 @@ function Gallery({ hinhAnh, isMobile = false }) {
     if (isFolder) {
       setLoading(true)
       getImagesFromFolder(hinhAnh)
-        .then(urls => {
-          // Prefix relative proxy URLs với API_BASE
-          const resolved = (urls || []).map(u =>
-            u.startsWith('/api/') ? `${API_BASE}${u}` : u
-          )
-          setImgs(resolved)
-          setLoading(false)
-        })
+        .then(urls => { setImgs(urls || []); setLoading(false) })
         .catch(() => setLoading(false))
     } else {
       // Parse comma/newline separated file links
