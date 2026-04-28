@@ -55,8 +55,34 @@ export default function PageGPS() {
   const [tokenInput, setTokenInput] = useState('')
   const [showToken, setShowToken]   = useState(false)
   const [toast, setToast]           = useState(null)
+  const [backfilling, setBackfilling] = useState(false)
+  const [backfillInfo, setBackfillInfo] = useState(null)
 
   const showToast = (msg, err) => { setToast({ msg, err }); setTimeout(() => setToast(null), 3500) }
+
+  const loadBackfillStatus = async () => {
+    try {
+      const r = await authFetch('/api/gps/backfill-status')
+      const d = await r.json()
+      setBackfillInfo(d)
+    } catch(e) {}
+  }
+
+  const handleBackfill = async () => {
+    if (!window.confirm('Backfill sẽ lấy km 30 ngày qua cho tất cả xe (~5 phút). Tiếp tục?')) return
+    setBackfilling(true)
+    try {
+      const r = await authFetch('/api/gps/backfill-history', { method: 'POST' })
+      const d = await r.json()
+      if (d.error) { showToast(d.error, true); setBackfilling(false); return }
+      showToast(d.message)
+      // Poll status mỗi 10s
+      const poll = setInterval(async () => {
+        await loadBackfillStatus()
+      }, 10000)
+      setTimeout(() => { clearInterval(poll); setBackfilling(false) }, 6 * 60 * 1000)
+    } catch(e) { showToast(e.message, true); setBackfilling(false) }
+  }
 
   const loadStatus = async () => {
     setLoading(true)
@@ -68,7 +94,7 @@ export default function PageGPS() {
     setLoading(false)
   }
 
-  useEffect(() => { loadStatus() }, [])
+  useEffect(() => { loadStatus(); loadBackfillStatus() }, [])
 
   const handleSync = async () => {
     setSyncing(true)
@@ -147,6 +173,12 @@ export default function PageGPS() {
             style={{ padding:'7px 14px', borderRadius:8, border:'1px solid var(--sep)', background:'var(--bg-card)', cursor:'pointer', fontSize:12, fontFamily:'inherit' }}>
             🔑 Cập nhật Token
           </button>
+          <button onClick={handleBackfill} disabled={backfilling}
+            style={{ padding:'7px 14px', borderRadius:8, border:'1px solid var(--sep)',
+              background: backfilling ? 'var(--sep)' : 'var(--bg-card)',
+              cursor: backfilling ? 'not-allowed' : 'pointer', fontSize:12, fontFamily:'inherit' }}>
+            {backfilling ? '⏳ Đang backfill...' : '📥 Backfill lịch sử 30 ngày'}
+          </button>
           <button onClick={handleSync} disabled={syncing}
             style={{ padding:'7px 14px', borderRadius:8, border:'none',
               background: syncing ? 'var(--sep)' : 'var(--brand)', color:'#fff',
@@ -155,6 +187,17 @@ export default function PageGPS() {
           </button>
         </div>
       </div>
+
+      {/* Backfill info */}
+      {backfillInfo?.lastBackfill && (
+        <div style={{ marginBottom:14, padding:'8px 14px', borderRadius:8, background:'rgba(0,122,255,.06)',
+          border:'1px solid rgba(0,122,255,.15)', fontSize:12, color:'var(--label-secondary)', display:'flex', gap:16, flexWrap:'wrap' }}>
+          <span>📥 Backfill lần cuối: <strong>{new Date(backfillInfo.lastBackfill).toLocaleString('vi-VN')}</strong></span>
+          <span>✅ Thành công: <strong>{backfillInfo.done} xe</strong></span>
+          {backfillInfo.errors > 0 && <span style={{color:'#FF3B30'}}>❌ Lỗi: {backfillInfo.errors} xe</span>}
+          <span>📊 Tổng records km: <strong>{backfillInfo.kmRecords?.toLocaleString()}</strong></span>
+        </div>
+      )}
 
       {/* KPI Cards */}
       {!loading && (
