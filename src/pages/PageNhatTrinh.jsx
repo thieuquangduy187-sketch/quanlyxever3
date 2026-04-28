@@ -1,3 +1,6 @@
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 📁 FRONTEND — quanlyxever3/src/pages/PageNhatTrinh.jsx
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 import { useState, useEffect } from 'react'
 import useIsMobile from '../hooks/useIsMobile'
 
@@ -127,6 +130,15 @@ export default function PageNhatTrinh({ user }) {
     // Validate chọn biển số khi có nhiều xe
     if (hasMultiBienSo && !f.bienSoChon) {
       errs.bienSoChon = 'Vui lòng chọn biển số xe'
+    }
+    // Check xe này đã nộp tháng này chưa (chỉ khi không đang edit)
+    if (hasMultiBienSo && f.bienSoChon && !editingRecord) {
+      const alreadySubmitted = history.some(
+        h => h.bienSo === f.bienSoChon && h.thang === f.thang && h.nam === f.nam
+      )
+      if (alreadySubmitted) {
+        errs.bienSoChon = `Xe ${f.bienSoChon} đã nộp nhật trình tháng ${f.thang}/${f.nam}`
+      }
     }
     const km1 = Number(f.kmDauThang) || 0
     const km2 = Number(f.kmCuoiThang) || 0
@@ -333,11 +345,23 @@ export default function PageNhatTrinh({ user }) {
                 }}
               >
                 <option value="">-- Chọn biển số xe --</option>
-                {bienSoList.map(bs => (
-                  <option key={bs} value={bs}>{bs}</option>
-                ))}
+                {bienSoList.map(bs => {
+                  const submitted = history.some(
+                    h => h.bienSo === bs && h.thang === form.thang && h.nam === form.nam
+                  )
+                  return (
+                    <option key={bs} value={bs}>
+                      {bs}{submitted ? ' ✓ đã nộp' : ''}
+                    </option>
+                  )
+                })}
               </select>
-              {!form.bienSoChon && (
+              {errors.bienSoChon && (
+                <div style={{ fontSize:11.5, color:'var(--apple-red)', marginTop:4 }}>
+                  {errors.bienSoChon}
+                </div>
+              )}
+              {!form.bienSoChon && !errors.bienSoChon && (
                 <div style={{ fontSize:11.5, color:'var(--apple-red)', marginTop:4 }}>
                   Vui lòng chọn biển số trước khi nộp
                 </div>
@@ -514,7 +538,7 @@ export default function PageNhatTrinh({ user }) {
       {/* History */}
       {history.length > 0 && (
         <div style={{ marginTop:24 }}>
-          <div style={{ fontSize:13, fontWeight:600, color:'rgba(255,255,255,0.45)',
+          <div style={{ fontSize:13, fontWeight:600, color:'var(--label-secondary)',
             textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:10 }}>
             Lịch sử đã nộp
           </div>
@@ -528,10 +552,10 @@ export default function PageNhatTrinh({ user }) {
                 transition:'background .15s',
               }}>
               <div style={{ flex:1 }}>
-                <div style={{ fontSize:15, fontWeight:600, color:'rgba(255,255,255,0.88)' }}>
+                <div style={{ fontSize:15, fontWeight:600, color:'var(--label-primary)' }}>
                   Tháng {h.thang}/{h.nam}
                 </div>
-                <div style={{ fontSize:12, color:'rgba(255,255,255,0.45)', marginTop:3,
+                <div style={{ fontSize:12, color:'var(--label-secondary)', marginTop:3,
                   display:'flex', gap:10, flexWrap:'wrap' }}>
                   {h.tongKmDiChuyen > 0 && <span>🛣 {h.tongKmDiChuyen?.toLocaleString('vi-VN')} km</span>}
                   {h.soChuyenXe > 0 && <span>🚛 {h.soChuyenXe} chuyến</span>}
@@ -542,7 +566,7 @@ export default function PageNhatTrinh({ user }) {
               <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                 <div style={{ fontSize:11, color:'var(--apple-green)', fontWeight:600,
                   background:'rgba(52,199,89,0.12)', padding:'3px 10px', borderRadius:8 }}>✓ Đã nộp</div>
-                <div style={{ color:'rgba(255,255,255,0.3)', fontSize:16 }}>›</div>
+                <div style={{ color:'var(--label-tertiary)', fontSize:16 }}>›</div>
               </div>
             </div>
           ))}
