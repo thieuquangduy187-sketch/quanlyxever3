@@ -97,7 +97,8 @@ export default function PageXeTai({ data, rowsLoaded }) {
   const [filterMien, setFilterMien] = useState('')
   const [filterLT,       setFilterLT]       = useState('')
   const [filterLoaiHinh, setFilterLoaiHinh] = useState('')
-  const [colFilters, setColFilters] = useState({}) // { colKey: 'value' } — filter nhanh theo cột
+  const [colFilters, setColFilters] = useState({}) // { colKey: string[] } — multi-select filter theo cột
+  const [openFilterCol, setOpenFilterCol] = useState(null) // colKey đang mở dropdown
   const [sortCol, setSortCol] = useState(-1)
   const [sortDir, setSortDir] = useState(1)
   const [pg, setPg] = useState(0)
@@ -106,6 +107,14 @@ export default function PageXeTai({ data, rowsLoaded }) {
   const [editCell, setEditCell] = useState(null) // {rowIdx, field, value}
   const isMobile = useIsMobile()
   const [toast, setToast] = useState(null)
+
+  // Đóng dropdown filter khi click ra ngoài
+  useEffect(() => {
+    if (!openFilterCol) return
+    const handler = () => setOpenFilterCol(null)
+    document.addEventListener('click', handler)
+    return () => document.removeEventListener('click', handler)
+  }, [openFilterCol])
 
   const showToast = (msg, err) => {
     setToast({ msg, err })
@@ -132,10 +141,10 @@ export default function PageXeTai({ data, rowsLoaded }) {
         const lh = String(row.loaiHinh||'')
         return filterLoaiHinh === 'tonkho' ? lh === 'Tổng kho' : lh !== 'Tổng kho'
       })()
-      // Per-column filter
-      const mc = Object.entries(colFilters).every(([k, v]) => {
-        if (!v) return true
-        return String(row[k] || '').trim() === String(v).trim()
+      // Per-column filter (multi-select)
+      const mc = Object.entries(colFilters).every(([k, vals]) => {
+        if (!vals || vals.length === 0) return true
+        return vals.includes(String(row[k] || '').trim())
       })
       return ms && mm && ml && mh && mc
     })
@@ -143,9 +152,14 @@ export default function PageXeTai({ data, rowsLoaded }) {
       const col = visibleCols[sortCol]
       if (col) {
         r = [...r].sort((a, b) => {
-          const av = a[col.k] || '', bv = b[col.k] || ''
+          const av = String(a[col.k] ?? '').trim()
+          const bv = String(b[col.k] ?? '').trim()
+          // Luôn đẩy hàng rỗng xuống cuối, bất kể chiều sort
+          if (!av && !bv) return 0
+          if (!av) return 1
+          if (!bv) return -1
           const n = parseFloat(av) - parseFloat(bv)
-          return (isNaN(n) ? String(av).localeCompare(String(bv), 'vi') : n) * sortDir
+          return (isNaN(n) ? av.localeCompare(bv, 'vi') : n) * sortDir
         })
       }
     }
@@ -319,10 +333,18 @@ export default function PageXeTai({ data, rowsLoaded }) {
         {/* Filter bar */}
         <div style={{ display:'flex', alignItems:'center', gap:8, padding: isMobile ? '10px 12px' : '12px 16px', borderBottom:'1px solid var(--border)', flexWrap:'wrap' }}>
           <span style={{ fontSize:11, fontWeight:600, color:'var(--ink3)' }}>Lọc:</span>
-          <input placeholder="Biển số, cửa hàng..." value={search}
-            onChange={e => { setSearch(e.target.value); setPg(0) }}
-            style={{ border:'0.5px solid var(--sep)', background:'var(--fill-tertiary)', borderRadius:7, padding:'5px 9px', fontSize:12, outline:'none', minWidth:180 }}
-          />
+          <div style={{ position:'relative', display:'inline-flex', alignItems:'center' }}>
+            <input placeholder="Biển số, cửa hàng..." value={search}
+              onChange={e => { setSearch(e.target.value); setPg(0) }}
+              style={{ border:'0.5px solid var(--sep)', background:'var(--fill-tertiary)', borderRadius:7, padding:'5px 28px 5px 9px', fontSize:12, outline:'none', minWidth:180 }}
+            />
+            {search && (
+              <button onClick={() => { setSearch(''); setPg(0) }}
+                style={{ position:'absolute', right:6, background:'none', border:'none', cursor:'pointer', color:'var(--label-tertiary)', fontSize:14, lineHeight:1, padding:'0 2px', display:'flex', alignItems:'center' }}>
+                ✕
+              </button>
+            )}
+          </div>
           <select value={filterMien} onChange={e => { setFilterMien(e.target.value); setPg(0) }}
             style={{ border:'0.5px solid var(--sep)', background:'var(--fill-tertiary)', borderRadius:7, padding:'5px 9px', fontSize:12 }}>
             <option value="">Tất cả miền</option>
@@ -422,25 +444,73 @@ export default function PageXeTai({ data, rowsLoaded }) {
                 <tr>
                   {visibleCols.map(col => {
                     if (NO_COL_FILTER.has(col.k)) return <th key={col.k + '_f'} style={{ padding:'4px 6px', background:'var(--bg-secondary)', borderBottom:'2px solid var(--sep)' }} />
-                    // Tính unique values từ rows (không phải filtered — để luôn thấy hết options)
                     const opts = [...new Set(rows.map(r => String(r[col.k] || '')).filter(Boolean))].sort((a,b) => a.localeCompare(b, 'vi'))
-                    const active = colFilters[col.k] || ''
+                    if (opts.length === 0) return <th key={col.k + '_f'} style={{ padding:'4px 6px', background:'var(--bg-secondary)', borderBottom:'2px solid var(--sep)' }} />
+                    const selected = colFilters[col.k] || []
+                    const isOpen = openFilterCol === col.k
+                    const label = selected.length === 0 ? '--' : selected.length === 1 ? selected[0] : `${selected.length} mục`
+                    const toggleVal = (v) => {
+                      setColFilters(prev => {
+                        const cur = prev[col.k] || []
+                        const next = cur.includes(v) ? cur.filter(x => x !== v) : [...cur, v]
+                        return { ...prev, [col.k]: next }
+                      })
+                      setPg(0)
+                    }
                     return (
-                      <th key={col.k + '_f'} style={{ padding:'4px 6px', background:'var(--bg-secondary)', borderBottom:'2px solid var(--sep)' }}>
-                        {opts.length > 0 && (
-                          <select
-                            value={active}
-                            onChange={e => { setColFilters(prev => ({ ...prev, [col.k]: e.target.value })); setPg(0) }}
-                            style={{
-                              width:'100%', fontSize:10, padding:'2px 4px', border: active ? '1.5px solid var(--brand)' : '1px solid var(--sep)',
-                              borderRadius:4, background: active ? 'rgba(230,50,0,0.06)' : 'var(--bg-card)',
-                              color: active ? 'var(--brand)' : 'var(--label-secondary)', cursor:'pointer', outline:'none',
-                              fontWeight: active ? 700 : 400
-                            }}
-                          >
-                            <option value=''>--</option>
-                            {opts.map(o => <option key={o} value={o}>{o}</option>)}
-                          </select>
+                      <th key={col.k + '_f'} style={{ padding:'4px 6px', background:'var(--bg-secondary)', borderBottom:'2px solid var(--sep)', position:'relative' }}>
+                        {/* Trigger button */}
+                        <button
+                          onClick={e => { e.stopPropagation(); setOpenFilterCol(isOpen ? null : col.k) }}
+                          style={{
+                            width:'100%', fontSize:10, padding:'2px 18px 2px 5px', position:'relative',
+                            border: selected.length ? '1.5px solid var(--brand)' : '1px solid var(--sep)',
+                            borderRadius:4,
+                            background: selected.length ? 'rgba(230,50,0,0.06)' : 'var(--bg-card)',
+                            color: selected.length ? 'var(--brand)' : 'var(--label-secondary)',
+                            cursor:'pointer', outline:'none', fontWeight: selected.length ? 700 : 400,
+                            textAlign:'left', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis',
+                            fontFamily:'inherit'
+                          }}
+                        >
+                          {label}
+                          <span style={{ position:'absolute', right:4, top:'50%', transform:'translateY(-50%)', fontSize:8, opacity:.5 }}>▼</span>
+                        </button>
+                        {/* Dropdown panel */}
+                        {isOpen && (
+                          <div style={{
+                            position:'absolute', top:'100%', left:0, zIndex:200,
+                            background:'var(--bg-card)', border:'1px solid var(--sep)',
+                            borderRadius:7, boxShadow:'0 4px 20px rgba(0,0,0,.12)',
+                            minWidth:160, maxHeight:240, overflowY:'auto', padding:'4px 0'
+                          }}>
+                            {/* -- Reset */}
+                            <div
+                              onClick={() => { setColFilters(prev => ({ ...prev, [col.k]: [] })); setPg(0); setOpenFilterCol(null) }}
+                              style={{ padding:'6px 10px', fontSize:11, cursor:'pointer', color:'var(--label-secondary)', fontWeight:500,
+                                borderBottom:'1px solid var(--sep)', background: selected.length === 0 ? 'rgba(230,50,0,0.05)' : 'transparent' }}
+                            >
+                              -- Tất cả (bỏ lọc)
+                            </div>
+                            {opts.map(o => {
+                              const checked = selected.includes(o)
+                              return (
+                                <div key={o}
+                                  onClick={() => toggleVal(o)}
+                                  style={{ padding:'5px 10px', fontSize:11, cursor:'pointer', display:'flex', alignItems:'center', gap:6,
+                                    background: checked ? 'rgba(230,50,0,0.06)' : 'transparent',
+                                    color: checked ? 'var(--brand)' : 'var(--label-primary)', fontWeight: checked ? 600 : 400 }}
+                                >
+                                  <span style={{ width:13, height:13, borderRadius:3, border: checked ? '2px solid var(--brand)' : '1.5px solid var(--sep)',
+                                    background: checked ? 'var(--brand)' : 'transparent', display:'flex', alignItems:'center', justifyContent:'center',
+                                    flexShrink:0, fontSize:8, color:'#fff' }}>
+                                    {checked ? '✓' : ''}
+                                  </span>
+                                  <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{o}</span>
+                                </div>
+                              )
+                            })}
+                          </div>
                         )}
                       </th>
                     )
