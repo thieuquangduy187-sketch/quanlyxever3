@@ -5,164 +5,145 @@ import { useState, useEffect, useMemo } from 'react'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 const getToken = () => localStorage.getItem('hsg_token') || ''
-
 const authFetch = (path, opts = {}) => fetch(`${API}${path}`, {
   ...opts,
   headers: { 'Authorization': `Bearer ${getToken()}`, 'Content-Type': 'application/json', ...(opts.headers||{}) }
 })
 
-// ── Badge component ────────────────────────────────────────
-function Badge({ online }) {
+// ── Status Badge ───────────────────────────────────────────
+function StatusBadge({ label, color }) {
   return (
     <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 4,
-      padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600,
-      background: online ? 'rgba(52,199,89,.12)' : 'rgba(255,59,48,.10)',
-      color: online ? '#34C759' : '#FF3B30'
-    }}>
-      <span style={{ width: 6, height: 6, borderRadius: '50%', background: online ? '#34C759' : '#FF3B30', display: 'inline-block' }} />
-      {online ? 'Online' : 'Offline'}
-    </span>
+      display:'inline-block', padding:'2px 9px', borderRadius:20,
+      fontSize:11, fontWeight:600,
+      background: color + '18', color,
+      border: `1px solid ${color}30`,
+      whiteSpace:'nowrap'
+    }}>{label}</span>
   )
 }
 
 // ── KPI Card ───────────────────────────────────────────────
-function KpiCard({ label, value, color, icon }) {
+function KpiCard({ label, value, color, icon, onClick, active }) {
   return (
-    <div style={{ background: 'var(--bg-card)', borderRadius: 12, padding: '14px 18px', border: '0.5px solid var(--sep)', flex: 1, minWidth: 120 }}>
-      <div style={{ fontSize: 11, color: 'var(--label-secondary)', marginBottom: 4 }}>{icon} {label}</div>
-      <div style={{ fontSize: 26, fontWeight: 700, color }}>{value}</div>
+    <div onClick={onClick}
+      style={{ background:'var(--bg-card)', borderRadius:12, padding:'14px 18px',
+        border: active ? `1.5px solid ${color}` : '0.5px solid var(--sep)',
+        flex:1, minWidth:110, cursor: onClick ? 'pointer' : 'default',
+        background: active ? color + '10' : 'var(--bg-card)' }}>
+      <div style={{ fontSize:11, color:'var(--label-secondary)', marginBottom:4 }}>{icon} {label}</div>
+      <div style={{ fontSize:24, fontWeight:700, color }}>{value}</div>
     </div>
   )
 }
 
+const FILTERS = [
+  { key:'all',             label:'Tất cả' },
+  { key:'online',          label:'Online' },
+  { key:'offline',         label:'Offline' },
+  { key:'gps_lost_active', label:'Mất GPS (vẫn HĐ)' },
+  { key:'stopped',         label:'Xe dừng HĐ' },
+  { key:'cam_issue',       label:'Camera lỗi' },
+]
+
 export default function PageGPS() {
-  const [status, setStatus]       = useState(null)
-  const [loading, setLoading]     = useState(true)
-  const [syncing, setSyncing]     = useState(false)
-  const [search, setSearch]       = useState('')
-  const [filterMode, setFilterMode] = useState('all') // all | online | offline | inactive
-  const [token, setToken]         = useState('')
+  const [status, setStatus]         = useState(null)
+  const [loading, setLoading]       = useState(true)
+  const [syncing, setSyncing]       = useState(false)
+  const [search, setSearch]         = useState('')
+  const [filterMode, setFilterMode] = useState('all')
   const [tokenInput, setTokenInput] = useState('')
-  const [showTokenPanel, setShowTokenPanel] = useState(false)
-  const [toast, setToast]         = useState(null)
-  const [cameraData, setCameraData] = useState({}) // { vehicleId: {loading, data} }
+  const [showToken, setShowToken]   = useState(false)
+  const [toast, setToast]           = useState(null)
 
-  const showToast = (msg, err) => {
-    setToast({ msg, err })
-    setTimeout(() => setToast(null), 3000)
-  }
+  const showToast = (msg, err) => { setToast({ msg, err }); setTimeout(() => setToast(null), 3500) }
 
-  // Load status
   const loadStatus = async () => {
+    setLoading(true)
     try {
       const r = await authFetch('/api/gps/status')
       const d = await r.json()
       setStatus(d)
-    } catch(e) { showToast('Lỗi tải dữ liệu GPS', true) }
+    } catch(e) { showToast('Lỗi tải dữ liệu: ' + e.message, true) }
     setLoading(false)
   }
 
   useEffect(() => { loadStatus() }, [])
 
-  // Sync thủ công
   const handleSync = async () => {
     setSyncing(true)
     try {
-      const r = await authFetch('/api/gps/sync', { method: 'POST' })
+      const r = await authFetch('/api/gps/sync', { method:'POST' })
       const d = await r.json()
       if (d.error) { showToast(d.error, true); setSyncing(false); return }
       showToast(`✓ Sync xong: ${d.online} online / ${d.offline} offline`)
       await loadStatus()
-    } catch(e) { showToast('Lỗi sync: ' + e.message, true) }
+    } catch(e) { showToast('Lỗi: ' + e.message, true) }
     setSyncing(false)
   }
 
-  // Lưu token
   const handleSaveToken = async () => {
     if (!tokenInput.trim()) return
     try {
-      const r = await authFetch('/api/gps/set-token', {
-        method: 'POST',
-        body: JSON.stringify({ token: tokenInput.trim() })
-      })
+      const r = await authFetch('/api/gps/set-token', { method:'POST', body: JSON.stringify({ token: tokenInput.trim() }) })
       const d = await r.json()
-      if (d.success) { showToast('✓ Đã lưu token'); setShowTokenPanel(false); setTokenInput('') }
+      if (d.success) { showToast('✓ Đã lưu token'); setShowToken(false); setTokenInput('') }
       else showToast(d.error, true)
     } catch(e) { showToast(e.message, true) }
-  }
-
-  // Load camera status cho 1 xe
-  const loadCamera = async (vehicleId, plate) => {
-    setCameraData(prev => ({ ...prev, [vehicleId]: { loading: true } }))
-    try {
-      const r = await authFetch(`/api/gps/camera/${vehicleId}?plate=${encodeURIComponent(plate)}`)
-      const d = await r.json()
-      setCameraData(prev => ({ ...prev, [vehicleId]: { loading: false, data: d } }))
-    } catch(e) {
-      setCameraData(prev => ({ ...prev, [vehicleId]: { loading: false, error: e.message } }))
-    }
   }
 
   // Filter + search
   const filtered = useMemo(() => {
     if (!status?.vehicles) return []
     let r = status.vehicles
-    if (filterMode === 'online')   r = r.filter(v => v.isOnline)
-    if (filterMode === 'offline')  r = r.filter(v => !v.isOnline)
-    if (filterMode === 'inactive') {
-      const cutoff = new Date(Date.now() - 24 * 3600 * 1000)
-      r = r.filter(v => !v.isOnline && (!v.lastSeen || new Date(v.lastSeen) < cutoff))
-    }
+    if (filterMode === 'online')          r = r.filter(v => v.isOnline)
+    if (filterMode === 'offline')         r = r.filter(v => !v.isOnline)
+    if (filterMode === 'gps_lost_active') r = r.filter(v => v.gpsStatus?.code === 'gps_lost_active')
+    if (filterMode === 'stopped')         r = r.filter(v => v.gpsStatus?.code === 'stopped')
+    if (filterMode === 'cam_issue')       r = r.filter(v => ['partial','lost_all'].includes(v.camStatus?.code))
     if (search) {
       const q = search.toLowerCase()
-      r = r.filter(v => (v.plateRaw || '').toLowerCase().includes(q) || (v.plateNorm || '').toLowerCase().includes(q))
+      r = r.filter(v => (v.plateRaw||'').toLowerCase().includes(q))
     }
-    return r.sort((a, b) => {
-      // Online xuống cuối, offline lên trước
-      if (a.isOnline !== b.isOnline) return a.isOnline ? 1 : -1
-      // Trong offline: xe mất tín hiệu lâu nhất lên đầu
-      if (!a.isOnline && !b.isOnline) {
-        const ta = a.lastSeen ? new Date(a.lastSeen).getTime() : 0
-        const tb = b.lastSeen ? new Date(b.lastSeen).getTime() : 0
-        return ta - tb // nhỏ hơn = lâu hơn = lên đầu
-      }
-      return 0
+    // Sort: stopped → gps_lost → offline → online
+    const order = { stopped:0, gps_lost_active:1, no_signal:2, normal:3 }
+    return r.sort((a,b) => {
+      const oa = order[a.gpsStatus?.code] ?? 4
+      const ob = order[b.gpsStatus?.code] ?? 4
+      return oa - ob
     })
   }, [status, filterMode, search])
 
-  const fmtTime = iso => {
+  const fmtDate = iso => {
     if (!iso) return '—'
-    const d = new Date(iso)
-    return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')} ${d.getDate()}/${d.getMonth()+1}`
+    return iso.split('T')[0].split('-').reverse().join('/')
   }
-
-  const fmtKm = km => km ? `${Number(km).toFixed(1)} km` : '0 km'
+  const fmtKm = km => km ? `${Number(km).toFixed(1)} km` : '—'
 
   const s = status?.summary || {}
 
   return (
-    <div style={{ padding: '20px 24px', fontFamily: '-apple-system,sans-serif', maxWidth: 1200 }}>
+    <div style={{ padding:'20px 24px', fontFamily:'-apple-system,sans-serif', maxWidth:1300 }}>
 
       {/* Toast */}
       {toast && (
-        <div style={{ position:'fixed', top:20, right:20, zIndex:9999, padding:'10px 16px', borderRadius:10,
-          background: toast.err ? '#FF3B30' : '#34C759', color:'#fff', fontSize:13, fontWeight:500,
-          boxShadow:'0 4px 20px rgba(0,0,0,.2)' }}>
+        <div style={{ position:'fixed', top:20, right:20, zIndex:9999,
+          padding:'10px 18px', borderRadius:10, fontSize:13, fontWeight:500, color:'#fff',
+          background: toast.err ? '#FF3B30' : '#34C759', boxShadow:'0 4px 20px rgba(0,0,0,.2)' }}>
           {toast.msg}
         </div>
       )}
 
       {/* Header */}
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20, flexWrap:'wrap', gap:10 }}>
         <div>
-          <h2 style={{ margin:0, fontSize:20, fontWeight:700 }}>📡 Giám sát GPS</h2>
+          <h2 style={{ margin:0, fontSize:20, fontWeight:700 }}>📡 Giám sát GPS & Camera</h2>
           <div style={{ fontSize:12, color:'var(--label-secondary)', marginTop:3 }}>
-            Sync lần cuối: {status?.lastSync ? fmtTime(status.lastSync) : 'Chưa có dữ liệu'}
+            Sync lần cuối: {status?.lastSync ? new Date(status.lastSync).toLocaleString('vi-VN') : 'Chưa có dữ liệu'}
           </div>
         </div>
         <div style={{ display:'flex', gap:8 }}>
-          <button onClick={() => setShowTokenPanel(true)}
+          <button onClick={() => setShowToken(true)}
             style={{ padding:'7px 14px', borderRadius:8, border:'1px solid var(--sep)', background:'var(--bg-card)', cursor:'pointer', fontSize:12, fontFamily:'inherit' }}>
             🔑 Cập nhật Token
           </button>
@@ -178,15 +159,17 @@ export default function PageGPS() {
       {/* KPI Cards */}
       {!loading && (
         <div style={{ display:'flex', gap:10, marginBottom:20, flexWrap:'wrap' }}>
-          <KpiCard label="Tổng xe" value={s.total || 0} color="var(--label-primary)" icon="🚛" />
-          <KpiCard label="Online" value={s.online || 0} color="#34C759" icon="🟢" />
-          <KpiCard label="Offline" value={s.offline || 0} color="#FF3B30" icon="🔴" />
-          <KpiCard label="Không HĐ (km=0)" value={s.inactive || 0} color="#FF9500" icon="⚠️" />
+          <KpiCard label="Tổng xe"        value={s.total    ||0} color="var(--label-primary)" icon="🚛" onClick={() => setFilterMode('all')} active={filterMode==='all'} />
+          <KpiCard label="Online"          value={s.online   ||0} color="#34C759" icon="🟢" onClick={() => setFilterMode('online')} active={filterMode==='online'} />
+          <KpiCard label="Offline"         value={s.offline  ||0} color="#8E8E93" icon="⚪" onClick={() => setFilterMode('offline')} active={filterMode==='offline'} />
+          <KpiCard label="Mất GPS (vẫn HĐ)" value={s.gpsLost ||0} color="#FF9500" icon="📡" onClick={() => setFilterMode('gps_lost_active')} active={filterMode==='gps_lost_active'} />
+          <KpiCard label="Xe dừng HĐ"     value={s.stopped  ||0} color="#FF3B30" icon="🔴" onClick={() => setFilterMode('stopped')} active={filterMode==='stopped'} />
+          <KpiCard label="Camera lỗi"     value={(s.camPartial||0)+(s.camLostAll||0)} color="#FF6B00" icon="📵" onClick={() => setFilterMode('cam_issue')} active={filterMode==='cam_issue'} />
         </div>
       )}
 
-      {/* Filter bar */}
-      <div style={{ display:'flex', gap:8, marginBottom:16, alignItems:'center', flexWrap:'wrap' }}>
+      {/* Search + filter bar */}
+      <div style={{ display:'flex', gap:8, marginBottom:14, alignItems:'center', flexWrap:'wrap' }}>
         <div style={{ position:'relative' }}>
           <input value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Tìm biển số..."
@@ -196,18 +179,7 @@ export default function PageGPS() {
             style={{ position:'absolute', right:6, top:'50%', transform:'translateY(-50%)',
               background:'none', border:'none', cursor:'pointer', color:'var(--label-tertiary)', fontSize:13 }}>✕</button>}
         </div>
-        {['all','online','offline','inactive'].map(m => (
-          <button key={m} onClick={() => setFilterMode(m)}
-            style={{ padding:'5px 12px', borderRadius:20, border: filterMode===m ? 'none' : '1px solid var(--sep)',
-              background: filterMode===m ? 'var(--brand)' : 'var(--bg-card)',
-              color: filterMode===m ? '#fff' : 'var(--label-primary)',
-              cursor:'pointer', fontSize:12, fontFamily:'inherit', fontWeight: filterMode===m ? 600 : 400 }}>
-            {{ all:'Tất cả', online:'Online', offline:'Offline', inactive:'Không HĐ' }[m]}
-          </button>
-        ))}
-        <span style={{ fontSize:12, color:'var(--label-secondary)', marginLeft:'auto' }}>
-          {filtered.length} xe
-        </span>
+        <span style={{ fontSize:12, color:'var(--label-secondary)', marginLeft:'auto' }}>{filtered.length} xe</span>
       </div>
 
       {/* Table */}
@@ -217,16 +189,14 @@ export default function PageGPS() {
         <div style={{ textAlign:'center', padding:60 }}>
           <div style={{ fontSize:40 }}>📡</div>
           <div style={{ fontSize:15, fontWeight:600, marginTop:12 }}>Chưa có dữ liệu GPS</div>
-          <div style={{ fontSize:13, color:'var(--label-secondary)', marginTop:6 }}>
-            Cập nhật token Binhanh rồi nhấn Sync ngay
-          </div>
+          <div style={{ fontSize:13, color:'var(--label-secondary)', marginTop:6 }}>Cập nhật token rồi nhấn Sync ngay</div>
         </div>
       ) : (
-        <div style={{ background:'var(--bg-card)', borderRadius:12, border:'0.5px solid var(--sep)', overflow:'hidden' }}>
+        <div style={{ background:'var(--bg-card)', borderRadius:12, border:'0.5px solid var(--sep)', overflow:'auto' }}>
           <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
             <thead>
               <tr style={{ background:'var(--bg-secondary)' }}>
-                {['Biển số','Trạng thái','Km hôm nay','Tín hiệu cuối','Tốc độ','Camera',''].map(h => (
+                {['Biển số','Kết nối','GPS Time','Km hôm nay','Trạng thái GPS','Camera'].map(h => (
                   <th key={h} style={{ padding:'9px 12px', textAlign:'left', fontSize:11,
                     fontWeight:600, color:'var(--label-secondary)', borderBottom:'1px solid var(--sep)',
                     whiteSpace:'nowrap' }}>{h}</th>
@@ -235,48 +205,38 @@ export default function PageGPS() {
             </thead>
             <tbody>
               {filtered.map((v, i) => {
-                const cam = cameraData[v.vehicleId]
-                // Inactive = offline VÀ mất tín hiệu > 24h
-              const now = new Date()
-              const lastSeenDate = v.lastSeen ? new Date(v.lastSeen) : null
-              const hoursSinceLastSeen = lastSeenDate ? (now - lastSeenDate) / 3600000 : 9999
-              const isInactive = !v.isOnline && hoursSinceLastSeen > 24
+                const gs = v.gpsStatus || {}
+                const cs = v.camStatus || {}
+                const rowBg = gs.code === 'stopped' ? 'rgba(255,59,48,.04)'
+                            : gs.code === 'gps_lost_active' ? 'rgba(255,149,0,.04)' : 'transparent'
                 return (
-                  <tr key={v.plateRaw || i}
-                    style={{ borderBottom:'0.5px solid var(--sep)',
-                      background: isInactive ? 'rgba(255,149,0,.04)' : 'transparent' }}>
-                    <td style={{ padding:'9px 12px', fontWeight:600, color:'var(--label-primary)' }}>
-                      {v.plateRaw?.replace(/_[A-Z]$/, '') || '—'}
-                      {isInactive && <span style={{ marginLeft:6, fontSize:10, color:'#FF9500', fontWeight:400 }}>
-                        ⚠ Mất tín hiệu {hoursSinceLastSeen < 9999 ? `${Math.round(hoursSinceLastSeen)}h` : ''}
-                      </span>}
+                  <tr key={v.plateRaw || i} style={{ borderBottom:'0.5px solid var(--sep)', background: rowBg }}>
+                    <td style={{ padding:'9px 12px', fontWeight:600 }}>
+                      {(v.plateRaw||'').replace(/_[A-Z]$/,'')}
                     </td>
-                    <td style={{ padding:'9px 12px' }}><Badge online={v.isOnline} /></td>
+                    <td style={{ padding:'9px 12px' }}>
+                      <StatusBadge
+                        label={v.isOnline ? 'Online' : 'Offline'}
+                        color={v.isOnline ? '#34C759' : '#8E8E93'}
+                      />
+                    </td>
+                    <td style={{ padding:'9px 12px', color:'var(--label-secondary)', fontSize:11 }}>
+                      {fmtDate(v.gpsTime)}
+                      {gs.daysSince > 0 && <span style={{ marginLeft:5, color: gs.color, fontSize:10 }}>({gs.daysSince} ngày trước)</span>}
+                    </td>
                     <td style={{ padding:'9px 12px', color: v.totalKm > 0 ? 'var(--label-primary)' : 'var(--label-tertiary)' }}>
                       {fmtKm(v.totalKm)}
                     </td>
-                    <td style={{ padding:'9px 12px', color:'var(--label-secondary)' }}>{fmtTime(v.lastSeen)}</td>
-                    <td style={{ padding:'9px 12px' }}>{v.speed ? `${v.speed} km/h` : '—'}</td>
                     <td style={{ padding:'9px 12px' }}>
-                      {cam?.loading ? (
-                        <span style={{ fontSize:11, color:'var(--label-tertiary)' }}>⏳</span>
-                      ) : cam?.data ? (
-                        <span style={{ fontSize:11, color: cam.data.hasSignal ? '#34C759' : '#FF3B30', fontWeight:600 }}>
-                          {cam.data.hasSignal ? `🎥 ${cam.data.channels?.length || 0} kênh` : '📵 Mất tín hiệu'}
-                        </span>
-                      ) : (
-                        <span style={{ fontSize:11, color:'var(--label-tertiary)' }}>—</span>
-                      )}
+                      {gs.code ? <StatusBadge label={gs.label} color={gs.color} /> : '—'}
+                      {gs.km15 !== undefined && <span style={{ marginLeft:6, fontSize:10, color:'var(--label-tertiary)' }}>km15d: {gs.km15.toFixed(0)}</span>}
+                      {gs.km30 !== undefined && <span style={{ marginLeft:6, fontSize:10, color:'var(--label-tertiary)' }}>km30d: {gs.km30.toFixed(0)}</span>}
                     </td>
                     <td style={{ padding:'9px 12px' }}>
-                      {v.vehicleId && !cam && (
-                        <button onClick={() => loadCamera(v.vehicleId, v.plateRaw)}
-                          style={{ padding:'3px 8px', borderRadius:5, border:'1px solid var(--sep)',
-                            background:'none', cursor:'pointer', fontSize:11, fontFamily:'inherit',
-                            color:'var(--label-secondary)' }}>
-                          Kiểm tra cam
-                        </button>
-                      )}
+                      {cs.code && cs.code !== 'no_cam'
+                        ? <StatusBadge label={cs.label} color={cs.color} />
+                        : <span style={{ color:'var(--label-tertiary)', fontSize:11 }}>—</span>
+                      }
                     </td>
                   </tr>
                 )
@@ -287,38 +247,35 @@ export default function PageGPS() {
       )}
 
       {/* Token Modal */}
-      {showTokenPanel && (
+      {showToken && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.45)', zIndex:500,
           display:'flex', alignItems:'center', justifyContent:'center' }}
-          onClick={() => setShowTokenPanel(false)}>
+          onClick={() => setShowToken(false)}>
           <div style={{ background:'var(--bg-card)', borderRadius:14, width:520, maxWidth:'95vw',
             boxShadow:'0 8px 40px rgba(0,0,0,.2)', overflow:'hidden' }}
             onClick={e => e.stopPropagation()}>
             <div style={{ padding:'16px 20px', borderBottom:'1px solid var(--sep)',
               display:'flex', justifyContent:'space-between', alignItems:'center' }}>
               <span style={{ fontWeight:600, fontSize:14 }}>🔑 Cập nhật Token Binhanh</span>
-              <button onClick={() => setShowTokenPanel(false)}
+              <button onClick={() => setShowToken(false)}
                 style={{ border:'none', background:'none', cursor:'pointer', fontSize:18, color:'var(--label-secondary)' }}>✕</button>
             </div>
             <div style={{ padding:'20px' }}>
-              <div style={{ fontSize:12, color:'var(--label-secondary)', marginBottom:8, lineHeight:1.6 }}>
-                Mở <strong>gps3.binhanh.vn</strong> → F12 → Network → click bất kỳ request → copy giá trị <strong>Authorization: Bearer ...</strong>
+              <div style={{ fontSize:12, color:'var(--label-secondary)', marginBottom:10, lineHeight:1.7 }}>
+                Mở <strong>gps3.binhanh.vn</strong> → F12 → Network → click bất kỳ request → copy giá trị <strong>Authorization: Bearer ...</strong> (bỏ chữ "Bearer ")
               </div>
-              <textarea
-                value={tokenInput}
-                onChange={e => setTokenInput(e.target.value)}
+              <textarea value={tokenInput} onChange={e => setTokenInput(e.target.value)}
                 placeholder="Paste JWT token vào đây (bắt đầu bằng eyJ...)"
                 rows={5}
                 style={{ width:'100%', boxSizing:'border-box', padding:'8px 12px', borderRadius:8,
                   border:'1px solid var(--sep)', fontSize:11, fontFamily:'monospace',
-                  outline:'none', resize:'vertical', background:'var(--fill-tertiary)' }}
-              />
+                  outline:'none', resize:'vertical', background:'var(--fill-tertiary)' }} />
               <div style={{ fontSize:11, color:'var(--label-tertiary)', marginTop:6 }}>
                 Token thường hết hạn sau 24h–7 ngày. Khi sync báo lỗi "Token hết hạn" thì cập nhật lại.
               </div>
             </div>
             <div style={{ padding:'12px 20px', borderTop:'1px solid var(--sep)', display:'flex', gap:8, justifyContent:'flex-end' }}>
-              <button onClick={() => setShowTokenPanel(false)}
+              <button onClick={() => setShowToken(false)}
                 style={{ padding:'7px 16px', borderRadius:7, border:'0.5px solid var(--sep)',
                   background:'var(--fill-tertiary)', cursor:'pointer', fontSize:12, fontFamily:'inherit' }}>Huỷ</button>
               <button onClick={handleSaveToken} disabled={!tokenInput.trim()}
