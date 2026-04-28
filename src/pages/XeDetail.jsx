@@ -1,3 +1,6 @@
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 📁 FRONTEND — quanlyxever3/src/pages/XeDetail.jsx
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 import { useState, useEffect, useCallback } from 'react'
 import { getXeDetail, getImagesFromFolder } from '../api'
 import { fmtCur } from '../hooks/useCharts'
@@ -144,11 +147,13 @@ export default function XeDetail() {
   const isMobile = useIsMobile()
 
   useEffect(() => {
-    // 1. Try sessionStorage first (instant — set by PageXeTai when clicking biển số)
+    // 1. Try localStorage first (instant — set by PageXeTai when clicking biển số)
+    // localStorage is shared across tabs, unlike sessionStorage
     try {
-      const raw = sessionStorage.getItem('xe_detail_data')
+      const raw = localStorage.getItem('xe_detail_data')
       if (raw) {
         const d = JSON.parse(raw)
+        localStorage.removeItem('xe_detail_data') // clear sau khi đọc
         setXe(d)
         setLoading(false)
         document.title = `${d.bienSo} — Chi tiết xe`
