@@ -1,3 +1,6 @@
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 📁 FRONTEND — quanlyxever3/src/pages/PageXeTai.jsx
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 import useIsMobile from '../hooks/useIsMobile'
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
@@ -413,7 +416,7 @@ export default function PageXeTai({ data, rowsLoaded }) {
                           <td key="bs" style={{ padding:'8px 10px', textAlign:'center' }}>
                             <span
                           style={{ color:'var(--brand)', fontWeight:700, cursor:'pointer', borderBottom:'1px dashed var(--brand)' }}
-                          onClick={() => { sessionStorage.setItem('xe_detail_data', JSON.stringify(r)); window.open('/xe-detail', '_blank') }}
+                          onClick={() => { localStorage.setItem('xe_detail_data', JSON.stringify(r)); window.open('/xe-detail', '_blank') }}
                           title="Click để xem chi tiết"
                         >{r.bienSo}</span>
                           </td>
