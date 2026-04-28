@@ -168,7 +168,15 @@ export default function PageXeTai({ data, rowsLoaded }) {
         })
       }
     }
-    return r
+    // Dedup: loại bỏ hàng có bienSo trùng (giữ hàng đầu tiên)
+    const seen = new Set()
+    const deduped = r.filter(row => {
+      const key = (row.bienSo || '').trim().toUpperCase() || row._id
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+    return deduped
   }, [rows, search, filterMien, filterLT, filterLoaiHinh, colFilters, sortCol, sortDir, visibleCols])
 
   const totalPg = Math.ceil(filtered.length / PAGE_SIZE)
@@ -544,7 +552,7 @@ export default function PageXeTai({ data, rowsLoaded }) {
                 {pgRows.map((r, idx) => {
                   const globalIdx = pg * PAGE_SIZE + idx
                   return (
-                    <tr key={r.maTaiSan || idx} style={{ borderBottom:'1px solid var(--border)' }}>
+                    <tr key={r._id || r.maTaiSan || idx} style={{ borderBottom:'1px solid var(--border)' }}>
                       {visibleCols.map(col => {
                         if (col.k === 'stt') return <td key="stt" style={{ padding:'8px 10px', color:'var(--ink3)', fontSize:11, textAlign:'center' }}>{globalIdx+1}</td>
                         if (col.k === 'bienSo') return (
