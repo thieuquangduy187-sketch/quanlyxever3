@@ -129,7 +129,7 @@ export default function PageXeTai({ data, rowsLoaded }) {
   ttArr.sort((a,b) => tto.indexOf(a.name) - tto.indexOf(b.name))
 
   const dynamicCols = useMemo(() => deriveColsFromData(rows), [rows])
-  const visibleCols = dynamicCols.filter(c => visibleKeys.includes(c.k))
+  const visibleCols = useMemo(() => dynamicCols.filter(c => visibleKeys.includes(c.k)), [dynamicCols, visibleKeys])
 
   const filtered = useMemo(() => {
     let r = rows.filter(row => {
@@ -478,7 +478,9 @@ export default function PageXeTai({ data, rowsLoaded }) {
                         </button>
                         {/* Dropdown panel */}
                         {isOpen && (
-                          <div style={{
+                          <div
+                            onClick={e => e.stopPropagation()}
+                            style={{
                             position:'absolute', top:'100%', left:0, zIndex:200,
                             background:'var(--bg-card)', border:'1px solid var(--sep)',
                             borderRadius:7, boxShadow:'0 4px 20px rgba(0,0,0,.12)',
