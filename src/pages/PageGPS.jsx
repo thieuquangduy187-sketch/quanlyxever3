@@ -110,15 +110,23 @@ export default function PageGPS() {
     let r = status.vehicles
     if (filterMode === 'online')   r = r.filter(v => v.isOnline)
     if (filterMode === 'offline')  r = r.filter(v => !v.isOnline)
-    if (filterMode === 'inactive') r = r.filter(v => !v.isOnline && v.totalKm === 0)
+    if (filterMode === 'inactive') {
+      const cutoff = new Date(Date.now() - 24 * 3600 * 1000)
+      r = r.filter(v => !v.isOnline && (!v.lastSeen || new Date(v.lastSeen) < cutoff))
+    }
     if (search) {
       const q = search.toLowerCase()
       r = r.filter(v => (v.plateRaw || '').toLowerCase().includes(q) || (v.plateNorm || '').toLowerCase().includes(q))
     }
     return r.sort((a, b) => {
-      // Offline lên trước, trong đó inactive (km=0) lên đầu
+      // Online xuống cuối, offline lên trước
       if (a.isOnline !== b.isOnline) return a.isOnline ? 1 : -1
-      if (!a.isOnline && !b.isOnline) return (a.totalKm || 0) - (b.totalKm || 0)
+      // Trong offline: xe mất tín hiệu lâu nhất lên đầu
+      if (!a.isOnline && !b.isOnline) {
+        const ta = a.lastSeen ? new Date(a.lastSeen).getTime() : 0
+        const tb = b.lastSeen ? new Date(b.lastSeen).getTime() : 0
+        return ta - tb // nhỏ hơn = lâu hơn = lên đầu
+      }
       return 0
     })
   }, [status, filterMode, search])
@@ -228,14 +236,20 @@ export default function PageGPS() {
             <tbody>
               {filtered.map((v, i) => {
                 const cam = cameraData[v.vehicleId]
-                const isInactive = !v.isOnline && (v.totalKm === 0 || !v.totalKm)
+                // Inactive = offline VÀ mất tín hiệu > 24h
+              const now = new Date()
+              const lastSeenDate = v.lastSeen ? new Date(v.lastSeen) : null
+              const hoursSinceLastSeen = lastSeenDate ? (now - lastSeenDate) / 3600000 : 9999
+              const isInactive = !v.isOnline && hoursSinceLastSeen > 24
                 return (
                   <tr key={v.plateRaw || i}
                     style={{ borderBottom:'0.5px solid var(--sep)',
                       background: isInactive ? 'rgba(255,149,0,.04)' : 'transparent' }}>
                     <td style={{ padding:'9px 12px', fontWeight:600, color:'var(--label-primary)' }}>
                       {v.plateRaw?.replace(/_[A-Z]$/, '') || '—'}
-                      {isInactive && <span style={{ marginLeft:6, fontSize:10, color:'#FF9500', fontWeight:400 }}>⚠ Không HĐ</span>}
+                      {isInactive && <span style={{ marginLeft:6, fontSize:10, color:'#FF9500', fontWeight:400 }}>
+                        ⚠ Mất tín hiệu {hoursSinceLastSeen < 9999 ? `${Math.round(hoursSinceLastSeen)}h` : ''}
+                      </span>}
                     </td>
                     <td style={{ padding:'9px 12px' }}><Badge online={v.isOnline} /></td>
                     <td style={{ padding:'9px 12px', color: v.totalKm > 0 ? 'var(--label-primary)' : 'var(--label-tertiary)' }}>
