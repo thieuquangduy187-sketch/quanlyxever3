@@ -4,6 +4,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { getXeDetail, getImagesFromFolder } from '../api'
 import { fmtCur } from '../hooks/useCharts'
+import useIsMobile from '../hooks/useIsMobile'
 
 // ── LIGHTBOX ──────────────────────────────────────────────────────────────────
 function Lightbox({ imgs, idx, onClose }) {
@@ -147,23 +148,31 @@ export default function XeDetail() {
   const isMobile = useIsMobile()
 
   useEffect(() => {
-    // 1. Try localStorage first (instant — set by PageXeTai when clicking biển số)
-    // localStorage is shared across tabs, unlike sessionStorage
+    const params = new URLSearchParams(window.location.search)
+    const id = params.get('id')
+
+    // 1. Thử localStorage trước (data được set bởi PageXeTai khi click biển số)
+    // KHÔNG xóa ngay — React StrictMode chạy useEffect 2 lần, lần 2 cần fallback URL
+    // Chỉ dùng localStorage nếu trùng với id trên URL (tránh load nhầm xe cũ)
     try {
       const raw = localStorage.getItem('xe_detail_data')
       if (raw) {
         const d = JSON.parse(raw)
-        localStorage.removeItem('xe_detail_data') // clear sau khi đọc
-        setXe(d)
-        setLoading(false)
-        document.title = `${d.bienSo} — Chi tiết xe`
-        return
+        const storedId = String(d.maTaiSan || d.bienSo || '')
+        const urlId    = String(id || '')
+        // Chỉ dùng nếu id khớp hoặc không có id trên URL
+        if (!urlId || storedId === urlId || encodeURIComponent(storedId) === urlId) {
+          // Clear sau 3s để không ảnh hưởng lần mở tiếp theo
+          setTimeout(() => localStorage.removeItem('xe_detail_data'), 3000)
+          setXe(d)
+          setLoading(false)
+          document.title = `${d.bienSo} — Chi tiết xe`
+          return
+        }
       }
     } catch(e) {}
 
-    // 2. Fallback: get maTaiSan from URL and fetch from API
-    const params = new URLSearchParams(window.location.search)
-    const id = params.get('id')
+    // 2. Fallback: fetch từ API bằng ?id= trên URL
     if (!id) {
       setError('Không có mã tài sản. Vui lòng mở từ bảng danh sách xe.')
       setLoading(false)
