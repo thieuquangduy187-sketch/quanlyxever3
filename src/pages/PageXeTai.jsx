@@ -1,6 +1,9 @@
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 📁 FRONTEND — quanlyxever3/src/pages/PageXeTai.jsx
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 📁 FRONTEND — quanlyxever3/src/pages/PageXeTai.jsx
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 import useIsMobile from '../hooks/useIsMobile'
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
@@ -63,6 +66,7 @@ function deriveColsFromData(rows) {
 }
 
 const DEFAULT_VISIBLE = ['stt','bienSo','tenTaiSan','loaiThung','loaiXe','taiTrong','mien','tinhMoi','cuaHang','namSX','gtcl','phapNhan']
+const NO_COL_FILTER = new Set(['stt','gtcl','nguyenGia','hasTaiNan','hasDieuDong'])
 
 function KpiCard({ icon, label, value, sub, color }) {
   const accents = { or:'#FF9500', te:'#5AC8FA', rd:'#FF3B30', am:'#FFCC00' }
@@ -93,6 +97,7 @@ export default function PageXeTai({ data, rowsLoaded }) {
   const [filterMien, setFilterMien] = useState('')
   const [filterLT,       setFilterLT]       = useState('')
   const [filterLoaiHinh, setFilterLoaiHinh] = useState('')
+  const [colFilters, setColFilters] = useState({}) // { colKey: 'value' } — filter nhanh theo cột
   const [sortCol, setSortCol] = useState(-1)
   const [sortDir, setSortDir] = useState(1)
   const [pg, setPg] = useState(0)
@@ -127,7 +132,12 @@ export default function PageXeTai({ data, rowsLoaded }) {
         const lh = String(row.loaiHinh||'')
         return filterLoaiHinh === 'tonkho' ? lh === 'Tổng kho' : lh !== 'Tổng kho'
       })()
-      return ms && mm && ml && mh
+      // Per-column filter
+      const mc = Object.entries(colFilters).every(([k, v]) => {
+        if (!v) return true
+        return String(row[k] || '').trim() === String(v).trim()
+      })
+      return ms && mm && ml && mh && mc
     })
     if (sortCol >= 0) {
       const col = visibleCols[sortCol]
@@ -140,7 +150,7 @@ export default function PageXeTai({ data, rowsLoaded }) {
       }
     }
     return r
-  }, [rows, search, filterMien, filterLT, filterLoaiHinh, sortCol, sortDir, visibleCols])
+  }, [rows, search, filterMien, filterLT, filterLoaiHinh, colFilters, sortCol, sortDir, visibleCols])
 
   const totalPg = Math.ceil(filtered.length / PAGE_SIZE)
   const pgRows = filtered.slice(pg * PAGE_SIZE, (pg+1) * PAGE_SIZE)
@@ -154,10 +164,14 @@ export default function PageXeTai({ data, rowsLoaded }) {
   const handleEdit = async (rowIdx, field, newVal) => {
     const row = filtered[rowIdx]
     if (!row || String(row[field]) === String(newVal)) return
+    const oldVal = row[field] || ''
     row[field] = newVal
     try {
       showToast('💾 Đang lưu...')
-      await updateXeRow(row.maTaiSan, field, newVal)
+      // Truyền oldValue để backend ghi cây điều động khi đổi cuaHang
+      const res = await updateXeRow(row.maTaiSan, field, newVal, field === 'cuaHang' ? oldVal : undefined)
+      // Cập nhật cayDieuDong ngay trên row local (không cần reload)
+      if (res?.cayDieuDong) row.cayDieuDong = res.cayDieuDong
       showToast('✓ Đã lưu')
     } catch(e) {
       showToast('✗ Lỗi: ' + e.message, true)
@@ -403,6 +417,34 @@ export default function PageXeTai({ data, rowsLoaded }) {
                       </span>}
                     </th>
                   ))}
+                </tr>
+                {/* ── Filter row ── */}
+                <tr>
+                  {visibleCols.map(col => {
+                    if (NO_COL_FILTER.has(col.k)) return <th key={col.k + '_f'} style={{ padding:'4px 6px', background:'var(--bg-secondary)', borderBottom:'2px solid var(--sep)' }} />
+                    // Tính unique values từ rows (không phải filtered — để luôn thấy hết options)
+                    const opts = [...new Set(rows.map(r => String(r[col.k] || '')).filter(Boolean))].sort((a,b) => a.localeCompare(b, 'vi'))
+                    const active = colFilters[col.k] || ''
+                    return (
+                      <th key={col.k + '_f'} style={{ padding:'4px 6px', background:'var(--bg-secondary)', borderBottom:'2px solid var(--sep)' }}>
+                        {opts.length > 0 && (
+                          <select
+                            value={active}
+                            onChange={e => { setColFilters(prev => ({ ...prev, [col.k]: e.target.value })); setPg(0) }}
+                            style={{
+                              width:'100%', fontSize:10, padding:'2px 4px', border: active ? '1.5px solid var(--brand)' : '1px solid var(--sep)',
+                              borderRadius:4, background: active ? 'rgba(230,50,0,0.06)' : 'var(--bg-card)',
+                              color: active ? 'var(--brand)' : 'var(--label-secondary)', cursor:'pointer', outline:'none',
+                              fontWeight: active ? 700 : 400
+                            }}
+                          >
+                            <option value=''>--</option>
+                            {opts.map(o => <option key={o} value={o}>{o}</option>)}
+                          </select>
+                        )}
+                      </th>
+                    )
+                  })}
                 </tr>
               </thead>
               <tbody>
