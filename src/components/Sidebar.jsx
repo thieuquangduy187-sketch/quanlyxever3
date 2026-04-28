@@ -1,3 +1,6 @@
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 📁 FRONTEND — quanlyxever3/src/components/Sidebar.jsx
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 import { useState } from 'react'
 
 const LOGO_URL = 'https://lh3.googleusercontent.com/d/1gnI72gZVm9cegVnbAWjRInk3_3Ouigqm'
@@ -8,6 +11,7 @@ const NAV = [
   { id: 'oto_con',     sf: '🚗', label: 'Ô tô con',        section: null, badgeKey: 'otocon', rowKey: 'oto_con' },
   { id: 'nhat_trinh',       sf: '📋', label: 'Nhật trình tháng', section: 'HỆ THỐNG' },
   { id: 'gia_dau',              sf: '🛢', label: 'Giá dầu diesel',       section: null },
+  { id: 'gps',                  sf: '📡', label: 'Giám sát GPS',           section: null },
   { id: 'bao_cao_nhat_trinh',   sf: '📊', label: 'Báo cáo nhật trình',    section: null },
 ]
 
