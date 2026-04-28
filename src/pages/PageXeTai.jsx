@@ -40,6 +40,7 @@ const ALL_COLS = [
   { k: 'ngayDuaVaoSD',l: 'Ngày đưa vào SD',      sort: true },
   { k: 'hasTaiNan',   l: 'Có tai nạn',           sort: true },
   { k: 'hasDieuDong', l: 'Đã điều động',         sort: true },
+  { k: 'cayDieuDong', l: 'Cây điều động',        sort: false },
 ]
 
 // Derive dynamic columns from actual API data keys
@@ -51,7 +52,7 @@ function deriveColsFromData(rows) {
   // Map to column definitions - use ALL_COLS labels if available, else auto-label
   const labelMap = {}
   ALL_COLS.forEach(c => { labelMap[c.k] = c })
-  const skip = new Set(['_id','__v','hinhAnh','lichSuTaiNan','cayDieuDong'])
+  const skip = new Set(['_id','__v','hinhAnh','lichSuTaiNan','cayDieuDong','cao','dai','rong','loaiHinh'])
   const derived = []
   // Always put STT first
   derived.push({ k:'stt', l:'STT', sort:false })
@@ -65,8 +66,8 @@ function deriveColsFromData(rows) {
   return derived
 }
 
-const DEFAULT_VISIBLE = ['stt','bienSo','tenTaiSan','loaiThung','loaiXe','taiTrong','mien','tinhMoi','cuaHang','namSX','gtcl','phapNhan']
-const NO_COL_FILTER = new Set(['stt','gtcl','nguyenGia','hasTaiNan','hasDieuDong'])
+const DEFAULT_VISIBLE = ['stt','bienSo','tenTaiSan','loaiThung','loaiXe','taiTrong','mien','tinhMoi','cuaHang','namSX','gtcl','phapNhan','cayDieuDong']
+const NO_COL_FILTER = new Set(['stt','gtcl','nguyenGia','hasTaiNan','hasDieuDong','cayDieuDong'])
 
 function KpiCard({ icon, label, value, sub, color }) {
   const accents = { or:'#FF9500', te:'#5AC8FA', rd:'#FF3B30', am:'#FFCC00' }
@@ -105,6 +106,10 @@ export default function PageXeTai({ data, rowsLoaded }) {
   const [pg, setPg] = useState(0)
   const [visibleKeys, setVisibleKeys] = useState(DEFAULT_VISIBLE)
   const [showColPicker, setShowColPicker] = useState(false)
+  const [showSyncDrive, setShowSyncDrive] = useState(false)
+  const [syncFolderId, setSyncFolderId] = useState('')
+  const [syncResult, setSyncResult] = useState(null)
+  const [syncing, setSyncing] = useState(false)
   const [editCell, setEditCell] = useState(null) // {rowIdx, field, value}
   const isMobile = useIsMobile()
   const [toast, setToast] = useState(null)
@@ -120,6 +125,28 @@ export default function PageXeTai({ data, rowsLoaded }) {
     document.addEventListener('click', handler)
     return () => document.removeEventListener('click', handler)
   }, [openFilterCol, pendingFilters])
+
+  const handleSyncDrive = async () => {
+    if (!syncFolderId.trim()) return
+    // Hỗ trợ cả URL lẫn folder ID thuần
+    const idMatch = syncFolderId.match(/folders\/([a-zA-Z0-9_-]+)/)
+    const folderId = idMatch ? idMatch[1] : syncFolderId.trim()
+    setSyncing(true)
+    setSyncResult(null)
+    try {
+      const res = await fetch(`${API}/api/xe/sync-drive-images`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({ rootFolderId: folderId })
+      })
+      const d = await res.json()
+      setSyncResult(d)
+      if (d.matched > 0) showToast(`✓ Đã map ${d.matched} xe`)
+    } catch(e) {
+      setSyncResult({ error: e.message })
+    }
+    setSyncing(false)
+  }
 
   const showToast = (msg, err) => {
     setToast({ msg, err })
@@ -381,6 +408,10 @@ export default function PageXeTai({ data, rowsLoaded }) {
               style={{ padding:'5px 11px', borderRadius:7, border:'1px solid var(--border)', background:'var(--card)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
               ⚙ Chọn cột
             </button>
+            <button onClick={() => { setShowSyncDrive(true); setSyncResult(null) }}
+              style={{ padding:'5px 11px', borderRadius:7, border:'1px solid var(--border)', background:'var(--card)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+              🔗 Sync ảnh Drive
+            </button>
 
             <button onClick={exportExcel}
               style={{ padding:'5px 11px', borderRadius:7, border:'none', background:'var(--green)', color:'#fff', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
@@ -559,7 +590,7 @@ export default function PageXeTai({ data, rowsLoaded }) {
                           <td key="bs" style={{ padding:'8px 10px', textAlign:'center' }}>
                             <span
                           style={{ color:'var(--brand)', fontWeight:700, cursor:'pointer', borderBottom:'1px dashed var(--brand)' }}
-                          onClick={() => { localStorage.setItem('xe_detail_data', JSON.stringify(r)); window.open('/xe-detail', '_blank') }}
+                          onClick={() => { localStorage.setItem('xe_detail_data', JSON.stringify(r)); window.open(`/xe-detail?id=${encodeURIComponent(r.maTaiSan || r.bienSo || '')}`, '_blank') }}
                           title="Click để xem chi tiết"
                         >{r.bienSo}</span>
                           </td>
@@ -631,6 +662,61 @@ export default function PageXeTai({ data, rowsLoaded }) {
       </div>
 
       {/* Column Picker Modal */}
+      {/* ── Modal Sync Drive ── */}
+      {showSyncDrive && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.4)', zIndex:500, display:'flex', alignItems:'center', justifyContent:'center' }}
+          onClick={() => setShowSyncDrive(false)}>
+          <div style={{ background:'var(--bg-card)', borderRadius:14, width:480, maxWidth:'95vw', boxShadow:'0 8px 40px rgba(0,0,0,.18)', overflow:'hidden' }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ padding:'16px 20px', borderBottom:'1px solid var(--sep)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+              <span style={{ fontSize:14, fontWeight:600 }}>🔗 Sync ảnh từ Google Drive</span>
+              <button onClick={() => setShowSyncDrive(false)} style={{ border:'none', background:'none', cursor:'pointer', fontSize:18, color:'var(--label-secondary)' }}>✕</button>
+            </div>
+            <div style={{ padding:'20px' }}>
+              <div style={{ fontSize:12, color:'var(--label-secondary)', marginBottom:12 }}>
+                Nhập URL hoặc ID của folder Drive gốc chứa các subfolder đặt tên theo biển số xe.
+              </div>
+              <input
+                value={syncFolderId}
+                onChange={e => setSyncFolderId(e.target.value)}
+                placeholder="https://drive.google.com/drive/folders/1abc... hoặc ID"
+                style={{ width:'100%', boxSizing:'border-box', padding:'8px 12px', borderRadius:8, border:'1px solid var(--sep)', fontSize:12, fontFamily:'inherit', outline:'none', background:'var(--fill-tertiary)' }}
+              />
+              {syncResult && (
+                <div style={{ marginTop:12, padding:'10px 14px', borderRadius:8,
+                  background: syncResult.error ? 'rgba(255,59,48,.08)' : 'rgba(52,199,89,.08)',
+                  border: `1px solid ${syncResult.error ? 'rgba(255,59,48,.2)' : 'rgba(52,199,89,.2)'}`,
+                  fontSize:12 }}>
+                  {syncResult.error ? (
+                    <span style={{ color:'var(--apple-red)' }}>❌ {syncResult.error}</span>
+                  ) : (
+                    <div style={{ color:'var(--apple-green)', lineHeight:1.8 }}>
+                      <div>✅ {syncResult.message}</div>
+                      <div style={{ color:'var(--label-secondary)' }}>
+                        Tổng folder: {syncResult.total} · Khớp: {syncResult.matched} · Không tìm thấy: {syncResult.notFound}
+                      </div>
+                      {syncResult.notFoundList?.length > 0 && (
+                        <div style={{ marginTop:6, color:'var(--label-tertiary)', fontSize:11 }}>
+                          Folder không khớp: {syncResult.notFoundList.join(', ')}
+                          {syncResult.notFound > 20 ? ` ... và ${syncResult.notFound - 20} folder khác` : ''}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            <div style={{ padding:'12px 20px', borderTop:'1px solid var(--sep)', display:'flex', gap:8, justifyContent:'flex-end' }}>
+              <button onClick={() => setShowSyncDrive(false)} style={{ padding:'7px 16px', borderRadius:7, border:'0.5px solid var(--sep)', background:'var(--fill-tertiary)', cursor:'pointer', fontSize:12, fontFamily:'inherit' }}>Đóng</button>
+              <button onClick={handleSyncDrive} disabled={syncing || !syncFolderId.trim()}
+                style={{ padding:'7px 16px', borderRadius:7, border:'none', background: syncing ? 'var(--sep)' : 'var(--brand)', color:'#fff', cursor: syncing ? 'not-allowed' : 'pointer', fontSize:12, fontFamily:'inherit', fontWeight:600 }}>
+                {syncing ? '⏳ Đang sync...' : '🔗 Bắt đầu Sync'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showColPicker && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.4)', zIndex:500, display:'flex', alignItems:'center', justifyContent:'center' }}
           onClick={() => setShowColPicker(false)}>
