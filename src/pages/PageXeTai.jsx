@@ -97,9 +97,10 @@ export default function PageXeTai({ data, rowsLoaded }) {
   const [filterMien, setFilterMien] = useState('')
   const [filterLT,       setFilterLT]       = useState('')
   const [filterLoaiHinh, setFilterLoaiHinh] = useState('')
-  const [colFilters, setColFilters] = useState({}) // { colKey: string[] } — multi-select filter theo cột
+  const [colFilters, setColFilters] = useState({}) // { colKey: string[] } — filter đang áp dụng cho bảng
+  const [pendingFilters, setPendingFilters] = useState({}) // selections đang chọn, chưa apply
   const [openFilterCol, setOpenFilterCol] = useState(null) // colKey đang mở dropdown
-  const [sortCol, setSortCol] = useState(-1)
+  const [sortCol, setSortCol] = useState(null) // lưu col.k (string) thay vì index
   const [sortDir, setSortDir] = useState(1)
   const [pg, setPg] = useState(0)
   const [visibleKeys, setVisibleKeys] = useState(DEFAULT_VISIBLE)
@@ -108,13 +109,17 @@ export default function PageXeTai({ data, rowsLoaded }) {
   const isMobile = useIsMobile()
   const [toast, setToast] = useState(null)
 
-  // Đóng dropdown filter khi click ra ngoài
+  // Đóng dropdown filter khi click ra ngoài → apply pending
   useEffect(() => {
     if (!openFilterCol) return
-    const handler = () => setOpenFilterCol(null)
+    const handler = () => {
+      setColFilters(prev => ({ ...prev, [openFilterCol]: pendingFilters[openFilterCol] || [] }))
+      setPg(0)
+      setOpenFilterCol(null)
+    }
     document.addEventListener('click', handler)
     return () => document.removeEventListener('click', handler)
-  }, [openFilterCol])
+  }, [openFilterCol, pendingFilters])
 
   const showToast = (msg, err) => {
     setToast({ msg, err })
@@ -148,13 +153,13 @@ export default function PageXeTai({ data, rowsLoaded }) {
       })
       return ms && mm && ml && mh && mc
     })
-    if (sortCol >= 0) {
-      const col = visibleCols[sortCol]
+    if (sortCol) {
+      const col = visibleCols.find(c => c.k === sortCol)
       if (col) {
         r = [...r].sort((a, b) => {
           const av = String(a[col.k] ?? '').trim()
           const bv = String(b[col.k] ?? '').trim()
-          // Luôn đẩy hàng rỗng xuống cuối, bất kể chiều sort
+          // Luôn đẩy hàng rỗng/0 xuống cuối bất kể chiều sort
           if (!av && !bv) return 0
           if (!av) return 1
           if (!bv) return -1
@@ -169,9 +174,9 @@ export default function PageXeTai({ data, rowsLoaded }) {
   const totalPg = Math.ceil(filtered.length / PAGE_SIZE)
   const pgRows = filtered.slice(pg * PAGE_SIZE, (pg+1) * PAGE_SIZE)
 
-  const handleSort = (i) => {
-    if (sortCol === i) setSortDir(d => d * -1)
-    else { setSortCol(i); setSortDir(1) }
+  const handleSort = (colKey) => {
+    if (sortCol === colKey) setSortDir(d => d * -1)
+    else { setSortCol(colKey); setSortDir(1) }
     setPg(0)
   }
 
@@ -425,7 +430,7 @@ export default function PageXeTai({ data, rowsLoaded }) {
                 <tr>
                   {visibleCols.map((col, i) => (
                     <th key={col.k}
-                      onClick={() => col.sort && handleSort(i)}
+                      onClick={() => col.sort && handleSort(col.k)}
                       style={{
                         padding:'9px 10px', background:'var(--bg-secondary)', borderBottom:'1px solid var(--sep)',
                         fontWeight:600, fontSize:10.5, color:'var(--label-secondary)', textTransform:'uppercase',
@@ -435,7 +440,7 @@ export default function PageXeTai({ data, rowsLoaded }) {
                     >
                       {col.l}
                       {col.sort && <span style={{ marginLeft:3, opacity:.5, fontSize:10 }}>
-                        {sortCol === i ? (sortDir === 1 ? '▲' : '▼') : '⇅'}
+                        {sortCol === col.k ? (sortDir === 1 ? '▲' : '▼') : '⇅'}
                       </span>}
                     </th>
                   ))}
@@ -446,22 +451,33 @@ export default function PageXeTai({ data, rowsLoaded }) {
                     if (NO_COL_FILTER.has(col.k)) return <th key={col.k + '_f'} style={{ padding:'4px 6px', background:'var(--bg-secondary)', borderBottom:'2px solid var(--sep)' }} />
                     const opts = [...new Set(rows.map(r => String(r[col.k] || '')).filter(Boolean))].sort((a,b) => a.localeCompare(b, 'vi'))
                     if (opts.length === 0) return <th key={col.k + '_f'} style={{ padding:'4px 6px', background:'var(--bg-secondary)', borderBottom:'2px solid var(--sep)' }} />
-                    const selected = colFilters[col.k] || []
-                    const isOpen = openFilterCol === col.k
-                    const label = selected.length === 0 ? '--' : selected.length === 1 ? selected[0] : `${selected.length} mục`
+                    const applied  = colFilters[col.k] || []
+                    const isOpen   = openFilterCol === col.k
+                    const selected = isOpen ? (pendingFilters[col.k] || []) : applied
+                    const label    = applied.length === 0 ? '--' : applied.length === 1 ? applied[0] : `${applied.length} mục`
                     const toggleVal = (v) => {
-                      setColFilters(prev => {
+                      setPendingFilters(prev => {
                         const cur = prev[col.k] || []
                         const next = cur.includes(v) ? cur.filter(x => x !== v) : [...cur, v]
                         return { ...prev, [col.k]: next }
                       })
-                      setPg(0)
                     }
                     return (
                       <th key={col.k + '_f'} style={{ padding:'4px 6px', background:'var(--bg-secondary)', borderBottom:'2px solid var(--sep)', position:'relative' }}>
                         {/* Trigger button */}
                         <button
-                          onClick={e => { e.stopPropagation(); setOpenFilterCol(isOpen ? null : col.k) }}
+                          onClick={e => {
+                          e.stopPropagation()
+                          if (!isOpen) {
+                            // Copy giá trị hiện tại vào pending khi mở
+                            setPendingFilters(prev => ({ ...prev, [col.k]: [...(colFilters[col.k] || [])] }))
+                          } else {
+                            // Đóng → apply pending vào colFilters
+                            setColFilters(prev => ({ ...prev, [col.k]: pendingFilters[col.k] || [] }))
+                            setPg(0)
+                          }
+                          setOpenFilterCol(isOpen ? null : col.k)
+                        }}
                           style={{
                             width:'100%', fontSize:10, padding:'2px 18px 2px 5px', position:'relative',
                             border: selected.length ? '1.5px solid var(--brand)' : '1px solid var(--sep)',
@@ -488,7 +504,12 @@ export default function PageXeTai({ data, rowsLoaded }) {
                           }}>
                             {/* -- Reset */}
                             <div
-                              onClick={() => { setColFilters(prev => ({ ...prev, [col.k]: [] })); setPg(0); setOpenFilterCol(null) }}
+                              onClick={() => {
+                                setColFilters(prev => ({ ...prev, [col.k]: [] }))
+                                setPendingFilters(prev => ({ ...prev, [col.k]: [] }))
+                                setPg(0)
+                                setOpenFilterCol(null)
+                              }}
                               style={{ padding:'6px 10px', fontSize:11, cursor:'pointer', color:'var(--label-secondary)', fontWeight:500,
                                 borderBottom:'1px solid var(--sep)', background: selected.length === 0 ? 'rgba(230,50,0,0.05)' : 'transparent' }}
                             >
