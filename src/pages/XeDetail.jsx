@@ -3,6 +3,7 @@
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 import { useState, useEffect, useCallback } from 'react'
 import { getXeDetail, getImagesFromFolder } from '../api'
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 import { fmtCur } from '../hooks/useCharts'
 import useIsMobile from '../hooks/useIsMobile'
 
@@ -56,7 +57,14 @@ function Gallery({ hinhAnh, isMobile = false }) {
     if (isFolder) {
       setLoading(true)
       getImagesFromFolder(hinhAnh)
-        .then(urls => { setImgs(urls || []); setLoading(false) })
+        .then(urls => {
+          // Prefix relative proxy URLs với API_BASE
+          const resolved = (urls || []).map(u =>
+            u.startsWith('/api/') ? `${API_BASE}${u}` : u
+          )
+          setImgs(resolved)
+          setLoading(false)
+        })
         .catch(() => setLoading(false))
     } else {
       // Parse comma/newline separated file links
