@@ -1,3 +1,6 @@
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 📁 FRONTEND — quanlyxever3/src/api.js
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // ── API Client — JWT auth + Express backend ───────────────────────────────────
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
@@ -83,8 +86,8 @@ export async function getXeDetail(maTaiSan) {
   return get(`/api/xe/${encodeURIComponent(maTaiSan)}`)
 }
 
-export async function updateXeRow(maTaiSan, field, value) {
-  return put(`/api/xe/${encodeURIComponent(maTaiSan)}`, { field, value })
+export async function updateXeRow(maTaiSan, field, value, oldValue) {
+  return put(`/api/xe/${encodeURIComponent(maTaiSan)}`, { field, value, oldValue })
 }
 
 // ── Images ────────────────────────────────────────────────────────────────────
