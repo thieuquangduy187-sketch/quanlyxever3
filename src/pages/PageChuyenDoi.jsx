@@ -283,9 +283,10 @@ function TabAudit() {
 
 // ── Main Page ─────────────────────────────────────────────
 export default function PageChuyenDoi() {
-  const [tab, setTab]         = useState('dot')
-  const [config, setConfig]   = useState({ dotsDone: [], dotCount: [] })
-  const [toast, setToast]     = useState(null)
+  const [tab, setTab]           = useState('dot')
+  const [config, setConfig]     = useState({ dotsDone: [], dotCount: [] })
+  const [toast, setToast]       = useState(null)
+  const [batchResult, setBatchResult] = useState(null)
 
   const showToast = (msg, err) => { setToast({ msg, err }); setTimeout(() => setToast(null), 3500) }
 
