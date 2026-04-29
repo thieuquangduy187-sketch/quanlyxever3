@@ -304,11 +304,15 @@ export default function PageChuyenDoi() {
   const handleBatchUpdate = async (dot, setUpdating) => {
     if (!window.confirm(`Batch update tất cả xe trong ${dot} theo thông tin HSH?\nKhông ghi cây điều động.`)) return
     setUpdating(dot)
+    setBatchResult(null)
     try {
       const r = await authFetch('/api/cua-hang/batch-update', { method:'POST', body: JSON.stringify({ dot }) })
       const d = await r.json()
       if (d.error) { showToast(d.error, true) }
-      else showToast(`✓ ${d.message}${d.notFound > 0 ? ` · ${d.notFound} xe không tìm thấy` : ''}`)
+      else {
+        showToast(`✓ ${d.message}`)
+        setBatchResult({ dot, ...d })
+      }
     } catch(e) { showToast(e.message, true) }
     setUpdating(null)
   }
@@ -343,7 +347,64 @@ export default function PageChuyenDoi() {
         ))}
       </div>
 
-      {tab === 'dot'   && <TabChuyenDot dotsDone={config.dotsDone} dotCount={config.dotCount} onSave={handleSaveConfig} onBatchUpdate={handleBatchUpdate} />}
+      {tab === 'dot' && (
+        <>
+          <TabChuyenDot dotsDone={config.dotsDone} dotCount={config.dotCount} onSave={handleSaveConfig} onBatchUpdate={handleBatchUpdate} />
+          {batchResult && (
+            <div style={{ marginTop:24 }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
+                <div style={{ fontWeight:600, fontSize:14 }}>
+                  Kết quả Batch Update — {batchResult.dot}
+                </div>
+                <div style={{ display:'flex', gap:16, fontSize:12 }}>
+                  <span style={{ color:'#34C759', fontWeight:600 }}>✅ {batchResult.updated} cập nhật</span>
+                  <span style={{ color:'#FF3B30', fontWeight:600 }}>❌ {batchResult.missed} bị miss</span>
+                  <span style={{ color:'var(--label-secondary)' }}>Tổng: {batchResult.total}</span>
+                </div>
+                <button onClick={() => setBatchResult(null)}
+                  style={{ border:'none', background:'none', cursor:'pointer', color:'var(--label-tertiary)', fontSize:16 }}>✕</button>
+              </div>
+              <div style={{ background:'var(--bg-card)', borderRadius:12, border:'0.5px solid var(--sep)', overflow:'auto', maxHeight:400 }}>
+                <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
+                  <thead>
+                    <tr style={{ background:'var(--bg-secondary)', position:'sticky', top:0 }}>
+                      {['Biển số','Tên CH','Tỉnh','Trạng thái','Chi tiết'].map(h => (
+                        <th key={h} style={{ padding:'8px 12px', textAlign:'left', fontSize:11,
+                          fontWeight:600, color:'var(--label-secondary)', borderBottom:'1px solid var(--sep)', whiteSpace:'nowrap' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {batchResult.results?.map((r, i) => (
+                      <tr key={i} style={{ borderBottom:'0.5px solid var(--sep)',
+                        background: r.status === 'updated' ? 'rgba(52,199,89,.03)' : 'rgba(255,59,48,.03)' }}>
+                        <td style={{ padding:'7px 12px', fontWeight:600 }}>{r.bienSo}</td>
+                        <td style={{ padding:'7px 12px', color:'var(--label-secondary)' }}>{r.tenCH || '—'}</td>
+                        <td style={{ padding:'7px 12px', color:'var(--label-secondary)' }}>{r.tinh || '—'}</td>
+                        <td style={{ padding:'7px 12px' }}>
+                          {r.status === 'updated'
+                            ? <span style={{ color:'#34C759', fontWeight:600 }}>✅ Đã cập nhật</span>
+                            : <span style={{ color:'#FF3B30', fontWeight:600 }}>
+                                {r.status === 'not_in_xetai' ? '🚗 Không phải xe tải'
+                                  : r.status === 'no_cuahang' ? '⚠️ Thiếu tên CH'
+                                  : '❌ Không tìm thấy CH'}
+                              </span>
+                          }
+                        </td>
+                        <td style={{ padding:'7px 12px', color:'var(--label-secondary)', fontSize:11 }}>
+                          {r.status === 'updated'
+                            ? `Mã: ${r.ma} · Tỉnh: ${r.tinhMoi}`
+                            : r.reason}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </>
+      )}
       {tab === 'audit' && <TabAudit />}
     </div>
   )
