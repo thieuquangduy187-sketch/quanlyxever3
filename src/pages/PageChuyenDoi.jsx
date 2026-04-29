@@ -110,6 +110,7 @@ function TabAudit() {
   const [loading, setLoading]   = useState(false)
   const [result, setResult]     = useState(null)
   const [fixing, setFixing]     = useState(null)
+  const [ignored, setIgnored]   = useState(new Set())
   const [fixed, setFixed]       = useState(new Set())
   const [filterMode, setFilter] = useState('all')
 
@@ -121,6 +122,16 @@ function TabAudit() {
       setResult(d)
     } catch(e) { alert('Lỗi: ' + e.message) }
     setLoading(false)
+  }
+
+  const handleIgnore = async (item) => {
+    try {
+      await authFetch('/api/cua-hang/ignore', {
+        method: 'POST',
+        body: JSON.stringify({ bienSo: item.bienSo, tenCH: item.tenCH })
+      })
+      setIgnored(prev => new Set([...prev, `${item.bienSo}|${item.tenCH}`]))
+    } catch(e) { alert('Lỗi: ' + e.message) }
   }
 
   const fixOne = async (item) => {
@@ -143,6 +154,8 @@ function TabAudit() {
   }
 
   const filtered = (result?.data || []).filter(i =>
+    !ignored.has(`${i.bienSo}|${i.tenCH}`)
+  ).filter(i =>
     filterMode === 'all' ? true :
     filterMode === 'mismatch' ? i.loai === 'MISMATCH' :
     i.loai === 'NOT_FOUND'
@@ -234,15 +247,26 @@ function TabAudit() {
                         <td style={{ padding:'8px 12px' }}>
                           {isDone ? (
                             <span style={{ fontSize:11, color:'#34C759', fontWeight:600 }}>✓ Đã sửa</span>
-                          ) : item.suggest ? (
-                            <button onClick={() => fixOne(item)} disabled={fixing === item.bienSo}
-                              style={{ padding:'3px 10px', borderRadius:6, border:'none',
-                                background: fixing === item.bienSo ? 'var(--sep)' : '#34C759',
-                                color:'#fff', cursor: fixing === item.bienSo ? 'not-allowed' : 'pointer',
-                                fontSize:11, fontFamily:'inherit', fontWeight:600 }}>
-                              {fixing === item.bienSo ? '...' : 'Sửa'}
-                            </button>
-                          ) : null}
+                          ) : (
+                            <div style={{ display:'flex', gap:4 }}>
+                              {item.suggest && (
+                                <button onClick={() => fixOne(item)} disabled={fixing === item.bienSo}
+                                  style={{ padding:'3px 10px', borderRadius:6, border:'none',
+                                    background: fixing === item.bienSo ? 'var(--sep)' : '#34C759',
+                                    color:'#fff', cursor: fixing === item.bienSo ? 'not-allowed' : 'pointer',
+                                    fontSize:11, fontFamily:'inherit', fontWeight:600 }}>
+                                  {fixing === item.bienSo ? '...' : 'Sửa'}
+                                </button>
+                              )}
+                              <button onClick={() => handleIgnore(item)}
+                                style={{ padding:'3px 10px', borderRadius:6, border:'1px solid var(--sep)',
+                                  background:'var(--fill-tertiary)', color:'var(--label-secondary)',
+                                  cursor:'pointer', fontSize:11, fontFamily:'inherit' }}
+                                title="Bỏ qua cảnh báo này">
+                                Bỏ qua
+                              </button>
+                            </div>
+                          )}
                         </td>
                       </tr>
                     )
