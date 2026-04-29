@@ -12,6 +12,7 @@ const NAV = [
   { id: 'nhat_trinh',       sf: '📋', label: 'Nhật trình tháng', section: 'HỆ THỐNG' },
   { id: 'gia_dau',              sf: '🛢', label: 'Giá dầu diesel',       section: null },
   { id: 'gps',                  sf: '📡', label: 'Giám sát GPS',           section: null },
+  { id: 'chuyen_doi',           sf: '🔄', label: 'Chuyển đổi HSG→HSH',      section: null },
   { id: 'bao_cao_nhat_trinh',   sf: '📊', label: 'Báo cáo nhật trình',    section: null },
 ]
 
