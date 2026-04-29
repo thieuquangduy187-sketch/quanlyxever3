@@ -111,6 +111,8 @@ export default function PageXeTai({ data, rowsLoaded }) {
   const [syncResult, setSyncResult] = useState(null)
   const [syncing, setSyncing] = useState(false)
   const [editCell, setEditCell] = useState(null) // {rowIdx, field, value}
+  const [suggestions, setSuggestions] = useState([]) // autocomplete cửa hàng
+  const [showSug, setShowSug]         = useState(false)
   const isMobile = useIsMobile()
   const [toast, setToast] = useState(null)
 
@@ -146,6 +148,27 @@ export default function PageXeTai({ data, rowsLoaded }) {
       setSyncResult({ error: e.message })
     }
     setSyncing(false)
+  }
+
+  const fetchSuggestions = async (q) => {
+    if (!q || q.length < 1) { setSuggestions([]); return }
+    try {
+      const r = await fetch(`${API}/api/cua-hang/suggest?q=${encodeURIComponent(q)}`, {
+        headers: { Authorization: `Bearer ${getToken()}` }
+      })
+      const d = await r.json()
+      setSuggestions(d || [])
+      setShowSug(true)
+    } catch(e) { setSuggestions([]) }
+  }
+
+  const handleSelectSuggestion = async (rowIdx, sug) => {
+    setShowSug(false)
+    setSuggestions([])
+    // Update cell value
+    setEditCell(null)
+    // Lưu tên CH (không có tỉnh)
+    await handleEdit(rowIdx, 'cuaHang', sug.value, { ma: sug.ma, tinh: sug.tinh, mien: sug.mien })
   }
 
   const showToast = (msg, err) => {
@@ -215,17 +238,27 @@ export default function PageXeTai({ data, rowsLoaded }) {
     setPg(0)
   }
 
-  const handleEdit = async (rowIdx, field, newVal) => {
+  const handleEdit = async (rowIdx, field, newVal, extraFields) => {
     const row = filtered[rowIdx]
     if (!row || String(row[field]) === String(newVal)) return
     const oldVal = row[field] || ''
     row[field] = newVal
     try {
       showToast('💾 Đang lưu...')
-      // Truyền oldValue để backend ghi cây điều động khi đổi cuaHang
       const res = await updateXeRow(row.maTaiSan, field, newVal, field === 'cuaHang' ? oldVal : undefined)
-      // Cập nhật cayDieuDong ngay trên row local (không cần reload)
       if (res?.cayDieuDong) row.cayDieuDong = res.cayDieuDong
+      // Auto-fill mã CH, tỉnh, miền nếu có (từ autocomplete)
+      if (extraFields && field === 'cuaHang') {
+        const fields = [
+          { f: 'maHienTai', v: extraFields.ma   },
+          { f: 'tinhMoi',   v: extraFields.tinh  },
+          { f: 'mien',      v: extraFields.mien  },
+        ].filter(x => x.v)
+        for (const { f, v } of fields) {
+          await updateXeRow(row.maTaiSan, f, v)
+          row[f] = v
+        }
+      }
       showToast('✓ Đã lưu')
     } catch(e) {
       showToast('✗ Lỗi: ' + e.message, true)
@@ -607,22 +640,46 @@ export default function PageXeTai({ data, rowsLoaded }) {
                         const isEditing = editCell?.rowIdx === globalIdx && editCell?.field === col.k
                         return (
                           <td key={col.k}
-                            style={{ padding: isEditing ? 0 : '8px 10px', color:'var(--ink2)', whiteSpace:'nowrap', maxWidth:180, overflow:'hidden', textOverflow:'ellipsis', cursor: col.edit ? 'text' : 'default' }}
+                            style={{ padding: isEditing ? 0 : '8px 10px', color:'var(--ink2)', whiteSpace:'nowrap', maxWidth:180, overflow:'hidden', textOverflow:'ellipsis', cursor: col.edit ? 'text' : 'default', position:'relative' }}
                             onDoubleClick={() => col.edit && setEditCell({ rowIdx: globalIdx, field: col.k, value: r[col.k] || '' })}
                             title={col.edit ? 'Nhấp đúp để sửa' : ''}
                           >
                             {isEditing ? (
-                              <input
-                                autoFocus
-                                value={editCell.value}
-                                onChange={e => setEditCell(ec => ({ ...ec, value: e.target.value }))}
-                                onBlur={() => { handleEdit(globalIdx, col.k, editCell.value); setEditCell(null) }}
-                                onKeyDown={e => {
-                                  if (e.key === 'Enter') { handleEdit(globalIdx, col.k, editCell.value); setEditCell(null) }
-                                  if (e.key === 'Escape') setEditCell(null)
-                                }}
-                                style={{ width:'100%', padding:'7px 10px', border:'2px solid var(--brand)', outline:'none', fontFamily:'inherit', fontSize:12 }}
-                              />
+                              <>
+                                <input
+                                  autoFocus
+                                  value={editCell.value}
+                                  onChange={e => {
+                                    setEditCell(ec => ({ ...ec, value: e.target.value }))
+                                    if (col.k === 'cuaHang') fetchSuggestions(e.target.value)
+                                  }}
+                                  onBlur={() => { setTimeout(() => { handleEdit(globalIdx, col.k, editCell.value); setEditCell(null); setShowSug(false) }, 200) }}
+                                  onKeyDown={e => {
+                                    if (e.key === 'Enter') { handleEdit(globalIdx, col.k, editCell.value); setEditCell(null); setShowSug(false) }
+                                    if (e.key === 'Escape') { setEditCell(null); setShowSug(false) }
+                                  }}
+                                  style={{ width:'100%', padding:'7px 10px', border:'2px solid var(--brand)', outline:'none', fontFamily:'inherit', fontSize:12 }}
+                                />
+                                {col.k === 'cuaHang' && showSug && suggestions.length > 0 && (
+                                  <div style={{ position:'absolute', top:'100%', left:0, zIndex:300,
+                                    background:'var(--bg-card)', border:'1px solid var(--sep)',
+                                    borderRadius:8, boxShadow:'0 4px 20px rgba(0,0,0,.15)',
+                                    minWidth:280, maxHeight:200, overflowY:'auto' }}>
+                                    {suggestions.map((sug, si) => (
+                                      <div key={si}
+                                        onMouseDown={() => handleSelectSuggestion(globalIdx, sug)}
+                                        style={{ padding:'7px 12px', cursor:'pointer', fontSize:12,
+                                          borderBottom:'0.5px solid var(--sep)', color:'var(--label-primary)' }}
+                                        onMouseEnter={e => e.currentTarget.style.background='var(--fill-tertiary)'}
+                                        onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                                        <span style={{ fontWeight:600 }}>{sug.value}</span>
+                                        <span style={{ color:'var(--label-secondary)', marginLeft:6 }}>- {sug.tinh}</span>
+                                        <span style={{ fontSize:10, color:'var(--label-tertiary)', marginLeft:8 }}>{sug.type} · {sug.ma}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </>
                             ) : (r[col.k] || '')}
                           </td>
                         )
