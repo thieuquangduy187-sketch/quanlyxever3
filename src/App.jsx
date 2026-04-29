@@ -10,6 +10,7 @@ import Sidebar from './components/Sidebar'
 import Topbar from './components/Topbar'
 import PageOverview from './pages/PageOverview'
 import PageGPS from './pages/PageGPS'
+import PageChuyenDoi from './pages/PageChuyenDoi'
 import PageXeTai from './pages/PageXeTai'
 import PageOtoCon from './pages/PageOtoCon'
 import PageCuaHang from './pages/PageCuaHang'
@@ -224,6 +225,7 @@ export default function App() {
           {page === 'nhat_trinh_ngay' && <PageNhatTrinhNgay user={user} />}
           {page === 'gia_dau'          && <PageGiaDau />}
           {page === 'gps'              && <PageGPS />}
+          {page === 'chuyen_doi'      && <PageChuyenDoi />}
           {page === 'bao_cao_nhat_trinh' && <PageBaoCaoNhatTrinh />}
           {page === 'import'     && <PageImport />}
           {page === 'analyze'    && <PageAnalyze />}
