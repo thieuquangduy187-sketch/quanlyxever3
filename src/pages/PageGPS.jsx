@@ -62,6 +62,24 @@ export default function PageGPS() {
   const [backfilling, setBackfilling] = useState(false)
   const [backfillInfo, setBackfillInfo] = useState(null)
 
+  const downloadExcel = (type) => {
+    const token = getToken()
+    const url = `${API}/api/gps/${type}-excel-export`
+    // Mở URL trực tiếp với token trong header không được → dùng fetch + blob
+    authFetch(`/api/gps/${type}-excel-export`)
+      .then(r => {
+        if (!r.ok) throw new Error('Export failed')
+        return r.blob()
+      })
+      .then(blob => {
+        const a = document.createElement('a')
+        a.href = URL.createObjectURL(blob)
+        a.download = `${type}_report_${new Date().toISOString().slice(0,10)}.xlsx`
+        a.click()
+      })
+      .catch(e => showToast('Lỗi export: ' + e.message, true))
+  }
+
   const loadCamReport = async () => {
     setCamLoading(true)
     try {
@@ -206,6 +224,11 @@ export default function PageGPS() {
               cursor: backfilling ? 'not-allowed' : 'pointer', fontSize:12, fontFamily:'inherit' }}>
             {backfilling ? '⏳ Đang backfill...' : '📥 Backfill lịch sử 30 ngày'}
           </button>
+          <button onClick={() => downloadExcel('gps')}
+            style={{ padding:'7px 14px', borderRadius:8, border:'1px solid var(--sep)',
+              background:'var(--bg-card)', cursor:'pointer', fontSize:12, fontFamily:'inherit' }}>
+            ⬇ Tải Excel GPS
+          </button>
           <button onClick={handleSync} disabled={syncing}
             style={{ padding:'7px 14px', borderRadius:8, border:'none',
               background: syncing ? 'var(--sep)' : 'var(--brand)', color:'#fff',
@@ -266,7 +289,7 @@ export default function PageGPS() {
           <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
             <thead>
               <tr style={{ background:'var(--bg-secondary)' }}>
-                {['Biển số','Kết nối','GPS Time','Km hôm nay','Trạng thái GPS','Camera'].map(h => (
+                {['Biển số','Cửa hàng','Tỉnh','Kết nối','GPS Time','Km hôm nay','Trạng thái GPS'].map(h => (
                   <th key={h} style={{ padding:'9px 12px', textAlign:'left', fontSize:11,
                     fontWeight:600, color:'var(--label-secondary)', borderBottom:'1px solid var(--sep)',
                     whiteSpace:'nowrap' }}>{h}</th>
@@ -284,6 +307,8 @@ export default function PageGPS() {
                     <td style={{ padding:'9px 12px', fontWeight:600 }}>
                       {(v.plateRaw||'').replace(/_[A-Z]$/,'')}
                     </td>
+                    <td style={{ padding:'9px 12px', fontSize:11, color:'var(--label-secondary)' }}>{v.cuaHang||'—'}</td>
+                    <td style={{ padding:'9px 12px', fontSize:11, color:'var(--label-secondary)' }}>{v.tinhMoi||'—'}</td>
                     <td style={{ padding:'9px 12px' }}>
                       <StatusBadge
                         label={v.isOnline ? 'Online' : 'Offline'}
@@ -335,8 +360,15 @@ export default function PageGPS() {
                   {camReport.dateStr} · Logic: ≥ 2 kênh hoạt động = Bình thường
                 </div>
               </div>
-              <button onClick={() => setShowCamReport(false)}
-                style={{ border:'none', background:'none', cursor:'pointer', fontSize:18, color:'var(--label-secondary)' }}>✕</button>
+              <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                <button onClick={() => downloadExcel('camera')}
+                  style={{ padding:'5px 12px', borderRadius:7, border:'none', background:'#34C759',
+                    color:'#fff', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+                  ⬇ Tải Excel
+                </button>
+                <button onClick={() => setShowCamReport(false)}
+                  style={{ border:'none', background:'none', cursor:'pointer', fontSize:18, color:'var(--label-secondary)' }}>✕</button>
+              </div>
             </div>
 
             {/* KPI row */}
@@ -372,7 +404,7 @@ export default function PageGPS() {
               <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
                 <thead style={{ position:'sticky', top:0, background:'var(--bg-secondary)', zIndex:1 }}>
                   <tr>
-                    {['STT','Biển số','Kênh 1','Kênh 2','Kênh 3','Kênh 4','Trạng thái'].map(h => (
+                    {['STT','Biển số','Cửa hàng','Tỉnh','Kênh 1','Kênh 2','Kênh 3','Kênh 4','Trạng thái'].map(h => (
                       <th key={h} style={{ padding:'8px 12px', textAlign:'left', fontSize:11,
                         fontWeight:600, color:'var(--label-secondary)', borderBottom:'1px solid var(--sep)' }}>{h}</th>
                     ))}
@@ -389,6 +421,8 @@ export default function PageGPS() {
                       background: r.ok ? 'transparent' : r.camCount === 0 ? 'transparent' : 'rgba(255,149,0,.04)' }}>
                       <td style={{ padding:'7px 12px', color:'var(--label-tertiary)', fontSize:11 }}>{r.stt}</td>
                       <td style={{ padding:'7px 12px', fontWeight:600 }}>{r.bienSo}</td>
+                      <td style={{ padding:'7px 12px', fontSize:11, color:'var(--label-secondary)' }}>{r.cuaHang||'—'}</td>
+                      <td style={{ padding:'7px 12px', fontSize:11, color:'var(--label-secondary)' }}>{r.tinhMoi||'—'}</td>
                       {[r.kenh1, r.kenh2, r.kenh3, r.kenh4].map((k, ki) => (
                         <td key={ki} style={{ padding:'7px 12px', fontSize:11,
                           color: k === 'Hoạt động' ? '#34C759' : k === 'Không hoạt động' ? '#FF3B30' : 'var(--label-tertiary)' }}>
