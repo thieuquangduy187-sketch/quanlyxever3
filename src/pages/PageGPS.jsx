@@ -38,12 +38,10 @@ function KpiCard({ label, value, color, icon, onClick, active }) {
 }
 
 const FILTERS = [
-  { key:'all',             label:'Tất cả' },
-  { key:'online',          label:'Online' },
-  { key:'offline',         label:'Offline' },
-  { key:'gps_lost_active', label:'Mất GPS (vẫn HĐ)' },
-  { key:'stopped',         label:'Xe dừng HĐ' },
-  { key:'cam_issue',       label:'Camera lỗi' },
+  { key:'all',     label:'Tất cả' },
+  { key:'normal',  label:'Bình thường' },
+  { key:'stopped', label:'Xe dừng HĐ' },
+  { key:'cam_issue', label:'Camera lỗi' },
 ]
 
 export default function PageGPS() {
@@ -161,21 +159,20 @@ export default function PageGPS() {
   const filtered = useMemo(() => {
     if (!status?.vehicles) return []
     let r = status.vehicles
-    if (filterMode === 'online')          r = r.filter(v => v.isOnline)
-    if (filterMode === 'offline')         r = r.filter(v => !v.isOnline)
-    if (filterMode === 'gps_lost_active') r = r.filter(v => v.gpsStatus?.code === 'gps_lost_active')
-    if (filterMode === 'stopped')         r = r.filter(v => v.gpsStatus?.code === 'stopped')
-    if (filterMode === 'cam_issue')       r = r.filter(v => ['partial','lost_all'].includes(v.camStatus?.code))
+    if (filterMode === 'normal')  r = r.filter(v => v.gpsStatus?.code === 'normal')
+    if (filterMode === 'stopped') r = r.filter(v => v.gpsStatus?.code === 'stopped')
+    if (filterMode === 'cam_issue') r = r.filter(v => ['partial','lost_all'].includes(v.camStatus?.code))
     if (search) {
       const q = search.toLowerCase()
       r = r.filter(v => (v.plateRaw||'').toLowerCase().includes(q))
     }
-    // Sort: stopped → gps_lost → offline → online
-    const order = { stopped:0, gps_lost_active:1, no_signal:2, normal:3 }
-    return r.sort((a,b) => {
-      const oa = order[a.gpsStatus?.code] ?? 4
-      const ob = order[b.gpsStatus?.code] ?? 4
-      return oa - ob
+    // Sort: stopped (nhiều ngày nhất lên đầu) → normal
+    return r.sort((a, b) => {
+      const aS = a.gpsStatus?.stoppedDays ?? 0
+      const bS = b.gpsStatus?.stoppedDays ?? 0
+      if (a.gpsStatus?.code === 'stopped' && b.gpsStatus?.code !== 'stopped') return -1
+      if (b.gpsStatus?.code === 'stopped' && a.gpsStatus?.code !== 'stopped') return 1
+      return bS - aS  // stopped nhiều ngày hơn lên đầu
     })
   }, [status, filterMode, search])
 
@@ -252,12 +249,10 @@ export default function PageGPS() {
       {/* KPI Cards */}
       {!loading && (
         <div style={{ display:'flex', gap:10, marginBottom:20, flexWrap:'wrap' }}>
-          <KpiCard label="Tổng xe"        value={s.total    ||0} color="var(--label-primary)" icon="🚛" onClick={() => setFilterMode('all')} active={filterMode==='all'} />
-          <KpiCard label="Online"          value={s.online   ||0} color="#34C759" icon="🟢" onClick={() => setFilterMode('online')} active={filterMode==='online'} />
-          <KpiCard label="Offline"         value={s.offline  ||0} color="#8E8E93" icon="⚪" onClick={() => setFilterMode('offline')} active={filterMode==='offline'} />
-          <KpiCard label="Mất GPS (vẫn HĐ)" value={s.gpsLost ||0} color="#FF9500" icon="📡" onClick={() => setFilterMode('gps_lost_active')} active={filterMode==='gps_lost_active'} />
-          <KpiCard label="Xe dừng HĐ"     value={s.stopped  ||0} color="#FF3B30" icon="🔴" onClick={() => setFilterMode('stopped')} active={filterMode==='stopped'} />
-          <KpiCard label="Camera lỗi"     value={(s.camPartial||0)+(s.camLostAll||0)} color="#FF6B00" icon="📵" onClick={() => setFilterMode('cam_issue')} active={filterMode==='cam_issue'} />
+          <KpiCard label="Tổng xe"      value={s.total   ||0} color="var(--label-primary)" icon="🚛" onClick={() => setFilterMode('all')} active={filterMode==='all'} />
+          <KpiCard label="Bình thường"   value={s.normal  ||0} color="#34C759" icon="🟢" onClick={() => setFilterMode('normal')} active={filterMode==='normal'} />
+          <KpiCard label="Xe dừng HĐ"   value={s.stopped ||0} color="#FF3B30" icon="🔴" onClick={() => setFilterMode('stopped')} active={filterMode==='stopped'} />
+          <KpiCard label="Camera lỗi"   value={(s.camPartial||0)+(s.camLostAll||0)} color="#FF6B00" icon="📵" onClick={() => setFilterMode('cam_issue')} active={filterMode==='cam_issue'} />
         </div>
       )}
 
@@ -289,7 +284,7 @@ export default function PageGPS() {
           <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
             <thead>
               <tr style={{ background:'var(--bg-secondary)' }}>
-                {['Biển số','Cửa hàng','Tỉnh','Kết nối','GPS Time','Km hôm nay','Trạng thái GPS'].map(h => (
+                {['Biển số','Cửa hàng','Tỉnh','Trạng thái GPS','Dừng từ ngày','Km tích lũy'].map(h => (
                   <th key={h} style={{ padding:'9px 12px', textAlign:'left', fontSize:11,
                     fontWeight:600, color:'var(--label-secondary)', borderBottom:'1px solid var(--sep)',
                     whiteSpace:'nowrap' }}>{h}</th>
@@ -310,22 +305,16 @@ export default function PageGPS() {
                     <td style={{ padding:'9px 12px', fontSize:11, color:'var(--label-secondary)' }}>{v.cuaHang||'—'}</td>
                     <td style={{ padding:'9px 12px', fontSize:11, color:'var(--label-secondary)' }}>{v.tinhMoi||'—'}</td>
                     <td style={{ padding:'9px 12px' }}>
-                      <StatusBadge
-                        label={v.isOnline ? 'Online' : 'Offline'}
-                        color={v.isOnline ? '#34C759' : '#8E8E93'}
-                      />
+                      {gs.code === 'stopped'
+                        ? <StatusBadge label={gs.label} color={gs.color} />
+                        : <StatusBadge label="Bình thường" color="#34C759" />
+                      }
                     </td>
                     <td style={{ padding:'9px 12px', color:'var(--label-secondary)', fontSize:11 }}>
-                      {fmtDate(v.gpsTime)}
-                      {gs.daysSince > 0 && <span style={{ marginLeft:5, color: gs.color, fontSize:10 }}>({gs.daysSince} ngày trước)</span>}
+                      {gs.stoppedSince ? fmtDate(gs.stoppedSince) : '—'}
                     </td>
-                    <td style={{ padding:'9px 12px', color: v.totalKm > 0 ? 'var(--label-primary)' : 'var(--label-tertiary)' }}>
-                      {fmtKm(v.totalKm)}
-                    </td>
-                    <td style={{ padding:'9px 12px' }}>
-                      {gs.code ? <StatusBadge label={gs.label} color={gs.color} /> : '—'}
-                      {gs.km15 !== undefined && <span style={{ marginLeft:6, fontSize:10, color:'var(--label-tertiary)' }}>km15d: {gs.km15.toFixed(0)}</span>}
-                      {gs.km30 !== undefined && <span style={{ marginLeft:6, fontSize:10, color:'var(--label-tertiary)' }}>km30d: {gs.km30.toFixed(0)}</span>}
+                    <td style={{ padding:'9px 12px', color:'var(--label-secondary)', fontSize:11 }}>
+                      {gs.kmTotal ? fmtKm(gs.kmTotal) : '—'}
                     </td>
                     <td style={{ padding:'9px 12px' }}>
                       {cs.code && cs.code !== 'no_cam'
