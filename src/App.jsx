@@ -43,7 +43,8 @@ export default function App() {
     } catch { return 'overview' }
   })
   const isMobile = useIsMobile()
-  const [showSidebar, setShowSidebar] = useState(false)
+  const [showSidebar, setShowSidebar]         = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [token, setToken] = useState(() => {
     const t = localStorage.getItem('hsg_token')
     if (!t) return null
@@ -210,10 +211,12 @@ export default function App() {
         isMobile={isMobile}
         showSidebar={showSidebar}
         onCloseSidebar={() => setShowSidebar(false)}
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed(c => !c)}
         user={user}
         onLogout={handleLogout}
       />
-      <div style={{ marginLeft: isMobile ? 0 : 'var(--sw)', flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <div style={{ marginLeft: isMobile ? 0 : (sidebarCollapsed ? '52px' : 'var(--sw)'), flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh', transition: 'margin-left .22s ease' }}>
         <Topbar page={page} refreshing={refreshing} loadProgress={loadProgress} isMobile={isMobile} onMenuClick={() => setShowSidebar(s => !s)} user={user} onLogout={handleLogout} />
         <main style={{ padding: '20px 20px 32px', flex: 1 }}>
           {error && <ErrorBar message={error} onClose={() => setError(null)} />}
