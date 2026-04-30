@@ -52,6 +52,8 @@ export default function PageGPS() {
   const [tokenInput, setTokenInput] = useState('')
   const [showToken, setShowToken]   = useState(false)
   const [toast, setToast]           = useState(null)
+  const [chartModal, setChartModal] = useState(null) // { plateRaw, data }
+  const [chartLoading, setChartLoading] = useState(false)
   const [camReport, setCamReport]   = useState(null)
   const [camLoading, setCamLoading] = useState(false)
   const [showCamReport, setShowCamReport] = useState(false)
@@ -91,6 +93,17 @@ export default function PageGPS() {
       setShowCamReport(true)
     } catch(e) { showToast('Lỗi: ' + e.message, true) }
     setCamLoading(false)
+  }
+
+  const loadVehicleHistory = async (plateRaw) => {
+    setChartLoading(true)
+    setChartModal({ plateRaw, data: null })
+    try {
+      const r = await authFetch(`/api/gps/vehicle-history/${encodeURIComponent(plateRaw)}`)
+      const d = await r.json()
+      setChartModal({ plateRaw, data: d.data || [] })
+    } catch(e) { showToast('Lỗi tải lịch sử: ' + e.message, true) }
+    setChartLoading(false)
   }
 
   const showToast = (msg, err) => { setToast({ msg, err }); setTimeout(() => setToast(null), 3500) }
@@ -157,20 +170,26 @@ export default function PageGPS() {
   const filtered = useMemo(() => {
     if (!status?.vehicles) return []
     let r = status.vehicles
-    if (filterMode === 'normal')  r = r.filter(v => v.gpsStatus?.code === 'normal')
-    if (filterMode === 'stopped') r = r.filter(v => v.gpsStatus?.code === 'stopped')
+    if (filterMode === 'normal')       r = r.filter(v => v.gpsStatus?.code === 'normal')
+    if (filterMode === 'stopped')      r = r.filter(v => v.gpsStatus?.code === 'stopped')
+    if (filterMode === 'low_activity') r = r.filter(v => v.gpsStatus?.code === 'low_activity')
 
     if (search) {
       const q = search.toLowerCase()
       r = r.filter(v => (v.plateRaw||'').toLowerCase().includes(q))
     }
-    // Sort: stopped (nhiều ngày nhất lên đầu) → normal
+    // Sort: stopped (nhiều ngày) → low_activity (ít km) → normal
+    const order = { stopped: 0, low_activity: 1, normal: 2, no_data: 3 }
     return r.sort((a, b) => {
-      const aS = a.gpsStatus?.stoppedDays ?? 0
-      const bS = b.gpsStatus?.stoppedDays ?? 0
-      if (a.gpsStatus?.code === 'stopped' && b.gpsStatus?.code !== 'stopped') return -1
-      if (b.gpsStatus?.code === 'stopped' && a.gpsStatus?.code !== 'stopped') return 1
-      return bS - aS  // stopped nhiều ngày hơn lên đầu
+      const oa = order[a.gpsStatus?.code] ?? 4
+      const ob = order[b.gpsStatus?.code] ?? 4
+      if (oa !== ob) return oa - ob
+      // Cùng loại: sort theo stoppedDays hoặc kmTotal DESC
+      if (a.gpsStatus?.code === 'stopped')
+        return (b.gpsStatus?.stoppedDays||0) - (a.gpsStatus?.stoppedDays||0)
+      if (a.gpsStatus?.code === 'low_activity')
+        return (a.gpsStatus?.kmTotal||0) - (b.gpsStatus?.kmTotal||0) // km ít hơn lên trước
+      return 0
     })
   }, [status, filterMode, search])
 
@@ -247,9 +266,10 @@ export default function PageGPS() {
       {/* KPI Cards */}
       {!loading && (
         <div style={{ display:'flex', gap:10, marginBottom:20, flexWrap:'wrap' }}>
-          <KpiCard label="Tổng xe"      value={s.total   ||0} color="var(--label-primary)" icon="🚛" onClick={() => setFilterMode('all')} active={filterMode==='all'} />
-          <KpiCard label="Bình thường"   value={s.normal  ||0} color="#34C759" icon="🟢" onClick={() => setFilterMode('normal')} active={filterMode==='normal'} />
-          <KpiCard label="Xe dừng HĐ"   value={s.stopped ||0} color="#FF3B30" icon="🔴" onClick={() => setFilterMode('stopped')} active={filterMode==='stopped'} />
+          <KpiCard label="Tổng xe"        value={s.total      ||0} color="var(--label-primary)" icon="🚛" onClick={() => setFilterMode('all')} active={filterMode==='all'} />
+          <KpiCard label="Bình thường"     value={s.normal     ||0} color="#34C759" icon="🟢" onClick={() => setFilterMode('normal')} active={filterMode==='normal'} />
+          <KpiCard label="Xe dừng HĐ"     value={s.stopped    ||0} color="#FF3B30" icon="🔴" onClick={() => setFilterMode('stopped')} active={filterMode==='stopped'} />
+          <KpiCard label="HĐ rất ít"      value={s.lowActivity||0} color="#FF9500" icon="⚠️" onClick={() => setFilterMode('low_activity')} active={filterMode==='low_activity'} />
           <div onClick={loadCamReport}
             style={{ flex:1, minWidth:110, cursor:'pointer', background: 'var(--bg-card)',
               borderRadius:12, padding:'14px 18px', border:'0.5px solid var(--sep)',
@@ -290,7 +310,7 @@ export default function PageGPS() {
           <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
             <thead>
               <tr style={{ background:'var(--bg-secondary)' }}>
-                {['Biển số','Cửa hàng','Tỉnh','Trạng thái GPS','Dừng từ ngày','Km tích lũy'].map(h => (
+                {['Biển số','Cửa hàng','Tỉnh','Trạng thái GPS','Dừng từ ngày','Km/tháng','Km TB/ngày'].map(h => (
                   <th key={h} style={{ padding:'9px 12px', textAlign:'left', fontSize:11,
                     fontWeight:600, color:'var(--label-secondary)', borderBottom:'1px solid var(--sep)',
                     whiteSpace:'nowrap' }}>{h}</th>
@@ -319,8 +339,12 @@ export default function PageGPS() {
                     <td style={{ padding:'9px 12px', color:'var(--label-secondary)', fontSize:11 }}>
                       {gs.stoppedSince ? fmtDate(gs.stoppedSince) : '—'}
                     </td>
-                    <td style={{ padding:'9px 12px', color:'var(--label-secondary)', fontSize:11 }}>
-                      {gs.kmTotal ? fmtKm(gs.kmTotal) : '—'}
+                    <td style={{ padding:'9px 12px', fontSize:11,
+                      color: gs.kmTotal > 0 && gs.kmTotal < 1000 ? '#FF9500' : 'var(--label-secondary)' }}>
+                      {gs.kmTotal != null ? `${gs.kmTotal.toLocaleString()} km` : '—'}
+                    </td>
+                    <td style={{ padding:'9px 12px', color:'var(--label-tertiary)', fontSize:11 }}>
+                      {gs.kmPerDay != null ? `${gs.kmPerDay} km/ngày` : '—'}
                     </td>
                     <td style={{ padding:'9px 12px' }}>
                       {cs.code && cs.code !== 'no_cam'
@@ -434,6 +458,141 @@ export default function PageGPS() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+      {/* Vehicle KM Chart Modal */}
+      {chartModal && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.45)', zIndex:500,
+          display:'flex', alignItems:'center', justifyContent:'center' }}
+          onClick={() => setChartModal(null)}>
+          <div style={{ background:'var(--bg-card)', borderRadius:14, width:'90vw', maxWidth:800,
+            maxHeight:'85vh', display:'flex', flexDirection:'column',
+            boxShadow:'0 8px 40px rgba(0,0,0,.2)', overflow:'hidden' }}
+            onClick={e => e.stopPropagation()}>
+
+            <div style={{ padding:'14px 20px', borderBottom:'1px solid var(--sep)',
+              display:'flex', justifyContent:'space-between', alignItems:'center', flexShrink:0 }}>
+              <div>
+                <div style={{ fontWeight:700, fontSize:14 }}>
+                  📈 Lịch sử km — {chartModal.plateRaw?.replace(/_[A-Z]$/,'')}
+                </div>
+                <div style={{ fontSize:11, color:'var(--label-secondary)', marginTop:2 }}>
+                  30 ngày gần nhất · Đoạn nằm ngang = xe dừng hoạt động
+                </div>
+              </div>
+              <button onClick={() => setChartModal(null)}
+                style={{ border:'none', background:'none', cursor:'pointer', fontSize:18 }}>✕</button>
+            </div>
+
+            <div style={{ padding:'20px', flex:1, overflow:'auto' }}>
+              {chartLoading ? (
+                <div style={{ textAlign:'center', padding:40, color:'var(--label-secondary)' }}>Đang tải...</div>
+              ) : !chartModal.data?.length ? (
+                <div style={{ textAlign:'center', padding:40, color:'var(--label-secondary)' }}>
+                  Chưa có dữ liệu — cần chạy Backfill 30 ngày trước
+                </div>
+              ) : (() => {
+                const data = chartModal.data
+                const kms  = data.map(d => d.prevKm).filter(k => k > 0)
+                if (!kms.length) return <div style={{ textAlign:'center', padding:40 }}>Không có dữ liệu km</div>
+                const minKm = Math.min(...kms), maxKm = Math.max(...kms)
+                const range = maxKm - minKm || 1
+                const W = 720, H = 200, PAD = 40
+
+                // Tính điểm SVG
+                const pts = data.filter(d => d.prevKm > 0).map((d, i, arr) => {
+                  const x = PAD + (i / Math.max(arr.length - 1, 1)) * (W - PAD * 2)
+                  const y = H - PAD - ((d.prevKm - minKm) / range) * (H - PAD * 2)
+                  return { x, y, ...d }
+                })
+                const pathD = pts.map((p, i) => `${i===0?'M':'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ')
+
+                // Phát hiện đoạn nằm ngang (dừng)
+                const flatSegs = []
+                let flatStart = null
+                for (let i = 1; i < pts.length; i++) {
+                  if (pts[i].prevKm === pts[i-1].prevKm) {
+                    if (!flatStart) flatStart = i - 1
+                  } else {
+                    if (flatStart !== null) {
+                      flatSegs.push({ x1: pts[flatStart].x, x2: pts[i-1].x, y: pts[flatStart].y })
+                      flatStart = null
+                    }
+                  }
+                }
+                if (flatStart !== null && pts.length > 0)
+                  flatSegs.push({ x1: pts[flatStart].x, x2: pts[pts.length-1].x, y: pts[flatStart].y })
+
+                const totalKm = maxKm - minKm
+                const stoppedDays = data.filter((d, i) => i > 0 && Math.round(d.prevKm) === Math.round(data[i-1].prevKm)).length
+
+                return (
+                  <div>
+                    {/* Summary */}
+                    <div style={{ display:'flex', gap:12, marginBottom:16, flexWrap:'wrap' }}>
+                      {[
+                        { label:'Tổng km/tháng', value: `${totalKm.toLocaleString()} km`, color: totalKm < 1000 ? '#FF9500' : '#34C759' },
+                        { label:'Km TB/ngày', value: `${Math.round(totalKm / data.length)} km`, color:'var(--label-primary)' },
+                        { label:'Ngày dừng', value: `${stoppedDays} ngày`, color: stoppedDays > 3 ? '#FF3B30' : 'var(--label-secondary)' },
+                        { label:'Ngày có data', value: `${data.length} ngày`, color:'var(--label-secondary)' },
+                      ].map(k => (
+                        <div key={k.label} style={{ flex:1, minWidth:130, background:'var(--bg-secondary)', borderRadius:8, padding:'8px 12px' }}>
+                          <div style={{ fontSize:10, color:'var(--label-tertiary)', marginBottom:2 }}>{k.label}</div>
+                          <div style={{ fontSize:16, fontWeight:700, color:k.color }}>{k.value}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Chart */}
+                    <div style={{ overflowX:'auto' }}>
+                      <svg width={W} height={H} style={{ display:'block' }}>
+                        {/* Grid lines */}
+                        {[0,.25,.5,.75,1].map(t => {
+                          const y = H - PAD - t * (H - PAD * 2)
+                          const km = Math.round(minKm + t * range)
+                          return (
+                            <g key={t}>
+                              <line x1={PAD} y1={y} x2={W-PAD} y2={y} stroke="var(--sep)" strokeWidth={0.5} />
+                              <text x={PAD-4} y={y+4} textAnchor="end" fontSize={9} fill="var(--label-tertiary)">{km.toLocaleString()}</text>
+                            </g>
+                          )
+                        })}
+                        {/* X axis labels */}
+                        {pts.filter((_, i) => i % Math.ceil(pts.length / 8) === 0).map(p => (
+                          <text key={p.date} x={p.x} y={H-5} textAnchor="middle" fontSize={9} fill="var(--label-tertiary)">
+                            {p.date?.slice(5)}
+                          </text>
+                        ))}
+                        {/* Flat segments highlight (đỏ) */}
+                        {flatSegs.map((seg, i) => (
+                          <line key={i} x1={seg.x1} y1={seg.y} x2={seg.x2} y2={seg.y}
+                            stroke="#FF3B30" strokeWidth={3} strokeLinecap="round" opacity={0.7} />
+                        ))}
+                        {/* Main km line */}
+                        <path d={pathD} fill="none" stroke="var(--brand)" strokeWidth={2} />
+                        {/* Points */}
+                        {pts.map((p, i) => (
+                          <circle key={i} cx={p.x} cy={p.y} r={2} fill="var(--brand)" opacity={0.6} />
+                        ))}
+                      </svg>
+                    </div>
+                    <div style={{ display:'flex', gap:16, marginTop:8, fontSize:11, color:'var(--label-secondary)' }}>
+                      <span style={{ display:'flex', alignItems:'center', gap:4 }}>
+                        <svg width={16} height={4}><line x1={0} y1={2} x2={16} y2={2} stroke="var(--brand)" strokeWidth={2}/></svg>
+                        Km tích lũy
+                      </span>
+                      <span style={{ display:'flex', alignItems:'center', gap:4 }}>
+                        <svg width={16} height={4}><line x1={0} y1={2} x2={16} y2={2} stroke="#FF3B30" strokeWidth={3}/></svg>
+                        Đoạn dừng hoạt động
+                      </span>
+                    </div>
+                  </div>
+                )
+              })()}
             </div>
           </div>
         </div>
