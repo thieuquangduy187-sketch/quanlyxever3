@@ -41,7 +41,6 @@ const FILTERS = [
   { key:'all',     label:'Tất cả' },
   { key:'normal',  label:'Bình thường' },
   { key:'stopped', label:'Xe dừng HĐ' },
-  { key:'cam_issue', label:'Camera lỗi' },
 ]
 
 export default function PageGPS() {
@@ -86,9 +85,8 @@ export default function PageGPS() {
       if (d.error) { showToast(d.error, true); setCamLoading(false); return }
       // Format lại cho UI
       const now = new Date()
-      const dateStr = d.lastSync
-        ? new Date(d.lastSync).toLocaleString('vi-VN')
-        : `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} ${now.getDate()}/${now.getMonth()+1}/${now.getFullYear()}`
+      // lastSync có thể là "2026-04-30 11:25:04 (GMT+7)" hoặc ISO string
+      const dateStr = d.lastSync || `${now.getDate()}/${now.getMonth()+1}/${now.getFullYear()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`
       setCamReport({ ...d, dateStr })
       setShowCamReport(true)
     } catch(e) { showToast('Lỗi: ' + e.message, true) }
@@ -161,7 +159,7 @@ export default function PageGPS() {
     let r = status.vehicles
     if (filterMode === 'normal')  r = r.filter(v => v.gpsStatus?.code === 'normal')
     if (filterMode === 'stopped') r = r.filter(v => v.gpsStatus?.code === 'stopped')
-    if (filterMode === 'cam_issue') r = r.filter(v => ['partial','lost_all'].includes(v.camStatus?.code))
+
     if (search) {
       const q = search.toLowerCase()
       r = r.filter(v => (v.plateRaw||'').toLowerCase().includes(q))
@@ -252,7 +250,15 @@ export default function PageGPS() {
           <KpiCard label="Tổng xe"      value={s.total   ||0} color="var(--label-primary)" icon="🚛" onClick={() => setFilterMode('all')} active={filterMode==='all'} />
           <KpiCard label="Bình thường"   value={s.normal  ||0} color="#34C759" icon="🟢" onClick={() => setFilterMode('normal')} active={filterMode==='normal'} />
           <KpiCard label="Xe dừng HĐ"   value={s.stopped ||0} color="#FF3B30" icon="🔴" onClick={() => setFilterMode('stopped')} active={filterMode==='stopped'} />
-          <KpiCard label="Camera lỗi"   value={(s.camPartial||0)+(s.camLostAll||0)} color="#FF6B00" icon="📵" onClick={() => setFilterMode('cam_issue')} active={filterMode==='cam_issue'} />
+          <div onClick={loadCamReport}
+            style={{ flex:1, minWidth:110, cursor:'pointer', background: 'var(--bg-card)',
+              borderRadius:12, padding:'14px 18px', border:'0.5px solid var(--sep)',
+              display:'flex', flexDirection:'column', gap:4 }}>
+            <div style={{ fontSize:11, color:'var(--label-secondary)' }}>📷 Báo cáo Camera</div>
+            <div style={{ fontSize:13, fontWeight:600, color:'var(--brand)' }}>
+              {camLoading ? '⏳ Đang tải...' : 'Xem báo cáo →'}
+            </div>
+          </div>
         </div>
       )}
 
