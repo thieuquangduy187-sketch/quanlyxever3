@@ -107,6 +107,7 @@ export default function PageXeTai({ data, rowsLoaded }) {
   const [visibleKeys, setVisibleKeys] = useState(DEFAULT_VISIBLE)
   const [showColPicker, setShowColPicker] = useState(false)
   const [showSyncDrive, setShowSyncDrive] = useState(false)
+  const [fullscreen, setFullscreen]       = useState(false)
   const [syncFolderId, setSyncFolderId] = useState('')
   const [syncResult, setSyncResult] = useState(null)
   const [syncing, setSyncing] = useState(false)
@@ -115,6 +116,13 @@ export default function PageXeTai({ data, rowsLoaded }) {
   const [showSug, setShowSug]         = useState(false)
   const isMobile = useIsMobile()
   const [toast, setToast] = useState(null)
+
+  // Đóng fullscreen khi nhấn Escape
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape') setFullscreen(false) }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
 
   // Đóng dropdown filter khi click ra ngoài → apply pending
   useEffect(() => {
@@ -350,7 +358,11 @@ export default function PageXeTai({ data, rowsLoaded }) {
   const isLoading = !rowsLoaded?.xe_tai && rows.length === 0
 
   return (
-    <div>
+    <div style={fullscreen ? {
+      position:'fixed', inset:0, zIndex:999,
+      background:'var(--bg-secondary)', overflowY:'auto',
+      padding:'12px 16px', boxSizing:'border-box'
+    } : {}}>
       {/* Toast */}
       {toast && (
         <div style={{ position:'fixed', bottom:24, right:24, background: toast.err?'var(--red)':'#1A1A1A', color:'#fff', padding:'10px 18px', borderRadius:9, fontSize:13, zIndex:9999 }}>
@@ -444,6 +456,13 @@ export default function PageXeTai({ data, rowsLoaded }) {
             <button onClick={() => { setShowSyncDrive(true); setSyncResult(null) }}
               style={{ padding:'5px 11px', borderRadius:7, border:'1px solid var(--border)', background:'var(--card)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
               🔗 Sync ảnh Drive
+            </button>
+            <button onClick={() => setFullscreen(f => !f)}
+              title={fullscreen ? 'Thoát toàn màn hình (Esc)' : 'Toàn màn hình'}
+              style={{ padding:'5px 11px', borderRadius:7, border:'1px solid var(--border)', background: fullscreen ? 'var(--brand)' : 'var(--card)',
+                color: fullscreen ? '#fff' : 'var(--label-primary)',
+                fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+              {fullscreen ? '⊠ Thu nhỏ' : '⊡ Toàn màn hình'}
             </button>
 
             <button onClick={exportExcel}
