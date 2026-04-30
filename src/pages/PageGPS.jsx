@@ -65,9 +65,15 @@ export default function PageGPS() {
   const loadCamReport = async () => {
     setCamLoading(true)
     try {
-      const r = await authFetch('/api/gps/camera-report')
+      const r = await authFetch('/api/gps/camera-status')
       const d = await r.json()
-      setCamReport(d)
+      if (d.error) { showToast(d.error, true); setCamLoading(false); return }
+      // Format lại cho UI
+      const now = new Date()
+      const dateStr = d.lastSync
+        ? new Date(d.lastSync).toLocaleString('vi-VN')
+        : `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} ${now.getDate()}/${now.getMonth()+1}/${now.getFullYear()}`
+      setCamReport({ ...d, dateStr })
       setShowCamReport(true)
     } catch(e) { showToast('Lỗi: ' + e.message, true) }
     setCamLoading(false)
