@@ -55,8 +55,23 @@ export default function PageGPS() {
   const [tokenInput, setTokenInput] = useState('')
   const [showToken, setShowToken]   = useState(false)
   const [toast, setToast]           = useState(null)
+  const [camReport, setCamReport]   = useState(null)
+  const [camLoading, setCamLoading] = useState(false)
+  const [showCamReport, setShowCamReport] = useState(false)
+  const [camFilter, setCamFilter]   = useState('all') // all | ok | warning | noCam
   const [backfilling, setBackfilling] = useState(false)
   const [backfillInfo, setBackfillInfo] = useState(null)
+
+  const loadCamReport = async () => {
+    setCamLoading(true)
+    try {
+      const r = await authFetch('/api/gps/camera-report')
+      const d = await r.json()
+      setCamReport(d)
+      setShowCamReport(true)
+    } catch(e) { showToast('Lỗi: ' + e.message, true) }
+    setCamLoading(false)
+  }
 
   const showToast = (msg, err) => { setToast({ msg, err }); setTimeout(() => setToast(null), 3500) }
 
@@ -169,6 +184,12 @@ export default function PageGPS() {
           </div>
         </div>
         <div style={{ display:'flex', gap:8 }}>
+          <button onClick={loadCamReport} disabled={camLoading}
+            style={{ padding:'7px 14px', borderRadius:8, border:'1px solid var(--sep)',
+              background:'var(--bg-card)', cursor: camLoading ? 'not-allowed' : 'pointer',
+              fontSize:12, fontFamily:'inherit' }}>
+            {camLoading ? '⏳ Đang tải...' : '📷 Báo cáo Camera'}
+          </button>
           <button onClick={() => setShowToken(true)}
             style={{ padding:'7px 14px', borderRadius:8, border:'1px solid var(--sep)', background:'var(--bg-card)', cursor:'pointer', fontSize:12, fontFamily:'inherit' }}>
             🔑 Cập nhật Token
@@ -286,6 +307,100 @@ export default function PageGPS() {
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Camera Report Modal */}
+      {showCamReport && camReport && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.45)', zIndex:500,
+          display:'flex', alignItems:'center', justifyContent:'center' }}
+          onClick={() => setShowCamReport(false)}>
+          <div style={{ background:'var(--bg-card)', borderRadius:14, width:'90vw', maxWidth:900,
+            maxHeight:'90vh', display:'flex', flexDirection:'column',
+            boxShadow:'0 8px 40px rgba(0,0,0,.2)', overflow:'hidden' }}
+            onClick={e => e.stopPropagation()}>
+
+            {/* Header */}
+            <div style={{ padding:'14px 20px', borderBottom:'1px solid var(--sep)',
+              display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
+              <div>
+                <div style={{ fontWeight:600, fontSize:14 }}>📷 Báo cáo Camera trực tuyến</div>
+                <div style={{ fontSize:11, color:'var(--label-secondary)', marginTop:2 }}>
+                  {camReport.dateStr} · Logic: ≥ 2 kênh hoạt động = Bình thường
+                </div>
+              </div>
+              <button onClick={() => setShowCamReport(false)}
+                style={{ border:'none', background:'none', cursor:'pointer', fontSize:18, color:'var(--label-secondary)' }}>✕</button>
+            </div>
+
+            {/* KPI row */}
+            <div style={{ display:'flex', gap:10, padding:'12px 20px', borderBottom:'1px solid var(--sep)', flexShrink:0 }}>
+              {[
+                { label:'Tổng xe',       value: camReport.total,   color:'var(--label-primary)' },
+                { label:'✅ Bình thường', value: camReport.ok,      color:'#34C759' },
+                { label:'⚠️ Cần kiểm tra',value: camReport.warning, color:'#FF9500' },
+                { label:'— Không có cam', value: camReport.noCam,   color:'var(--label-tertiary)' },
+              ].map(k => (
+                <div key={k.label} style={{ flex:1, background:'var(--bg-secondary)', borderRadius:8, padding:'8px 12px', textAlign:'center' }}>
+                  <div style={{ fontSize:20, fontWeight:700, color:k.color }}>{k.value}</div>
+                  <div style={{ fontSize:10, color:'var(--label-secondary)', marginTop:2 }}>{k.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Filter */}
+            <div style={{ display:'flex', gap:6, padding:'10px 20px', borderBottom:'1px solid var(--sep)', flexShrink:0 }}>
+              {[['all','Tất cả'],['ok','Bình thường'],['warning','Cần kiểm tra'],['noCam','Không có cam']].map(([k,l]) => (
+                <button key={k} onClick={() => setCamFilter(k)}
+                  style={{ padding:'4px 12px', borderRadius:20, border: camFilter===k ? 'none' : '1px solid var(--sep)',
+                    background: camFilter===k ? 'var(--brand)' : 'var(--bg-card)',
+                    color: camFilter===k ? '#fff' : 'var(--label-primary)',
+                    fontSize:11, cursor:'pointer', fontFamily:'inherit', fontWeight: camFilter===k ? 600 : 400 }}>
+                  {l}
+                </button>
+              ))}
+            </div>
+
+            {/* Table */}
+            <div style={{ overflowY:'auto', flex:1 }}>
+              <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
+                <thead style={{ position:'sticky', top:0, background:'var(--bg-secondary)', zIndex:1 }}>
+                  <tr>
+                    {['STT','Biển số','Kênh 1','Kênh 2','Kênh 3','Kênh 4','Trạng thái'].map(h => (
+                      <th key={h} style={{ padding:'8px 12px', textAlign:'left', fontSize:11,
+                        fontWeight:600, color:'var(--label-secondary)', borderBottom:'1px solid var(--sep)' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {camReport.rows
+                    .filter(r => camFilter === 'all' ? true
+                      : camFilter === 'ok' ? r.ok
+                      : camFilter === 'warning' ? (!r.ok && r.camCount > 0)
+                      : r.camCount === 0)
+                    .map((r, i) => (
+                    <tr key={i} style={{ borderBottom:'0.5px solid var(--sep)',
+                      background: r.ok ? 'transparent' : r.camCount === 0 ? 'transparent' : 'rgba(255,149,0,.04)' }}>
+                      <td style={{ padding:'7px 12px', color:'var(--label-tertiary)', fontSize:11 }}>{r.stt}</td>
+                      <td style={{ padding:'7px 12px', fontWeight:600 }}>{r.bienSo}</td>
+                      {[r.kenh1, r.kenh2, r.kenh3, r.kenh4].map((k, ki) => (
+                        <td key={ki} style={{ padding:'7px 12px', fontSize:11,
+                          color: k === 'Hoạt động' ? '#34C759' : k === 'Không hoạt động' ? '#FF3B30' : 'var(--label-tertiary)' }}>
+                          {k || '—'}
+                        </td>
+                      ))}
+                      <td style={{ padding:'7px 12px' }}>
+                        <span style={{ fontSize:11, fontWeight:600,
+                          color: r.ok ? '#34C759' : r.camCount === 0 ? 'var(--label-tertiary)' : '#FF9500' }}>
+                          {r.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       )}
 
