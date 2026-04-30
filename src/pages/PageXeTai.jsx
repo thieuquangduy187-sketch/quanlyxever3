@@ -414,7 +414,9 @@ export default function PageXeTai({ data, rowsLoaded }) {
       </div>}
 
       {/* Table card */}
-      <div style={{ background:'var(--bg-card)', border:'0.5px solid var(--sep)', borderRadius:14, overflow:'hidden' }}>
+      <div style={{ background:'var(--bg-card)', border:'0.5px solid var(--sep)', borderRadius: fullscreen ? 10 : 14,
+        overflow:'hidden', display:'flex', flexDirection:'column',
+        ...(fullscreen ? { height:'calc(100vh - 110px)' } : {}) }}>
         {/* Filter bar */}
         <div style={{ display:'flex', alignItems:'center', gap:8, padding: isMobile ? '10px 12px' : '12px 16px', borderBottom:'1px solid var(--border)', flexWrap:'wrap' }}>
           <span style={{ fontSize:11, fontWeight:600, color:'var(--ink3)' }}>Lọc:</span>
@@ -515,7 +517,7 @@ export default function PageXeTai({ data, rowsLoaded }) {
         {isLoading ? (
           <div style={{ textAlign:'center', padding:40, color:'var(--ink3)' }}>Đang tải dữ liệu...</div>
         ) : (
-          <div style={{ overflowX:'auto', maxHeight: isMobile ? '60vh' : 520, overflowY:'auto' }}>
+          <div style={{ overflowX:'auto', overflowY:'auto', ...(fullscreen ? { flex:1, maxHeight:'none' } : { maxHeight: isMobile ? '60vh' : 520 }) }}>
             <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
               <thead style={{ position:'sticky', top:0, zIndex:10, background:'var(--bg-secondary)' }}>
                 <tr>
