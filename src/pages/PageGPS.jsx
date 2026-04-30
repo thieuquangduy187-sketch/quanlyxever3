@@ -356,7 +356,7 @@ export default function PageGPS() {
 
             {/* Filter */}
             <div style={{ display:'flex', gap:6, padding:'10px 20px', borderBottom:'1px solid var(--sep)', flexShrink:0 }}>
-              {[['all','Tất cả'],['ok','Bình thường'],['warning','Cần kiểm tra'],['noCam','Không có cam']].map(([k,l]) => (
+              {[['all','Tất cả'],['ok','Bình thường'],['warning','Cần kiểm tra']].map(([k,l]) => (
                 <button key={k} onClick={() => setCamFilter(k)}
                   style={{ padding:'4px 12px', borderRadius:20, border: camFilter===k ? 'none' : '1px solid var(--sep)',
                     background: camFilter===k ? 'var(--brand)' : 'var(--bg-card)',
@@ -382,8 +382,8 @@ export default function PageGPS() {
                   {camReport.rows
                     .filter(r => camFilter === 'all' ? true
                       : camFilter === 'ok' ? r.ok
-                      : camFilter === 'warning' ? (!r.ok && r.camCount > 0)
-                      : r.camCount === 0)
+                      : camFilter === 'warning' ? !r.ok
+                      : false)
                     .map((r, i) => (
                     <tr key={i} style={{ borderBottom:'0.5px solid var(--sep)',
                       background: r.ok ? 'transparent' : r.camCount === 0 ? 'transparent' : 'rgba(255,149,0,.04)' }}>
