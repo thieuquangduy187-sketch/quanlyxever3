@@ -20,6 +20,7 @@ import PageNhatTrinh    from './pages/PageNhatTrinh'
 import PageNhatTrinhNgay from './pages/PageNhatTrinhNgay'
 import PageImport from './pages/PageImport'
 import PageAnalyze from './pages/PageAnalyze'
+import PageHieuQua from './pages/PageHieuQua'
 import LoadingScreen from './components/LoadingScreen'
 import ErrorBar from './components/ErrorBar'
 
@@ -232,6 +233,7 @@ export default function App() {
           {page === 'bao_cao_nhat_trinh' && <PageBaoCaoNhatTrinh />}
           {page === 'import'     && <PageImport />}
           {page === 'analyze'    && <PageAnalyze />}
+          {page === 'hieu_qua'   && <PageHieuQua />}
         </main>
       </div>
     </div>
