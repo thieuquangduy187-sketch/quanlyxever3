@@ -141,7 +141,7 @@ export default function PageAnalyze() {
 
       {/* Upload area */}
       {!result && (
-        <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 14, padding: 24, marginBottom: 16 }}>
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: 24, marginBottom: 16 }}>
           {/* Drop zone */}
           <div
             onDragOver={e => { e.preventDefault(); setDrag(true) }}
@@ -226,7 +226,7 @@ export default function PageAnalyze() {
       {result && (
         <div>
           {/* Summary bar */}
-          <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 14, padding: '16px 20px', marginBottom: 16, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: '16px 20px', marginBottom: 16, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>
                 📊 Kết quả phân tích {result.prs?.length || 0} PR
@@ -256,7 +256,7 @@ export default function PageAnalyze() {
             {result.prs?.map((pr, i) => {
               const risk = RISK_STYLE[pr.mucDoRuiRo] || RISK_STYLE['thấp']
               return (
-                <div key={i} style={{ background: '#fff', border: `1px solid ${pr.batThuong?.length ? '#FCA5A5' : 'var(--border)'}`, borderRadius: 12, overflow: 'hidden' }}>
+                <div key={i} style={{ background: 'var(--bg-card)', border: `1px solid ${pr.batThuong?.length ? '#FCA5A5' : 'var(--border)'}`, borderRadius: 12, overflow: 'hidden' }}>
                   {/* Card header */}
                   <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                     <div style={{ fontSize: 13, fontWeight: 700, flex: 1 }}>
@@ -368,7 +368,7 @@ export default function PageAnalyze() {
           </div>
 
           {/* Action buttons */}
-          <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             <div style={{ flex: 1, fontSize: 13, color: 'var(--ink3)' }}>
               Lưu kết quả vào collection <b>sua_chua</b> trong MongoDB để theo dõi lịch sử sửa chữa.
             </div>
