@@ -1,40 +1,37 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  /* ── Brand ── */
+  /* Brand */
   --brand:      #E63200;
   --brand-dark: #B82800;
   --brand-l:    rgba(230,50,0,0.10);
   --brand-bg:   #FFF5F2;
 
-  /* ── Status colors ── */
+  /* Status */
   --apple-red:    #D70015;
   --apple-orange: #C45500;
   --apple-green:  #1A7F37;
   --apple-blue:   #0055CC;
   --apple-teal:   #007B8F;
-  --red-l:   rgba(215,0,21,0.10);
-  --green-l: rgba(26,127,55,0.10);
-  --amber-l: rgba(196,85,0,0.10);
-  --teal-l:  rgba(0,123,143,0.10);
-  --purple-l:rgba(100,60,180,0.10);
-
-  /* Kept for legacy usage */
+  --red-l:    rgba(215,0,21,0.10);
+  --green-l:  rgba(26,127,55,0.10);
+  --amber-l:  rgba(196,85,0,0.10);
+  --teal-l:   rgba(0,123,143,0.10);
+  --purple-l: rgba(100,60,180,0.10);
   --green:  #1A7F37;
   --red:    #D70015;
   --amber:  #C45500;
   --teal:   #007B8F;
   --purple: #6432B0;
 
-  /* ── Backgrounds ── */
-  --bg:          #F4F5F7;
-  --bg-grouped:  #F4F5F7;
-  --bg-card:     #FFFFFF;
-  --bg-secondary:#F9FAFB;
-  --card:        #FFFFFF;
-  --bg:          #F4F5F7;
+  /* Backgrounds */
+  --bg:           #F4F5F7;
+  --bg-grouped:   #F4F5F7;
+  --bg-card:      #FFFFFF;
+  --bg-secondary: #F9FAFB;
+  --card:         #FFFFFF;
 
-  /* ── Text ── */
+  /* Text */
   --ink:  #111827;
   --ink2: #374151;
   --ink3: #6B7280;
@@ -43,17 +40,29 @@
   --label-tertiary:   #6B7280;
   --label-quaternary: #9CA3AF;
 
-  /* ── Fills ── */
+  /* Fills */
   --fill-primary:   rgba(107,114,128,0.18);
   --fill-secondary: rgba(107,114,128,0.12);
   --fill-tertiary:  rgba(107,114,128,0.07);
 
-  /* ── Borders ── */
+  /* Borders */
   --sep:    #E5E7EB;
   --border: #E5E7EB;
 
-  /* ── Sidebar ── */
-  --sw: 224px;
+  /* Sidebar */
+  --sw:           224px;
+  --sb-bg:        #1A1D23;
+  --sb-hover:     rgba(255,255,255,0.07);
+  --sb-active-bg: rgba(230,50,0,0.15);
+  --sb-active:    #FF6B3D;
+  --sb-text:      #C8D0DA;
+  --sb-text-2:    #6B7580;
+  --sb-sep:       rgba(255,255,255,0.08);
+  --sb-icon-bg:   rgba(255,255,255,0.06);
+
+  /* Topbar */
+  --topbar-bg:     #FFFFFF;
+  --topbar-border: #E5E7EB;
 
   font-family: -apple-system, "Helvetica Neue", "Segoe UI", sans-serif;
   font-size: 14px;
@@ -64,16 +73,110 @@
   color-scheme: light;
 }
 
+/* ── Dark mode ── */
+.dark {
+  --bg:           #0F1117;
+  --bg-grouped:   #0F1117;
+  --bg-card:      #1A1D23;
+  --bg-secondary: #22262E;
+  --card:         #1A1D23;
+
+  --ink:  #E8ECF0;
+  --ink2: #9AA5B4;
+  --ink3: #5F6B7A;
+  --label-primary:    #E8ECF0;
+  --label-secondary:  #9AA5B4;
+  --label-tertiary:   #5F6B7A;
+  --label-quaternary: #3A4250;
+
+  --sep:    #2A2D35;
+  --border: #2A2D35;
+
+  --sb-bg:        #0A0C10;
+  --topbar-bg:    #1A1D23;
+  --topbar-border:#2A2D35;
+
+  --fill-primary:   rgba(255,255,255,0.12);
+  --fill-secondary: rgba(255,255,255,0.07);
+  --fill-tertiary:  rgba(255,255,255,0.04);
+
+  --brand-bg: rgba(230,50,0,0.12);
+  --red-l:    rgba(215,0,21,0.15);
+  --green-l:  rgba(26,127,55,0.15);
+  --amber-l:  rgba(196,85,0,0.15);
+
+  --apple-green: #4CAF82;
+  --apple-red:   #EF7070;
+  --apple-blue:  #6BA3F5;
+  --apple-orange:#FFB74D;
+
+  color-scheme: dark;
+}
+
 body {
   background: var(--bg-grouped);
   min-height: 100vh;
+  transition: background 0.25s ease, color 0.25s ease;
 }
 
-/* ── Scrollbars ── */
+/* Smooth theme transitions */
+*, *::before, *::after {
+  transition-property: background-color, border-color, color;
+  transition-duration: 0.2s;
+  transition-timing-function: ease;
+}
+/* Exclude animations from transition override */
+[style*="animation"], .no-transition {
+  transition: none !important;
+}
+
+/* Scrollbars */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #9CA3AF; }
+::-webkit-scrollbar-thumb { background: var(--sep); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--ink3); }
 
-/* ── Utility ── */
+/* Utility */
 input, select, textarea, button { font-family: inherit; }
+
+/* Tooltip */
+.sb-tooltip {
+  position: absolute;
+  left: 56px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--ink);
+  color: var(--bg-card);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 10px;
+  border-radius: 7px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 200;
+  transition: opacity 0.15s ease !important;
+}
+.sb-tooltip::before {
+  content: '';
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 5px solid transparent;
+  border-right-color: var(--ink);
+}
+
+/* Skeleton loading */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--sep) 25%, var(--bg-secondary) 50%, var(--sep) 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: 6px;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
