@@ -542,7 +542,17 @@ export default function PageXeTai({ data, rowsLoaded }) {
                 <tr>
                   {visibleCols.map(col => {
                     if (NO_COL_FILTER.has(col.k)) return <th key={col.k + '_f'} style={{ padding:'4px 6px', background:'var(--bg-secondary)', borderBottom:'2px solid var(--sep)' }} />
-                    const opts = [...new Set(rows.map(r => String(r[col.k] || '')).filter(Boolean))].sort((a,b) => a.localeCompare(b, 'vi'))
+                    const opts = [...new Set(
+                      // Dùng rows đã lọc bởi tất cả filter NGOẠI TRỪ cột hiện tại
+                      // → hiện đúng options còn lại sau khi lọc các cột khác
+                      filtered.filter(row => {
+                        return Object.entries(colFilters).every(([k, vals]) => {
+                          if (k === col.k) return true // bỏ qua filter của chính cột này
+                          if (!vals || vals.length === 0) return true
+                          return vals.includes(String(row[k] || ''))
+                        })
+                      }).map(r => String(r[col.k] || '')).filter(Boolean)
+                    )].sort((a,b) => a.localeCompare(b, 'vi'))
                     if (opts.length === 0) return <th key={col.k + '_f'} style={{ padding:'4px 6px', background:'var(--bg-secondary)', borderBottom:'2px solid var(--sep)' }} />
                     const applied  = colFilters[col.k] || []
                     const isOpen   = openFilterCol === col.k
