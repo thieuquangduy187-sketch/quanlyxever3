@@ -549,7 +549,7 @@ export default function PageAdminUsers() {
   const loadUsers = useCallback(async () => {
     setLoading(true)
     try {
-      const params = new URLSearchParams({ limit: 200 })
+      const params = new URLSearchParams({ limit: 500 })
       if (q) params.append('q', q)
       if (filterRole !== 'all') params.append('role', filterRole)
       if (filterStatus !== 'all') params.append('active', filterStatus === 'active' ? 'true' : 'false')
