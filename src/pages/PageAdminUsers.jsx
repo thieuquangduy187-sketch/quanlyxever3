@@ -505,15 +505,24 @@ function SessionsTab() {
               <div style={{ fontSize:11, color:'var(--ink3)', minWidth:90 }}>
                 Tạo: {fmtDate(s.createdAt)}
               </div>
-              <div style={{ display:'flex', gap:6 }}>
-                <button onClick={() => revoke(s.userId, s.sessionId)}
-                  style={{ padding:'4px 10px', borderRadius:6, border:'1px solid var(--sep)', background:'none', color:'var(--apple-red)', fontSize:12, cursor:'pointer' }}>
-                  Thu hồi
-                </button>
-                <button onClick={() => revokeAll(s.userId, s.username)}
-                  style={{ padding:'4px 10px', borderRadius:6, border:'none', background:'var(--red-l)', color:'var(--apple-red)', fontSize:12, cursor:'pointer', fontWeight:600 }}>
-                  Tất cả
-                </button>
+              <div style={{ display:'flex', gap:6, alignItems:'center' }}>
+                {s.type === 'legacy' ? (
+                  <span style={{ fontSize:11, color:'var(--label-tertiary)', padding:'4px 8px',
+                    borderRadius:6, border:'1px solid var(--sep)', background:'var(--bg-secondary)' }}>
+                    ⏳ Hết hạn tự động
+                  </span>
+                ) : (
+                  <>
+                    <button onClick={() => revoke(s.userId, s.sessionId)}
+                      style={{ padding:'4px 10px', borderRadius:6, border:'1px solid var(--sep)', background:'none', color:'var(--apple-red)', fontSize:12, cursor:'pointer' }}>
+                      Thu hồi
+                    </button>
+                    <button onClick={() => revokeAll(s.userId, s.username)}
+                      style={{ padding:'4px 10px', borderRadius:6, border:'none', background:'var(--red-l)', color:'var(--apple-red)', fontSize:12, cursor:'pointer', fontWeight:600 }}>
+                      Tất cả
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           ))}
