@@ -186,14 +186,14 @@ function XeActivityReport() {
       marginTop: 16, overflow: 'hidden' }}>
 
       {/* Header row */}
-      <div style={{ padding: '12px 16px', borderBottom: '1px solid #E5E7EB',
+      <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--sep)',
         display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}>🚛 Tình trạng hoạt động xe</span>
           {data && (
             <>
-              <span style={{ fontSize: 11.5, color: '#6B7280' }}>{data.fileName} · {total} xe</span>
-              <span style={{ fontSize: 11, color: '#9CA3AF' }}>
+              <span style={{ fontSize: 11.5, color: 'var(--ink3)' }}>{data.fileName} · {total} xe</span>
+              <span style={{ fontSize: 11, color: 'var(--label-quaternary)' }}>
                 {new Date(data.uploadedAt).toLocaleDateString('vi-VN')}
               </span>
             </>
@@ -211,7 +211,7 @@ function XeActivityReport() {
       </div>
 
       {!data && !uploading && (
-        <div style={{ padding: '24px 20px', textAlign: 'center', color: '#9CA3AF', fontSize: 13 }}>
+        <div style={{ padding: '24px 20px', textAlign: 'center', color: 'var(--label-quaternary)', fontSize: 13 }}>
           Upload file CSV báo cáo GPS để xem tình trạng hoạt động xe
         </div>
       )}
@@ -219,9 +219,9 @@ function XeActivityReport() {
       {data && (
         <>
           {/* KPI chips */}
-          <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid #E5E7EB' }}>
+          <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid var(--sep)' }}>
             {[
-              { key: 'all',  label: 'Tất cả',  count: total,      color: '#374151' },
+              { key: 'all',  label: 'Tất cả',  count: total,      color: 'var(--ink2)' },
               { key: 'dung', label: 'Dừng',     count: S.dung||0,  color: '#DC2626' },
               { key: 'kem',  label: 'Kém HQ',   count: S.kem||0,   color: '#D97706' },
               { key: 'hd',   label: 'Hoạt động',count: S.hoatDong||0, color: '#16A34A' },
@@ -234,7 +234,7 @@ function XeActivityReport() {
                   borderBottom: tab === s.key ? `2px solid ${s.color}` : '2px solid transparent',
                 }}>
                 <div style={{ fontSize: 18, fontWeight: 800, color: s.color }}>{s.count}</div>
-                <div style={{ fontSize: 10.5, color: '#6B7280', marginTop: 1 }}>{s.label}</div>
+                <div style={{ fontSize: 10.5, color: 'var(--ink3)', marginTop: 1 }}>{s.label}</div>
               </div>
             ))}
           </div>
@@ -242,19 +242,19 @@ function XeActivityReport() {
           {/* Table */}
           <div style={{ overflowX: 'auto', maxHeight: 300, overflowY: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-              <thead style={{ position: 'sticky', top: 0, background: '#F9FAFB', zIndex: 5 }}>
+              <thead style={{ position: 'sticky', top: 0, background: 'var(--bg-secondary)', zIndex: 5 }}>
                 <tr>
                   {['#','Biển số','Cửa hàng','Tỉnh','Km GPS','Ngày HĐ','Tình trạng'].map(h => (
                     <th key={h} style={{ padding: '7px 12px', textAlign: 'center', fontWeight: 600,
-                      fontSize: 10.5, color: '#6B7280', textTransform: 'uppercase',
-                      borderBottom: '1px solid #E5E7EB', whiteSpace: 'nowrap' }}>{h}</th>
+                      fontSize: 10.5, color: 'var(--ink3)', textTransform: 'uppercase',
+                      borderBottom: '1px solid var(--sep)', whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((r, i) => (
                   <tr key={i} style={{ background: i%2===0?'#FAFAFA':'#fff' }}>
-                    <td style={{ padding:'6px 12px', textAlign:'center', color:'#9CA3AF', borderBottom:'1px solid #F3F4F6' }}>{i+1}</td>
+                    <td style={{ padding:'6px 12px', textAlign:'center', color:'var(--label-quaternary)', borderBottom:'1px solid #F3F4F6' }}>{i+1}</td>
                     <td style={{ padding:'6px 12px', textAlign:'center', fontWeight:600, color:'#0055CC', borderBottom:'1px solid #F3F4F6', whiteSpace:'nowrap' }}>{r.bienSo||'—'}</td>
                     <td style={{ padding:'6px 12px', textAlign:'center', borderBottom:'1px solid #F3F4F6' }}>{r.cuaHang||'—'}</td>
                     <td style={{ padding:'6px 12px', textAlign:'center', borderBottom:'1px solid #F3F4F6' }}>{r.tinh||'—'}</td>
@@ -266,7 +266,7 @@ function XeActivityReport() {
                   </tr>
                 ))}
                 {filtered.length === 0 && (
-                  <tr><td colSpan={7} style={{ padding: 20, textAlign: 'center', color: '#9CA3AF' }}>Không có dữ liệu</td></tr>
+                  <tr><td colSpan={7} style={{ padding: 20, textAlign: 'center', color: 'var(--label-quaternary)' }}>Không có dữ liệu</td></tr>
                 )}
               </tbody>
             </table>

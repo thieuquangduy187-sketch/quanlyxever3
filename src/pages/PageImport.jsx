@@ -106,7 +106,7 @@ export default function PageImport() {
 
   const reset = () => { setStep(0); setFile(null); setRows([]); setCols([]); setResult(null); setError('') }
 
-  const card = { background:'#fff', border:'1px solid var(--border)', borderRadius:14, padding:24, marginBottom:16 }
+  const card = { background:'var(--bg-card)', border:'1px solid var(--border)', borderRadius:14, padding:24, marginBottom:16 }
   const btn  = (bg='var(--brand)', extra={}) => ({ padding:'8px 18px', borderRadius:9, border:'none', background:bg, color:'#fff', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', ...extra })
 
   return (

@@ -142,7 +142,7 @@ export default function PageNhatTrinhNgay({ user }) {
     }),
     toggleDot: (on) => ({
       width: 26, height: 26, borderRadius: 13,
-      background: '#fff',
+      background: 'var(--bg-card)',
       position: 'absolute', top: 2,
       left: on ? 22 : 2,
       transition: 'left .2s',

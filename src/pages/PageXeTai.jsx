@@ -490,11 +490,11 @@ export default function PageXeTai({ data, rowsLoaded }) {
 
           {/* Preview modal */}
           {previewData && (
-            <div style={{ marginTop:8, padding:'12px', borderRadius:8, border:'1px solid #E5E7EB', background:'#F9FAFB' }}>
-              <div style={{ fontSize:12, fontWeight:700, color:'#374151', marginBottom:6 }}>
+            <div style={{ marginTop:8, padding:'12px', borderRadius:8, border:'1px solid var(--sep)', background:'var(--bg-secondary)' }}>
+              <div style={{ fontSize:12, fontWeight:700, color:'var(--ink2)', marginBottom:6 }}>
                 📋 Xem trước: {previewData.totalRows} dòng · {previewData.headers.length} cột
               </div>
-              <div style={{ fontSize:11, color:'#6B7280', marginBottom:8 }}>
+              <div style={{ fontSize:11, color:'var(--ink3)', marginBottom:8 }}>
                 Cột phát hiện: {previewData.headers.slice(0,6).join(' · ')}{previewData.headers.length > 6 ? ` +${previewData.headers.length-6}` : ''}
               </div>
               <div style={{ display:'flex', gap:8 }}>
@@ -504,8 +504,8 @@ export default function PageXeTai({ data, rowsLoaded }) {
                   {uploading ? '⏳...' : '✓ Xác nhận cập nhật'}
                 </button>
                 <button onClick={() => { setPreviewData(null); setPendingFile(null) }}
-                  style={{ padding:'6px 14px', borderRadius:6, background:'#F3F4F6', border:'1px solid #E5E7EB',
-                    color:'#374151', fontSize:12, cursor:'pointer' }}>
+                  style={{ padding:'6px 14px', borderRadius:6, background:'var(--bg-secondary)', border:'1px solid var(--sep)',
+                    color:'var(--ink2)', fontSize:12, cursor:'pointer' }}>
                   Huỷ
                 </button>
               </div>
