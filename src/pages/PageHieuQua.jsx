@@ -4,7 +4,7 @@ import useIsMobile from '../hooks/useIsMobile';
 
 const API = import.meta.env.VITE_API_URL || 'https://hsg-backend.onrender.com';
 
-const token = () => localStorage.getItem('token');
+const token = () => localStorage.getItem('hsg_token');
 
 // ────────────────────────────────────────────
 // HELPERS
