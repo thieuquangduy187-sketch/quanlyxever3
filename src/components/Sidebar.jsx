@@ -14,6 +14,7 @@ const NAV = [
   { id: 'gps',                  sf: '📡', label: 'Giám sát GPS',           section: null },
   { id: 'chuyen_doi',           sf: '🔄', label: 'Chuyển đổi HSG→HSH',      section: null },
   { id: 'bao_cao_nhat_trinh',   sf: '📊', label: 'Báo cáo nhật trình',    section: null },
+  { id: 'hieu_qua',             sf: '📈', label: 'Hiệu quả xe tải',        section: null },
 ]
 
 const NAV_XE = [
