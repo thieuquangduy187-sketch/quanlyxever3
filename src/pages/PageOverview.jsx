@@ -69,19 +69,15 @@ export default function PageOverview({ data }) {
         <KpiCard icon="🚙" label="Ô tô con" value={os.total||0} sub="Đang quản lý" color="pu" />
       </div>
 
-      {/* Báo cáo tình trạng xe */}
-      <XeActivityReport />
-
       {/* Charts row 1 */}
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '3fr 2fr', gap: 12, marginTop: 16, marginBottom: 12 }}>
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--sep)', borderRadius: 12, padding: '16px 18px' }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', marginBottom: 14 }}>Xe tải theo năm sản xuất</div>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={namArr} barSize={20}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
-              <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#9CA3AF' }} />
-              <YAxis tick={{ fontSize: 11, fill: '#9CA3AF' }} />
-              <Tooltip formatter={(v) => [v, 'Xe']} />
+              <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--label-tertiary)' }} axisLine={{ stroke: 'var(--sep)' }} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: 'var(--label-tertiary)' }} axisLine={false} tickLine={false} />
+              <Tooltip cursor={false} formatter={(v) => [v, 'Xe']} contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--sep)', borderRadius: 8, color: 'var(--ink)' }} />
               <Bar dataKey="value" fill="#E63200" radius={[3,3,0,0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -105,10 +101,9 @@ export default function PageOverview({ data }) {
           <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', marginBottom: 14 }}>Xe tải theo miền</div>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={mienArr} barSize={32}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
-              <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#9CA3AF' }} />
-              <YAxis tick={{ fontSize: 11, fill: '#9CA3AF' }} />
-              <Tooltip formatter={(v) => [v, 'Xe']} />
+              <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--label-tertiary)' }} axisLine={{ stroke: 'var(--sep)' }} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: 'var(--label-tertiary)' }} axisLine={false} tickLine={false} />
+              <Tooltip cursor={false} formatter={(v) => [v, 'Xe']} contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--sep)', borderRadius: 8, color: 'var(--ink)' }} />
               <Bar dataKey="value" radius={[3,3,0,0]}>
                 {mienArr.map((_,i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
               </Bar>

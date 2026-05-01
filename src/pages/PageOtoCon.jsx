@@ -82,14 +82,14 @@ export default function PageOtoCon({ data, rowsLoaded }) {
                 {rows.map((r, i) => (
                   <tr key={i} style={{ borderBottom:'1px solid var(--border)' }}>
                     <td style={{ padding:'8px 12px', color:'var(--label-secondary)', fontSize:11, textAlign:'center' }}>{i+1}</td>
-                    <td style={{ padding:'8px 12px' }}><b>{r.bienSo}</b></td>
-                    <td style={{ padding:'8px 12px' }}>{r.nhanHieu}</td>
-                    <td style={{ padding:'8px 12px' }}>{r.donViSD}</td>
-                    <td style={{ padding:'8px 12px' }}>{r.phapNhan}</td>
+                    <td style={{ padding:'8px 12px', color:'var(--ink)', fontWeight:600 }}>{r.bienSo}</td>
+                    <td style={{ padding:'8px 12px', color:'var(--ink)' }}>{r.nhanHieu}</td>
+                    <td style={{ padding:'8px 12px', color:'var(--ink)' }}>{r.donViSD}</td>
+                    <td style={{ padding:'8px 12px', color:'var(--ink)' }}>{r.phapNhan}</td>
                     <td style={{ padding:'8px 12px', textAlign:'right' }}>{r.soCho}</td>
-                    <td style={{ padding:'8px 12px' }}>{r.namSX||'—'}</td>
+                    <td style={{ padding:'8px 12px', color:'var(--ink)' }}>{r.namSX||'—'}</td>
                     <td style={{ padding:'8px 12px', textAlign:'right' }}>{r.gtcl ? fmtCur(r.gtcl) : '—'}</td>
-                    <td style={{ padding:'8px 12px' }}>{r.nhanSu}</td>
+                    <td style={{ padding:'8px 12px', color:'var(--ink)' }}>{r.nhanSu}</td>
                   </tr>
                 ))}
               </tbody>

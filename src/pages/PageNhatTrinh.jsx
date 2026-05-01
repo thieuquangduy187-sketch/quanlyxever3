@@ -301,7 +301,7 @@ export default function PageNhatTrinh({ user }) {
 
       {/* Header */}
       <div style={{ marginBottom:20 }}>
-        <div style={{ fontSize:22, fontWeight:700, letterSpacing:-0.5 }}>Nhật trình xe tháng</div>
+        <div style={{ fontSize:22, fontWeight:700, letterSpacing:-0.5, color:'var(--ink)' }}>Nhật trình xe tháng</div>
         <div style={{ fontSize:13, color:'var(--label-secondary)', marginTop:4 }}>
           Điền đầy đủ thông tin và nhấn Nộp nhật trình
         </div>
@@ -310,7 +310,7 @@ export default function PageNhatTrinh({ user }) {
       {/* Thông tin xe + tháng */}
       <div style={card}>
         <div style={cardHeader('#007AFF')}>
-          <span style={{ fontSize:14, fontWeight:600, color:'var(--apple-blue)' }}>🚛 Thông tin xe & kỳ báo cáo</span>
+          <span style={{ fontSize:14, fontWeight:600, color:'var(--ink)' }}>🚛 Thông tin xe & kỳ báo cáo</span>
         </div>
         <div style={{ ...cardBody, display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: isMobile ? 10 : 12 }}>
           {/* Biển số — auto fill */}
@@ -319,7 +319,7 @@ export default function PageNhatTrinh({ user }) {
             <div style={{
               padding:'11px 14px', background:'var(--fill-tertiary)',
               border:'0.5px solid var(--sep)', borderRadius:10,
-              fontSize:15, fontWeight:600, color:'var(--apple-blue)',
+              fontSize:15, fontWeight:600, color:'var(--ink)',
               letterSpacing:0.5,
             }}>
               {user?.bienSo || user?.displayName?.replace('Xe ','') || user?.username}

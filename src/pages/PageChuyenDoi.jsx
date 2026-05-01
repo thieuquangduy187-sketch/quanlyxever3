@@ -73,8 +73,8 @@ function TabChuyenDot({ dotsDone, dotCount, onSave, onBatchUpdate }) {
               </div>
               <div style={{ flex:1 }}>
                 <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                  <span style={{ fontWeight:600, fontSize:13 }}>{dot}</span>
-                  <span style={{ fontSize:11, color:'var(--label-tertiary)' }}>({count} xe)</span>
+                  <span style={{ fontWeight:600, fontSize:13, color:'var(--ink)' }}>{dot}</span>
+                  <span style={{ fontSize:11, color:'var(--ink2)' }}>({count} xe)</span>
                   {done && !wasDone && <span style={{ fontSize:10, color:'#FF9500', fontWeight:600 }}>Mới đánh dấu</span>}
                   {wasDone && <span style={{ fontSize:10, color:'#34C759', fontWeight:600 }}>✓ Đã chuyển HSH</span>}
                 </div>

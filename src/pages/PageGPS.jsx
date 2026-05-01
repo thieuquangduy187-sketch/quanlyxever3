@@ -439,7 +439,7 @@ export default function PageGPS() {
                     <tr key={i} style={{ borderBottom:'0.5px solid var(--sep)',
                       background: r.ok ? 'transparent' : r.camCount === 0 ? 'transparent' : 'rgba(255,149,0,.04)' }}>
                       <td style={{ padding:'7px 12px', color:'var(--label-tertiary)', fontSize:11 }}>{r.stt}</td>
-                      <td style={{ padding:'7px 12px', fontWeight:600 }}>{r.bienSo}</td>
+                      <td style={{ padding:'7px 12px', fontWeight:600, color:'var(--ink)' }}>{r.bienSo}</td>
                       <td style={{ padding:'7px 12px', fontSize:11, color:'var(--label-secondary)' }}>{r.cuaHang||'—'}</td>
                       <td style={{ padding:'7px 12px', fontSize:11, color:'var(--label-secondary)' }}>{r.tinhMoi||'—'}</td>
                       {[r.kenh1, r.kenh2, r.kenh3, r.kenh4].map((k, ki) => (

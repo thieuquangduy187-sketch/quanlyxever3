@@ -49,8 +49,8 @@ function DanhGiaBadge({ val }) {
       borderRadius: 20,
       fontSize: 12,
       fontWeight: 600,
-      background: ok ? '#e6f4ea' : '#fce8e6',
-      color: ok ? '#1e7e34' : '#c62828'
+      background: ok ? 'var(--green-l)' : 'var(--red-l)',
+      color: ok ? 'var(--apple-green)' : 'var(--apple-red)'
     }}>{val || '—'}</span>
   );
 }
@@ -89,7 +89,7 @@ function AnalysisPanel({ thang, nam, token: tok }) {
         style={{
           padding: '12px 18px', cursor: 'pointer',
           display: 'flex', alignItems: 'center', gap: 8,
-          background: open ? '#fff8f6' : 'var(--bg-card)',
+          background: open ? 'var(--brand-l)' : 'var(--bg-card)',
           userSelect: 'none'
         }}
       >
@@ -116,7 +116,7 @@ function AnalysisPanel({ thang, nam, token: tok }) {
                 {data.monthSummaries.map(m => (
                   <div key={m.label} style={{
                     flex: '1 0 100px', minWidth: 100,
-                    background: '#f7f8fa', borderRadius: 8, padding: '8px 10px',
+                    background: 'var(--bg-secondary)', borderRadius: 8, padding: '8px 10px',
                     textAlign: 'center'
                   }}>
                     <div style={{ fontSize: 11, color: 'var(--label-secondary)' }}>T.{m.label}</div>
@@ -136,7 +136,7 @@ function AnalysisPanel({ thang, nam, token: tok }) {
 
           {/* AI analysis text */}
           <div style={{
-            background: '#f7f8fa', borderRadius: 8, padding: '12px 14px',
+            background: 'var(--bg-secondary)', borderRadius: 8, padding: '12px 14px',
             fontSize: 13, lineHeight: 1.7, color: 'var(--label-primary)',
             whiteSpace: 'pre-wrap'
           }}>
@@ -213,7 +213,7 @@ function ImportModal({ onClose, onDone, tok }) {
           style={{
             border: '2px dashed var(--sep)', borderRadius: 10,
             padding: '20px', textAlign: 'center', cursor: 'pointer',
-            background: file ? '#f0fff4' : '#f7f8fa',
+            background: file ? 'var(--green-l)' : 'var(--bg-secondary)',
             marginBottom: 14
           }}
         >
@@ -231,7 +231,7 @@ function ImportModal({ onClose, onDone, tok }) {
 
         {result && (
           <div style={{
-            background: result.ok ? '#e6f4ea' : '#fce8e6',
+            background: result.ok ? 'var(--green-l)' : 'var(--red-l)',
             borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 13
           }}>
             {result.ok ? (
@@ -306,7 +306,7 @@ function SyncNtxtModal({ thang, nam, onClose, tok }) {
         </p>
         {result && (
           <div style={{
-            background: result.ok ? '#e6f4ea' : '#fce8e6',
+            background: result.ok ? 'var(--green-l)' : 'var(--red-l)',
             borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 13
           }}>
             {result.ok
@@ -405,7 +405,7 @@ function EditModal({ xe, thang, nam, onClose, onSaved, tok }) {
         {/* Preview metrics */}
         {tongKLVC > 0 && (
           <div style={{
-            background: '#f7f8fa', borderRadius: 8, padding: '10px 12px',
+            background: 'var(--bg-secondary)', borderRadius: 8, padding: '10px 12px',
             fontSize: 12, marginBottom: 14, color: 'var(--label-secondary)'
           }}>
             Tỷ lệ nội bộ: <b>{tongKLVC > 0 ? fmt(klvcNoiBo / tongKLVC * 100, 1) : 0}%</b>
@@ -518,7 +518,7 @@ export default function PageHieuQua() {
       style={{
         padding: '10px 10px', whiteSpace: 'nowrap', cursor: 'pointer',
         textAlign: right ? 'right' : 'left',
-        background: sortKey === col ? '#fff0eb' : 'transparent',
+        background: sortKey === col ? 'var(--brand-l)' : 'transparent',
         color: sortKey === col ? 'var(--brand)' : 'var(--label-secondary)',
         fontSize: 12, fontWeight: 600,
         userSelect: 'none'
@@ -609,13 +609,13 @@ export default function PageHieuQua() {
       {/* Cảnh báo */}
       {warnings.length > 0 && (
         <div style={{
-          background: '#fff8e1', borderRadius: 12, padding: '12px 16px',
+          background: 'var(--amber-l)', borderRadius: 12, padding: '12px 16px',
           marginBottom: 16, border: '1px solid #ffd54f'
         }}>
-          <div style={{ fontWeight: 700, color: '#e65100', marginBottom: 8, fontSize: 14 }}>
+          <div style={{ fontWeight: 700, color: 'var(--apple-orange)', marginBottom: 8, fontSize: 14 }}>
             ⚠️ Cảnh báo: {warnings.length} xe hoạt động kém hiệu quả
           </div>
-          <div style={{ fontSize: 12, color: '#5d4037', marginBottom: 6 }}>
+          <div style={{ fontSize: 12, color: 'var(--ink2)', marginBottom: 6 }}>
             Không đạt định mức VÀ KLVC dưới 50% trung bình đội xe
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -634,7 +634,7 @@ export default function PageHieuQua() {
               </span>
             ))}
             {warnings.length > 20 && (
-              <span style={{ fontSize: 12, color: '#5d4037' }}>
+              <span style={{ fontSize: 12, color: 'var(--ink2)' }}>
                 +{warnings.length - 20} xe khác
               </span>
             )}
@@ -700,7 +700,7 @@ export default function PageHieuQua() {
         <div style={{ overflowX: 'auto', borderRadius: 12, border: '1px solid var(--sep)' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
-              <tr style={{ background: '#f7f8fa', borderBottom: '1px solid var(--sep)' }}>
+              <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--sep)' }}>
                 <SortTh col="bienSo" label="Biển số" />
                 <SortTh col="cuaHang" label="Cửa hàng" />
                 <SortTh col="tinhMoi" label="Tỉnh" />
@@ -720,11 +720,11 @@ export default function PageHieuQua() {
                   key={row.bienSo}
                   style={{
                     borderBottom: '1px solid var(--sep)',
-                    background: i % 2 === 0 ? '#fff' : '#fafbfc',
+                    background: i % 2 === 0 ? 'var(--bg-card)' : 'var(--bg-secondary)',
                     transition: 'background 0.1s'
                   }}
-                  onMouseEnter={e => e.currentTarget.style.background = '#fff8f6'}
-                  onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? '#fff' : '#fafbfc'}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--brand-l)'}
+                  onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? 'var(--bg-card)' : 'var(--bg-secondary)'}
                 >
                   <td style={{ padding: '9px 10px', fontWeight: 600, whiteSpace: 'nowrap' }}>
                     {row.bienSo}

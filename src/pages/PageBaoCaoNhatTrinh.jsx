@@ -162,7 +162,7 @@ export default function PageBaoCaoNhatTrinh() {
             ].map((k,i)=>(
               <div key={k.l} style={{padding:'14px 18px',borderRight:i<3&&!isMobile?'1px solid #E5E7EB':'none',borderBottom:isMobile&&i<2?'1px solid #E5E7EB':'none'}}>
                 <div style={{fontSize:11,color:'var(--label-tertiary)',marginBottom:4}}>{k.l}</div>
-                <div style={{fontSize:18,fontWeight:700,color:k.col||'#111827'}}>{k.v}</div>
+                <div style={{fontSize:18,fontWeight:700,color:k.col||'var(--ink)'}}>{k.v}</div>
               </div>
             ))}
           </div>
@@ -182,13 +182,13 @@ export default function PageBaoCaoNhatTrinh() {
                 return (
                   <div key={t.tinh} onClick={()=>setFilterTinh(x=>x===t.tinh?'all':t.tinh)}
                     style={{padding:'10px 12px',borderRadius:8,cursor:'pointer',
-                      border:`1px solid ${filterTinh===t.tinh?'#0055CC':'#E5E7EB'}`,
-                      background:filterTinh===t.tinh?'#EFF6FF':'#FAFAFA'}}>
+                      border:`1px solid ${filterTinh===t.tinh?'var(--brand)':'var(--sep)'}`,
+                      background:filterTinh===t.tinh?'var(--brand-bg)':'var(--bg-secondary)'}}>
                     <div style={{display:'flex',justifyContent:'space-between',marginBottom:5}}>
                       <span style={{fontSize:13,fontWeight:600,color:'var(--ink)'}}>{t.tinh||'Chưa rõ'}</span>
                       <span style={{fontSize:12,fontWeight:700,color:pctColor(p)}}>{t.daNop}/{t.tongXe}</span>
                     </div>
-                    <div style={{height:4,background:'#E5E7EB',borderRadius:2,overflow:'hidden'}}>
+                    <div style={{height:4,background:'var(--sep)',borderRadius:2,overflow:'hidden'}}>
                       <div style={{height:'100%',width:`${p}%`,background:pctColor(p),borderRadius:2}}/>
                     </div>
                     <div style={{fontSize:11,color:'var(--label-quaternary)',marginTop:3}}>{p}% · {t.mien||''}</div>
@@ -239,8 +239,8 @@ export default function PageBaoCaoNhatTrinh() {
                       <td style={{...tdS(i),fontWeight:700,color:'#0055CC',whiteSpace:'nowrap'}}>{xe.bienSo||xe.ma}</td>
                       <td style={tdS(i)}>
                         {xe.daNop
-                          ?<span style={{padding:'2px 8px',borderRadius:4,fontSize:11,fontWeight:600,background:'#DCFCE7',color:'#1A7F37'}}>✓ Đã nộp</span>
-                          :<span style={{padding:'2px 8px',borderRadius:4,fontSize:11,fontWeight:600,background:'#FEE2E2',color:'#D70015'}}>✗ Chưa</span>}
+                          ?<span style={{padding:'2px 8px',borderRadius:4,fontSize:11,fontWeight:600,background:'var(--green-l)',color:'var(--apple-green)'}}>✓ Đã nộp</span>
+                          :<span style={{padding:'2px 8px',borderRadius:4,fontSize:11,fontWeight:600,background:'var(--red-l)',color:'var(--apple-red)'}}>✗ Chưa</span>}
                       </td>
                       <td style={{...tdS(i),color:r?'#0055CC':'#D1D5DB',fontWeight:r?700:400}}>{r?fmt(r.tongKmDiChuyen):'—'}</td>
                       <td style={{...tdS(i),color:r?'#1A7F37':'#D1D5DB'}}>{r?fmt(r.tongKLChuyen):'—'}</td>
