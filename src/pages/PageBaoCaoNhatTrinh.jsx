@@ -78,17 +78,17 @@ export default function PageBaoCaoNhatTrinh() {
   }
 
   // ── Styles ──
-  const card = { background:'#fff', borderRadius:12, border:'1px solid #E5E7EB', marginBottom:14 }
-  const hdrS = { padding:'12px 16px', borderBottom:'1px solid #E5E7EB', fontSize:11.5, fontWeight:700, color:'#374151', textTransform:'uppercase', letterSpacing:'0.06em' }
-  const thS  = { padding:'9px 12px', fontWeight:600, fontSize:10.5, color:'#6B7280', textTransform:'uppercase', letterSpacing:'0.05em', borderBottom:'1px solid #E5E7EB', background:'#F9FAFB', textAlign:'center', whiteSpace:'nowrap', cursor:'pointer' }
-  const tdS  = i => ({ padding:'9px 12px', fontSize:12.5, color:'#374151', borderBottom:'1px solid #F3F4F6', textAlign:'center', background:i%2===0?'#FAFAFA':'#fff' })
-  const selS = { padding:'7px 10px', borderRadius:8, border:'1px solid #E5E7EB', fontSize:12.5, color:'#374151', outline:'none', background:'#fff' }
+  const card = { background:'var(--bg-card)', borderRadius:12, border:'1px solid var(--sep)', marginBottom:14 }
+  const hdrS = { padding:'12px 16px', borderBottom:'1px solid var(--sep)', fontSize:11.5, fontWeight:700, color:'var(--label-secondary)', textTransform:'uppercase', letterSpacing:'0.06em' }
+  const thS  = { padding:'9px 12px', fontWeight:600, fontSize:10.5, color:'var(--label-tertiary)', textTransform:'uppercase', letterSpacing:'0.05em', borderBottom:'1px solid var(--sep)', background:'var(--bg-secondary)', textAlign:'center', whiteSpace:'nowrap', cursor:'pointer' }
+  const tdS  = i => ({ padding:'9px 12px', fontSize:12.5, color:'var(--ink2)', borderBottom:'1px solid var(--sep)', textAlign:'center', background:i%2===0?'var(--bg-secondary)':'var(--bg-card)' })
+  const selS = { padding:'7px 10px', borderRadius:8, border:'1px solid var(--sep)', fontSize:12.5, color:'var(--ink2)', outline:'none', background:'var(--bg-card)' }
   const btnS = c => ({ padding:'8px 14px', borderRadius:8, border:'none', color:'#fff', fontSize:13, fontWeight:600, cursor:'pointer', background:c })
 
   if (loading) return (
     <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'60vh',flexDirection:'column',gap:12}}>
-      <div style={{width:36,height:36,border:'3px solid #E5E7EB',borderTopColor:'#E63200',borderRadius:'50%',animation:'spin .7s linear infinite'}}/>
-      <div style={{color:'#6B7280',fontSize:13}}>Đang tải báo cáo...</div>
+      <div style={{width:36,height:36,border:'3px solid var(--sep)',borderTopColor:'#E63200',borderRadius:'50%',animation:'spin .7s linear infinite'}}/>
+      <div style={{color:'var(--label-tertiary)',fontSize:13}}>Đang tải báo cáo...</div>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   )
@@ -99,8 +99,8 @@ export default function PageBaoCaoNhatTrinh() {
       {/* Header */}
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:10,marginBottom:20}}>
         <div>
-          <h1 style={{fontSize:22,fontWeight:800,color:'#111827',letterSpacing:-0.5,margin:0}}>Báo cáo nhật trình xe tải</h1>
-          <p style={{fontSize:13,color:'#6B7280',margin:'4px 0 0'}}>Tháng {thang}/{nam}{data?` · ${data.summary.tongXe} xe`:''}</p>
+          <h1 style={{fontSize:22,fontWeight:800,color:'var(--ink)',letterSpacing:-0.5,margin:0}}>Báo cáo nhật trình xe tải</h1>
+          <p style={{fontSize:13,color:'var(--label-tertiary)',margin:'4px 0 0'}}>Tháng {thang}/{nam}{data?` · ${data.summary.tongXe} xe`:''}</p>
         </div>
         <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}}>
           <select value={thang} onChange={e=>setThang(+e.target.value)} style={selS}>
@@ -133,7 +133,7 @@ export default function PageBaoCaoNhatTrinh() {
               </div>
             </div>
             <div>
-              <div style={{fontSize:26,fontWeight:800,color:'#111827',lineHeight:1}}>{data.summary.daNop}<span style={{fontSize:13,color:'#9CA3AF',marginLeft:4}}>/ {data.summary.tongXe}</span></div>
+              <div style={{fontSize:26,fontWeight:800,color:'var(--ink)',lineHeight:1}}>{data.summary.daNop}<span style={{fontSize:13,color:'var(--label-quaternary)',marginLeft:4}}>/ {data.summary.tongXe}</span></div>
               <div style={{fontSize:11.5,color:'#1A7F37',fontWeight:600,marginTop:3}}>✓ {data.summary.daNop} đã nộp</div>
               <div style={{fontSize:11.5,color:'#D70015',marginTop:1}}>✗ {data.summary.chuaNop} chưa nộp</div>
             </div>
@@ -144,8 +144,8 @@ export default function PageBaoCaoNhatTrinh() {
             {l:'Tổng phút cẩu',  v:fmt(data.tongHop.tongPhutCau,'phút'),    border:'#C45500'},
           ].map(k=>(
             <div key={k.l} style={{...card,padding:'18px',borderTop:`3px solid ${k.border}`,marginBottom:0}}>
-              <div style={{fontSize:10.5,color:'#6B7280',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:8}}>{k.l}</div>
-              <div style={{fontSize:22,fontWeight:800,color:'#111827'}}>{k.v}</div>
+              <div style={{fontSize:10.5,color:'var(--label-tertiary)',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:8}}>{k.l}</div>
+              <div style={{fontSize:22,fontWeight:800,color:'var(--ink)'}}>{k.v}</div>
             </div>
           ))}
         </div>
@@ -161,7 +161,7 @@ export default function PageBaoCaoNhatTrinh() {
               {l:'TB KL nội bộ/xe',     v:fmt(data.tongHop.avgKLNoBo,'kg'), col:'#C45500'},
             ].map((k,i)=>(
               <div key={k.l} style={{padding:'14px 18px',borderRight:i<3&&!isMobile?'1px solid #E5E7EB':'none',borderBottom:isMobile&&i<2?'1px solid #E5E7EB':'none'}}>
-                <div style={{fontSize:11,color:'#6B7280',marginBottom:4}}>{k.l}</div>
+                <div style={{fontSize:11,color:'var(--label-tertiary)',marginBottom:4}}>{k.l}</div>
                 <div style={{fontSize:18,fontWeight:700,color:k.col||'#111827'}}>{k.v}</div>
               </div>
             ))}
@@ -173,7 +173,7 @@ export default function PageBaoCaoNhatTrinh() {
           <div onClick={()=>setTinhExpanded(v=>!v)}
             style={{...hdrS,cursor:'pointer',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
             <span>Tiến độ theo tỉnh</span>
-            <span style={{fontSize:11,color:'#9CA3AF',display:'inline-block',transform:tinhExpanded?'none':'rotate(-90deg)',transition:'transform .2s'}}>▼</span>
+            <span style={{fontSize:11,color:'var(--label-quaternary)',display:'inline-block',transform:tinhExpanded?'none':'rotate(-90deg)',transition:'transform .2s'}}>▼</span>
           </div>
           {tinhExpanded && (
             <div style={{padding:'14px 16px',display:'grid',gridTemplateColumns:isMobile?'1fr':'repeat(3,1fr)',gap:10}}>
@@ -185,13 +185,13 @@ export default function PageBaoCaoNhatTrinh() {
                       border:`1px solid ${filterTinh===t.tinh?'#0055CC':'#E5E7EB'}`,
                       background:filterTinh===t.tinh?'#EFF6FF':'#FAFAFA'}}>
                     <div style={{display:'flex',justifyContent:'space-between',marginBottom:5}}>
-                      <span style={{fontSize:13,fontWeight:600,color:'#111827'}}>{t.tinh||'Chưa rõ'}</span>
+                      <span style={{fontSize:13,fontWeight:600,color:'var(--ink)'}}>{t.tinh||'Chưa rõ'}</span>
                       <span style={{fontSize:12,fontWeight:700,color:pctColor(p)}}>{t.daNop}/{t.tongXe}</span>
                     </div>
                     <div style={{height:4,background:'#E5E7EB',borderRadius:2,overflow:'hidden'}}>
                       <div style={{height:'100%',width:`${p}%`,background:pctColor(p),borderRadius:2}}/>
                     </div>
-                    <div style={{fontSize:11,color:'#9CA3AF',marginTop:3}}>{p}% · {t.mien||''}</div>
+                    <div style={{fontSize:11,color:'var(--label-quaternary)',marginTop:3}}>{p}% · {t.mien||''}</div>
                   </div>
                 )
               })}
@@ -201,10 +201,10 @@ export default function PageBaoCaoNhatTrinh() {
 
         {/* Bảng chi tiết */}
         <div style={card}>
-          <div style={{padding:'12px 16px',borderBottom:'1px solid #E5E7EB',display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}}>
+          <div style={{padding:'12px 16px',borderBottom:'1px solid var(--sep)',display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}}>
             <input value={search} onChange={e=>setSearch(e.target.value)}
               placeholder="🔍 Tìm biển số, cửa hàng, tỉnh..."
-              style={{flex:1,minWidth:180,padding:'7px 12px',borderRadius:8,border:'1px solid #E5E7EB',fontSize:13,outline:'none',color:'#374151'}}/>
+              style={{flex:1,minWidth:180,padding:'7px 12px',borderRadius:8,border:'1px solid var(--sep)',fontSize:13,outline:'none',color:'var(--ink2)'}}/>
             <select value={filterTinh} onChange={e=>setFilterTinh(e.target.value)} style={selS}>
               <option value="all">Tất cả tỉnh</option>
               {data.byTinh.map(t=><option key={t.tinh} value={t.tinh}>{t.tinh}</option>)}
@@ -214,7 +214,7 @@ export default function PageBaoCaoNhatTrinh() {
               <option value="done">✓ Đã nộp ({data.summary.daNop})</option>
               <option value="pending">✗ Chưa nộp ({data.summary.chuaNop})</option>
             </select>
-            <span style={{fontSize:11,color:'#9CA3AF'}}>{filteredXe.length} kết quả</span>
+            <span style={{fontSize:11,color:'var(--label-quaternary)'}}>{filteredXe.length} kết quả</span>
           </div>
           <div style={{overflowX:'auto'}}>
             <table style={{width:'100%',borderCollapse:'collapse',fontSize:12.5}}>
@@ -233,8 +233,8 @@ export default function PageBaoCaoNhatTrinh() {
                   return (
                     <tr key={xe.ma+xe.bienSo}>
                       <td style={{...tdS(i),textAlign:'left'}}>
-                        <div style={{fontWeight:600,color:'#111827'}}>{xe.tinh||'—'}</div>
-                        <div style={{fontSize:11,color:'#9CA3AF',marginTop:1}}>{xe.cuaHang||'—'}</div>
+                        <div style={{fontWeight:600,color:'var(--ink)'}}>{xe.tinh||'—'}</div>
+                        <div style={{fontSize:11,color:'var(--label-quaternary)',marginTop:1}}>{xe.cuaHang||'—'}</div>
                       </td>
                       <td style={{...tdS(i),fontWeight:700,color:'#0055CC',whiteSpace:'nowrap'}}>{xe.bienSo||xe.ma}</td>
                       <td style={tdS(i)}>
@@ -248,13 +248,13 @@ export default function PageBaoCaoNhatTrinh() {
                       <td style={{...tdS(i),color:r?.tongTienDau?'#D70015':'#D1D5DB'}}>{r?fmtM(r.tongTienDau):'—'}</td>
                       <td style={{...tdS(i),color:r?.tgSuDungCau>0?'#C45500':'#D1D5DB'}}>{r?(r.tgSuDungCau||0):'—'}</td>
                       <td style={tdS(i)}>{r?(r.soChuyenXe||0):'—'}</td>
-                      <td style={{...tdS(i),maxWidth:140,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:'#9CA3AF'}}>{r?.ghiChu||'—'}</td>
+                      <td style={{...tdS(i),maxWidth:140,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:'var(--label-quaternary)'}}>{r?.ghiChu||'—'}</td>
                     </tr>
                   )
                 })}
               </tbody>
             </table>
-            {filteredXe.length===0&&<div style={{padding:40,textAlign:'center',color:'#9CA3AF'}}>Không có kết quả</div>}
+            {filteredXe.length===0&&<div style={{padding:40,textAlign:'center',color:'var(--label-quaternary)'}}>Không có kết quả</div>}
           </div>
         </div>
       </>}
