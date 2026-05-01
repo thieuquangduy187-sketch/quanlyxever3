@@ -1,6 +1,7 @@
 // quanlyxever3/src/pages/PageHieuQua.jsx
 import { useState, useEffect, useCallback, useRef } from 'react';
 import useIsMobile from '../hooks/useIsMobile';
+import * as XLSX from 'xlsx';
 
 const API = import.meta.env.VITE_API_URL || 'https://hsg-backend.onrender.com';
 
@@ -438,6 +439,361 @@ function EditModal({ xe, thang, nam, onClose, onSaved, tok }) {
 // ────────────────────────────────────────────
 // MAIN PAGE
 // ────────────────────────────────────────────
+// ────────────────────────────────────────────
+// ALL_COLS definition (dùng cho cả Export và table)
+// ────────────────────────────────────────────
+const EXPORT_COLS = [
+  { key: 'stt',        label: 'STT',             default: true },
+  { key: 'bienSo',     label: 'Biển số',          default: true },
+  { key: 'maHienTai',  label: 'Mã hiện tại',      default: true },
+  { key: 'cuaHang',    label: 'Cửa hàng sử dụng', default: true },
+  { key: 'tinhMoi',    label: 'Tỉnh',             default: true },
+  { key: 'tenTaiSan',  label: 'Loại xe',           default: false },
+  { key: 'taiTrong',   label: 'Tải trọng (T)',     default: true },
+  { key: 'km',         label: 'KM',               default: true },
+  { key: 'tongKLVC',   label: 'KLVC (kg)',         default: true },
+  { key: 'klvcNoiBo',  label: 'Nội bộ (kg)',       default: true },
+  { key: 'tyLeNoiBo',  label: '% Nội bộ',          default: true },
+  { key: 'soChuyenNgay', label: 'Số chuyến/ngày',  default: true },
+  { key: 'danhGia',    label: 'Đánh giá',          default: true },
+]
+
+// ────────────────────────────────────────────
+// EXPORT MODAL
+// ────────────────────────────────────────────
+function ExportModal({ onClose, tok, currentThang, currentNam }) {
+  const now = new Date()
+  const curYear = currentNam || now.getFullYear()
+
+  // Tháng có thể chọn: 12 tháng gần nhất
+  const monthOptions = []
+  let t = currentThang || now.getMonth() + 1
+  let y = curYear
+  for (let i = 0; i < 18; i++) {
+    monthOptions.push({ thang: t, nam: y, label: `Tháng ${t}/${y}` })
+    t--; if (t === 0) { t = 12; y-- }
+  }
+
+  const [selectedMonths, setSelectedMonths] = useState([
+    { thang: currentThang, nam: currentNam }
+  ])
+  const [selectedCols, setSelectedCols] = useState(
+    EXPORT_COLS.filter(c => c.default).map(c => c.key)
+  )
+  const [sheetMode, setSheetMode] = useState('separate') // 'separate' | 'combined'
+  const [loading, setLoading] = useState(false)
+  const [progress, setProgress] = useState('')
+
+  const toggleMonth = (m) => {
+    const key = `${m.thang}-${m.nam}`
+    const exists = selectedMonths.find(x => `${x.thang}-${x.nam}` === key)
+    if (exists) {
+      if (selectedMonths.length > 1) setSelectedMonths(selectedMonths.filter(x => `${x.thang}-${x.nam}` !== key))
+    } else {
+      setSelectedMonths([...selectedMonths, m])
+    }
+  }
+
+  const toggleCol = (key) => {
+    if (key === 'stt') return // STT luôn bật
+    setSelectedCols(prev =>
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    )
+  }
+
+  const isMonthSelected = (m) =>
+    !!selectedMonths.find(x => x.thang === m.thang && x.nam === m.nam)
+
+  const fetchMonth = async (thang, nam) => {
+    const r = await fetch(`${API}/api/hieu-qua?thang=${thang}&nam=${nam}`, {
+      headers: { Authorization: `Bearer ${tok}` }
+    })
+    const d = await r.json()
+    return d.data || []
+  }
+
+  const getCellValue = (row, key, idx) => {
+    switch (key) {
+      case 'stt':          return idx + 1
+      case 'bienSo':       return row.bienSo || ''
+      case 'maHienTai':    return row.maHienTai || ''
+      case 'cuaHang':      return row.cuaHang || ''
+      case 'tinhMoi':      return row.tinhMoi || ''
+      case 'tenTaiSan':    return row.tenTaiSan || ''
+      case 'taiTrong':     return row.taiTrong || 0
+      case 'km':           return row.km || 0
+      case 'tongKLVC':     return row.tongKLVC || 0
+      case 'klvcNoiBo':    return row.klvcNoiBo || 0
+      case 'tyLeNoiBo':    return row.tyLeNoiBo ? +Number(row.tyLeNoiBo).toFixed(1) : 0
+      case 'soChuyenNgay': return row.soChuyenNgay ? +Number(row.soChuyenNgay).toFixed(2) : 0
+      case 'danhGia':      return row.danhGia || ''
+      default:             return ''
+    }
+  }
+
+  const buildSheet = (rows, monthLabel) => {
+    const activeCols = EXPORT_COLS.filter(c => selectedCols.includes(c.key))
+
+    // Header rows
+    const titleRow = [`BÁO CÁO HIỆU QUẢ XE TẢI${monthLabel ? ' — ' + monthLabel : ''}`]
+    const headerRow = activeCols.map(c => c.label)
+
+    const wsData = [titleRow, [], headerRow]
+
+    rows.forEach((row, i) => {
+      wsData.push(activeCols.map(c => getCellValue(row, c.key, i)))
+    })
+
+    // Summary row
+    wsData.push([])
+    wsData.push([
+      '', '', '', '', '',
+      'Tổng xe:', rows.length,
+      'Đạt:', rows.filter(r => r.danhGia === 'Đạt').length,
+      'Không đạt:', rows.filter(r => r.danhGia === 'Không đạt').length,
+    ])
+
+    const ws = XLSX.utils.aoa_to_sheet(wsData)
+
+    // Column widths
+    const colWidths = activeCols.map(c => {
+      const w = { stt:6, bienSo:12, maHienTai:12, cuaHang:28, tinhMoi:16,
+        tenTaiSan:24, taiTrong:10, km:10, tongKLVC:14, klvcNoiBo:14,
+        tyLeNoiBo:10, soChuyenNgay:14, danhGia:12 }
+      return { wch: w[c.key] || 12 }
+    })
+    ws['!cols'] = colWidths
+
+    // Merge title row
+    ws['!merges'] = [{ s:{r:0,c:0}, e:{r:0,c:activeCols.length-1} }]
+
+    return ws
+  }
+
+  const handleExport = async () => {
+    if (selectedMonths.length === 0) return alert('Chọn ít nhất 1 tháng')
+    if (selectedCols.length === 0) return alert('Chọn ít nhất 1 cột')
+    setLoading(true)
+
+    try {
+      const wb = XLSX.utils.book_new()
+
+      // Sort months ascending
+      const sorted = [...selectedMonths].sort((a, b) =>
+        (a.nam * 12 + a.thang) - (b.nam * 12 + b.thang)
+      )
+
+      if (sheetMode === 'separate') {
+        // Mỗi tháng 1 sheet riêng
+        for (const m of sorted) {
+          setProgress(`Đang tải tháng ${m.thang}/${m.nam}...`)
+          const rows = await fetchMonth(m.thang, m.nam)
+          const ws = buildSheet(rows, `Tháng ${m.thang}/${m.nam}`)
+          XLSX.utils.book_append_sheet(wb, ws, `T${m.thang}-${m.nam}`)
+        }
+      } else {
+        // Gộp tất cả vào 1 sheet, thêm cột Tháng
+        setProgress('Đang tải dữ liệu...')
+        const activeCols = EXPORT_COLS.filter(c => selectedCols.includes(c.key))
+        const allRows = []
+
+        for (const m of sorted) {
+          const rows = await fetchMonth(m.thang, m.nam)
+          rows.forEach(row => allRows.push({ ...row, _thang: `${m.thang}/${m.nam}` }))
+        }
+
+        const titleRow = ['BÁO CÁO HIỆU QUẢ XE TẢI — TỔNG HỢP NHIỀU THÁNG']
+        const headerRow = ['Tháng', ...activeCols.map(c => c.label)]
+        const wsData = [titleRow, [], headerRow]
+
+        let stt = 0
+        allRows.forEach(row => {
+          stt++
+          wsData.push([
+            row._thang,
+            ...activeCols.map((c, _) => getCellValue(row, c.key, stt - 1))
+          ])
+        })
+
+        const ws = XLSX.utils.aoa_to_sheet(wsData)
+        ws['!cols'] = [{ wch: 10 }, ...activeCols.map(c => {
+          const w = { stt:6, bienSo:12, maHienTai:12, cuaHang:28, tinhMoi:16,
+            tenTaiSan:24, taiTrong:10, km:10, tongKLVC:14, klvcNoiBo:14,
+            tyLeNoiBo:10, soChuyenNgay:14, danhGia:12 }
+          return { wch: w[c.key] || 12 }
+        })]
+        ws['!merges'] = [{ s:{r:0,c:0}, e:{r:0,c:activeCols.length} }]
+        XLSX.utils.book_append_sheet(wb, ws, 'Tổng hợp')
+      }
+
+      // Filename
+      const monthStr = sorted.length === 1
+        ? `T${sorted[0].thang}-${sorted[0].nam}`
+        : `${sorted.length}-thang`
+      const filename = `BaoCaoHieuQua_${monthStr}.xlsx`
+
+      setProgress('Đang tạo file...')
+      XLSX.writeFile(wb, filename)
+      onClose()
+    } catch (e) {
+      alert('Lỗi xuất Excel: ' + e.message)
+    }
+    setLoading(false)
+    setProgress('')
+  }
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+    }}>
+      <div style={{
+        background: 'var(--bg-card)', borderRadius: 16, padding: 24,
+        width: '90%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto',
+        border: '1px solid var(--sep)'
+      }}>
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <span style={{ fontWeight: 700, fontSize: 16, color: 'var(--ink)' }}>📥 Xuất Excel</span>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: 'var(--ink3)' }}>✕</button>
+        </div>
+
+        {/* Chọn tháng */}
+        <div style={{ marginBottom: 18 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink2)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Chọn tháng ({selectedMonths.length} đã chọn)
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {monthOptions.map(m => {
+              const sel = isMonthSelected(m)
+              return (
+                <button key={`${m.thang}-${m.nam}`} onClick={() => toggleMonth(m)}
+                  style={{
+                    padding: '5px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer',
+                    fontWeight: sel ? 600 : 400,
+                    background: sel ? 'var(--brand)' : 'var(--bg-secondary)',
+                    color: sel ? '#fff' : 'var(--ink2)',
+                    border: `1px solid ${sel ? 'var(--brand)' : 'var(--sep)'}`,
+                    transition: 'all 0.12s',
+                  }}>
+                  {m.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Chế độ sheet */}
+        {selectedMonths.length > 1 && (
+          <div style={{ marginBottom: 18 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink2)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Cách tổ chức dữ liệu
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {[
+                { val: 'separate', label: '📋 Mỗi tháng 1 sheet', desc: 'Sheet T4-2026, T3-2026...' },
+                { val: 'combined', label: '📊 Gộp 1 sheet', desc: 'Có cột Tháng để phân biệt' },
+              ].map(opt => (
+                <div key={opt.val} onClick={() => setSheetMode(opt.val)}
+                  style={{
+                    flex: 1, padding: '10px 12px', borderRadius: 10, cursor: 'pointer',
+                    border: `2px solid ${sheetMode === opt.val ? 'var(--brand)' : 'var(--sep)'}`,
+                    background: sheetMode === opt.val ? 'var(--brand-l)' : 'var(--bg-secondary)',
+                  }}>
+                  <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--ink)', marginBottom: 3 }}>{opt.label}</div>
+                  <div style={{ fontSize: 11, color: 'var(--ink3)' }}>{opt.desc}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Chọn cột */}
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink2)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Chọn cột ({selectedCols.length}/{EXPORT_COLS.length})
+            </span>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setSelectedCols(EXPORT_COLS.map(c => c.key))}
+                style={{ fontSize: 11, padding: '3px 8px', borderRadius: 6, border: '1px solid var(--sep)', background: 'none', cursor: 'pointer', color: 'var(--ink2)' }}>
+                Chọn tất cả
+              </button>
+              <button onClick={() => setSelectedCols(['stt', 'bienSo'])}
+                style={{ fontSize: 11, padding: '3px 8px', borderRadius: 6, border: '1px solid var(--sep)', background: 'none', cursor: 'pointer', color: 'var(--ink2)' }}>
+                Bỏ chọn
+              </button>
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6 }}>
+            {EXPORT_COLS.map(col => {
+              const active = selectedCols.includes(col.key)
+              const locked = col.key === 'stt'
+              return (
+                <div key={col.key} onClick={() => toggleCol(col.key)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '8px 10px', borderRadius: 8, cursor: locked ? 'default' : 'pointer',
+                    background: active ? 'var(--brand-l)' : 'var(--bg-secondary)',
+                    border: `1px solid ${active ? 'var(--brand)' : 'var(--sep)'}`,
+                    opacity: locked ? 0.7 : 1,
+                  }}>
+                  <div style={{
+                    width: 16, height: 16, borderRadius: 4, flexShrink: 0,
+                    background: active ? 'var(--brand)' : 'var(--sep)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {active && <span style={{ color: '#fff', fontSize: 10, lineHeight: 1 }}>✓</span>}
+                  </div>
+                  <span style={{ fontSize: 13, color: 'var(--ink)', fontWeight: active ? 500 : 400 }}>
+                    {col.label}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Progress */}
+        {progress && (
+          <div style={{
+            background: 'var(--bg-secondary)', borderRadius: 8, padding: '8px 12px',
+            fontSize: 12, color: 'var(--ink2)', marginBottom: 14,
+            display: 'flex', alignItems: 'center', gap: 8
+          }}>
+            <div style={{
+              width: 14, height: 14, border: '2px solid var(--sep)',
+              borderTopColor: 'var(--brand)', borderRadius: '50%',
+              animation: 'spin .6s linear infinite', flexShrink: 0,
+            }} />
+            {progress}
+          </div>
+        )}
+
+        {/* Footer */}
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <button onClick={onClose} style={{
+            padding: '9px 20px', borderRadius: 9,
+            border: '1px solid var(--sep)', background: 'none',
+            color: 'var(--ink2)', fontSize: 13, cursor: 'pointer',
+          }}>Huỷ</button>
+          <button onClick={handleExport} disabled={loading}
+            style={{
+              padding: '9px 20px', borderRadius: 9, border: 'none',
+              background: loading ? 'var(--sep)' : 'var(--apple-green)',
+              color: loading ? 'var(--ink3)' : '#fff',
+              fontSize: 13, fontWeight: 600, cursor: loading ? 'default' : 'pointer',
+              display: 'flex', alignItems: 'center', gap: 6,
+            }}>
+            {loading ? 'Đang xuất...' : `📥 Xuất Excel (${selectedMonths.length} tháng)`}
+          </button>
+        </div>
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      </div>
+    </div>
+  )
+}
+
 export default function PageHieuQua() {
   const isMobile = useIsMobile();
   const tok = token();
@@ -456,6 +812,7 @@ export default function PageHieuQua() {
   const [sortAsc, setSortAsc] = useState(true);
   const [showImport, setShowImport] = useState(false);
   const [showSync, setShowSync] = useState(false);
+  const [showExport, setShowExport] = useState(false);
   const [editXe, setEditXe] = useState(null);
 
   const fetchData = useCallback(async () => {
@@ -572,6 +929,9 @@ export default function PageHieuQua() {
           </button>
           <button onClick={() => setShowImport(true)} style={btnStyle('var(--apple-orange)')}>
             📥 Import Excel
+          </button>
+          <button onClick={() => setShowExport(true)} style={btnStyle('var(--apple-green)')}>
+            📤 Xuất Excel
           </button>
         </div>
       </div>
@@ -781,6 +1141,14 @@ export default function PageHieuQua() {
       )}
 
       {/* Modals */}
+      {showExport && (
+        <ExportModal
+          tok={tok}
+          currentThang={thang}
+          currentNam={nam}
+          onClose={() => setShowExport(false)}
+        />
+      )}
       {showImport && (
         <ImportModal
           tok={tok}
