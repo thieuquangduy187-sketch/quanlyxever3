@@ -216,7 +216,7 @@ export default function PageGPS() {
       {/* Header */}
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20, flexWrap:'wrap', gap:10 }}>
         <div>
-          <h2 style={{ margin:0, fontSize:20, fontWeight:700 }}>📡 Giám sát GPS & Camera</h2>
+          <h2 style={{ margin:0, fontSize:20, fontWeight:700, color:'var(--ink)' }}>📡 Giám sát GPS & Camera</h2>
           <div style={{ fontSize:12, color:'var(--label-secondary)', marginTop:3 }}>
             Sync lần cuối: {status?.lastSync ? new Date(status.lastSync).toLocaleString('vi-VN') : 'Chưa có dữ liệu'}
           </div>
