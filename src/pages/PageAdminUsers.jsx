@@ -727,7 +727,7 @@ export default function PageAdminUsers() {
                         <div style={{ fontSize:10, color:'var(--ink3)' }}>{fmtDate(u.lastLogin)}</div>
                       </td>
                       <td style={{ padding:'10px 12px' }}>
-                        <div style={{ display:'flex', gap:4', flexWrap:'wrap', justifyContent:'flex-end' }}>
+                        <div style={{ display:'flex', gap:4, flexWrap:'wrap', justifyContent:'flex-end' }}>
                           <button onClick={() => { setEditMode('edit'); setEditUser(u) }}
                             style={{ padding:'4px 8px', borderRadius:6, border:'1px solid var(--sep)', background:'none', color:'var(--apple-blue)', fontSize:11, cursor:'pointer' }}>
                             ✏️ Sửa
