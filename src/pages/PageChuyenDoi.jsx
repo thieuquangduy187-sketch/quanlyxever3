@@ -328,7 +328,7 @@ export default function PageChuyenDoi() {
       {toast && <Toast msg={toast.msg} err={toast.err} />}
 
       <div style={{ marginBottom:20 }}>
-        <h2 style={{ margin:0, fontSize:20, fontWeight:700 }}>🔄 Quản lý chuyển đổi HSG → HSH</h2>
+        <h2 style={{ margin:0, fontSize:20, fontWeight:700, color:'var(--ink)' }}>🔄 Quản lý chuyển đổi HSG → HSH</h2>
         <div style={{ fontSize:12, color:'var(--label-secondary)', marginTop:4 }}>
           Cập nhật thông tin cửa hàng theo tiến độ bàn giao từng đợt
         </div>
