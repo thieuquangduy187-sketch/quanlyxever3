@@ -21,6 +21,7 @@ import PageNhatTrinhNgay from './pages/PageNhatTrinhNgay'
 import PageImport from './pages/PageImport'
 import PageAnalyze from './pages/PageAnalyze'
 import PageHieuQua from './pages/PageHieuQua'
+import PageAdminUsers from './pages/PageAdminUsers'
 import LoadingScreen from './components/LoadingScreen'
 import ErrorBar from './components/ErrorBar'
 
@@ -241,6 +242,7 @@ export default function App() {
           {page === 'hieu_qua'               && <PageHieuQua />}
           {page === 'import'                 && <PageImport />}
           {page === 'analyze'                && <PageAnalyze />}
+          {page === 'admin_users'            && <PageAdminUsers />}
         </main>
       </div>
     </div>
