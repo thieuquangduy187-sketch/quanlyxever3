@@ -555,8 +555,15 @@ export default function PageAdminUsers() {
       if (filterStatus !== 'all') params.append('active', filterStatus === 'active' ? 'true' : 'false')
       const r = await fetch(`${API}/api/admin/users?${params}`, { headers: authH() })
       const d = await r.json()
+      if (!r.ok) {
+        showToast(`Lỗi ${r.status}: ${d.error || 'Không tải được danh sách'}`, 'err')
+        setLoading(false)
+        return
+      }
       setUsers(d.users || [])
-    } catch {}
+    } catch (e) {
+      showToast('Lỗi kết nối: ' + e.message, 'err')
+    }
     setLoading(false)
   }, [q, filterRole, filterStatus])
 
