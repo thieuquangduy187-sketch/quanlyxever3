@@ -14,6 +14,7 @@ const ICONS = {
   bao_cao_nhat_trinh: <svg width="16" height="16" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" stroke="currentColor"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
   hieu_qua:           <svg width="16" height="16" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" stroke="currentColor"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>,
   analyze:            <svg width="16" height="16" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>,
+  admin_users:        <svg width="16" height="16" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" stroke="currentColor"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>,
   import:             <svg width="16" height="16" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" stroke="currentColor"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
   collapse:           <svg width="16" height="16" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" strokeWidth="1.8" strokeLinecap="round" stroke="currentColor"><path d="M15 18l-6-6 6-6"/></svg>,
   refresh:            <svg width="16" height="16" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" stroke="currentColor"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>,
@@ -31,6 +32,7 @@ const NAV = [
   { id: 'bao_cao_nhat_trinh',    label: 'Báo cáo nhật trình', section: 'BÁO CÁO' },
   { id: 'hieu_qua',              label: 'Hiệu quả xe tải',    section: null },
   { id: 'analyze',               label: 'Phân tích AI',       section: null },
+  { id: 'admin_users',           label: 'Quản lý Users',      section: 'QUẢN TRỊ' },
 ]
 
 const NAV_XE = [
@@ -101,7 +103,14 @@ function NavItem({ item, active, collapsed, badge, onClick }) {
 
 function SidebarContent({ page, onNav, data, refreshing, onRefresh, lastUpdated, loadProgress, user, collapsed }) {
   const [hoverRefresh, setHoverRefresh] = useState(false)
-  const activeNav = user?.role === 'xe' ? NAV_XE : NAV
+  const activeNav = user?.role === 'xe' ? NAV_XE : NAV.filter(item => {
+    // admin sees all
+    if (user?.role === 'admin') return true
+    // filter by allowedPages from user token
+    const allowed = user?.allowedPages || []
+    if (item.id === 'overview') return allowed.includes('overview')
+    return allowed.includes(item.id)
+  })
   const stats = data?.xeTai?.stats || {}
 
   const groups = []
