@@ -6,16 +6,16 @@ import { obj2arr, sortDesc, fmtCur, COLORS, PIE_COLORS } from '../hooks/useChart
 function KpiCard({ icon, label, value, sub, color }) {
   return (
     <div style={{
-      background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: 12,
+      background: 'var(--bg-card)', border: '1px solid var(--sep)', borderRadius: 12,
       padding: '16px 18px', position: 'relative', overflow: 'hidden',
     }}>
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3,
         background: color === 'or' ? '#E63200' : color === 'am' ? '#D97706' : color === 'pu' ? '#7C3AED' : '#0055CC' }} />
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
         <div>
-          <div style={{ fontSize: 11.5, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>{label}</div>
-          <div style={{ fontSize: 28, fontWeight: 800, color: '#111827', letterSpacing: -1 }}>{value}</div>
-          {sub && <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 4 }}>{sub}</div>}
+          <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--label-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>{label}</div>
+          <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--ink)', letterSpacing: -1 }}>{value}</div>
+          {sub && <div style={{ fontSize: 12, color: 'var(--label-quaternary)', marginTop: 4 }}>{sub}</div>}
         </div>
         <span style={{ fontSize: 26 }}>{icon}</span>
       </div>
@@ -28,11 +28,11 @@ function MiniBar({ label, items, max }) {
     <div>
       {items.slice(0, 8).map((p, i) => (
         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-          <div style={{ fontSize: 12, color: '#374151', minWidth: 80, textAlign: 'right', flexShrink: 0 }}>{p.name}</div>
-          <div style={{ flex: 1, height: 6, background: '#F3F4F6', borderRadius: 3, overflow: 'hidden' }}>
+          <div style={{ fontSize: 12, color: 'var(--ink2)', minWidth: 80, textAlign: 'right', flexShrink: 0 }}>{p.name}</div>
+          <div style={{ flex: 1, height: 6, background: 'var(--fill-secondary)', borderRadius: 3, overflow: 'hidden' }}>
             <div style={{ height: '100%', borderRadius: 3, background: COLORS[i % COLORS.length], width: `${p.value / max * 100}%` }} />
           </div>
-          <b style={{ fontSize: 12, color: '#374151', minWidth: 28, textAlign: 'right' }}>{p.value}</b>
+          <b style={{ fontSize: 12, color: 'var(--ink2)', minWidth: 28, textAlign: 'right' }}>{p.value}</b>
         </div>
       ))}
     </div>
@@ -74,8 +74,8 @@ export default function PageOverview({ data }) {
 
       {/* Charts row 1 */}
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '3fr 2fr', gap: 12, marginTop: 16, marginBottom: 12 }}>
-        <div style={{ background: '#fff', border: '1px solid #E5E7EB', borderRadius: 12, padding: '16px 18px' }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#111827', marginBottom: 14 }}>Xe tải theo năm sản xuất</div>
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--sep)', borderRadius: 12, padding: '16px 18px' }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', marginBottom: 14 }}>Xe tải theo năm sản xuất</div>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={namArr} barSize={20}>
               <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
@@ -86,8 +86,8 @@ export default function PageOverview({ data }) {
             </BarChart>
           </ResponsiveContainer>
         </div>
-        <div style={{ background: '#fff', border: '1px solid #E5E7EB', borderRadius: 12, padding: '16px 18px' }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#111827', marginBottom: 14 }}>Loại thùng xe tải</div>
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--sep)', borderRadius: 12, padding: '16px 18px' }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', marginBottom: 14 }}>Loại thùng xe tải</div>
           <ResponsiveContainer width="100%" height={180}>
             <PieChart>
               <Pie data={loaiArr} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2}>
@@ -101,8 +101,8 @@ export default function PageOverview({ data }) {
 
       {/* Charts row 2 */}
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12 }}>
-        <div style={{ background: '#fff', border: '1px solid #E5E7EB', borderRadius: 12, padding: '16px 18px' }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#111827', marginBottom: 14 }}>Xe tải theo miền</div>
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--sep)', borderRadius: 12, padding: '16px 18px' }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', marginBottom: 14 }}>Xe tải theo miền</div>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={mienArr} barSize={32}>
               <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
@@ -115,8 +115,8 @@ export default function PageOverview({ data }) {
             </BarChart>
           </ResponsiveContainer>
         </div>
-        <div style={{ background: '#fff', border: '1px solid #E5E7EB', borderRadius: 12, padding: '16px 18px' }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#111827', marginBottom: 14 }}>Pháp nhân đứng tên</div>
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--sep)', borderRadius: 12, padding: '16px 18px' }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', marginBottom: 14 }}>Pháp nhân đứng tên</div>
           <MiniBar label="Pháp nhân" items={pnArr} max={maxPn} />
         </div>
       </div>
@@ -187,14 +187,14 @@ function XeActivityReport() {
   const S = data?.summary || {}
 
   return (
-    <div style={{ background: '#fff', border: '1px solid #E5E7EB', borderRadius: 12,
+    <div style={{ background: 'var(--bg-card)', border: '1px solid var(--sep)', borderRadius: 12,
       marginTop: 16, overflow: 'hidden' }}>
 
       {/* Header row */}
       <div style={{ padding: '12px 16px', borderBottom: '1px solid #E5E7EB',
         display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>🚛 Tình trạng hoạt động xe</span>
+          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}>🚛 Tình trạng hoạt động xe</span>
           {data && (
             <>
               <span style={{ fontSize: 11.5, color: '#6B7280' }}>{data.fileName} · {total} xe</span>
