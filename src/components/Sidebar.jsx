@@ -3,143 +3,182 @@
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 import { useState } from 'react'
 
-const LOGO_URL = 'https://lh3.googleusercontent.com/d/1gnI72gZVm9cegVnbAWjRInk3_3Ouigqm'
+const ICONS = {
+  overview:           <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>,
+  xe_tai:             <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M1 3h15v13H1V3zM16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>,
+  oto_con:            <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11l4 4v8a2 2 0 01-2 2h-2"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>,
+  nhat_trinh:         <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>,
+  gia_dau:            <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 22V8l9-6 9 6v14M9 22V12h6v10"/></svg>,
+  gps:                <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="10" r="3"/><path d="M12 2C8.1 2 5 5.1 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.9-3.1-7-7-7z"/></svg>,
+  chuyen_doi:         <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 1l4 4-4 4M3 11V9a4 4 0 014-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 01-4 4H3"/></svg>,
+  bao_cao_nhat_trinh: <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
+  hieu_qua:           <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>,
+  analyze:            <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>,
+  import:             <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
+  collapse:           <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" strokeLinecap="round"><path d="M15 18l-6-6 6-6"/></svg>,
+  refresh:            <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>,
+  logo:               <svg viewBox="0 0 24 24" fill="white"><path d="M1 3h15v13H1V3zM16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>,
+}
 
 const NAV = [
-  { id: 'overview',    sf: '◉',  label: 'Tổng quan',      section: null },
-  { id: 'xe_tai',      sf: '🚛', label: 'Xe tải',          section: 'QUẢN LÝ', badgeKey: 'xeTai', rowKey: 'xe_tai' },
-  { id: 'oto_con',     sf: '🚗', label: 'Ô tô con',        section: null, badgeKey: 'otocon', rowKey: 'oto_con' },
-  { id: 'nhat_trinh',       sf: '📋', label: 'Nhật trình tháng', section: 'HỆ THỐNG' },
-  { id: 'gia_dau',              sf: '🛢', label: 'Giá dầu diesel',       section: null },
-  { id: 'gps',                  sf: '📡', label: 'Giám sát GPS',           section: null },
-  { id: 'chuyen_doi',           sf: '🔄', label: 'Chuyển đổi HSG→HSH',      section: null },
-  { id: 'bao_cao_nhat_trinh',   sf: '📊', label: 'Báo cáo nhật trình',    section: null },
-  { id: 'hieu_qua',             sf: '📈', label: 'Hiệu quả xe tải',        section: null },
+  { id: 'overview',              label: 'Tổng quan',          section: null },
+  { id: 'xe_tai',                label: 'Xe tải',             section: 'QUẢN LÝ', badgeKey: 'xeTai' },
+  { id: 'oto_con',               label: 'Ô tô con',           section: null,       badgeKey: 'otocon' },
+  { id: 'nhat_trinh',            label: 'Nhật trình tháng',   section: 'NGHIỆP VỤ' },
+  { id: 'gia_dau',               label: 'Giá dầu diesel',     section: null },
+  { id: 'gps',                   label: 'Giám sát GPS',       section: null,       badgeKey: 'gps' },
+  { id: 'chuyen_doi',            label: 'Chuyển đổi HSG→HSH', section: null },
+  { id: 'bao_cao_nhat_trinh',    label: 'Báo cáo nhật trình', section: 'BÁO CÁO' },
+  { id: 'hieu_qua',              label: 'Hiệu quả xe tải',    section: null },
+  { id: 'analyze',               label: 'Phân tích AI',       section: null },
 ]
 
 const NAV_XE = [
-  { id: 'nhat_trinh', sf: '📋', label: 'Nhật trình tháng', section: null },
+  { id: 'nhat_trinh', label: 'Nhật trình tháng', section: null },
 ]
 
-const S = {
-  aside: {
-    width: 'var(--sw)',
-    background: '#FFFFFF',
-    borderRight: '1px solid #E5E7EB',
-    position: 'fixed', top: 0, left: 0, bottom: 0,
-    display: 'flex', flexDirection: 'column',
-    zIndex: 100, overflowY: 'auto',
-  },
-  logo: {
-    padding: '16px 16px 14px',
-    borderBottom: '1px solid #E5E7EB',
-    display: 'flex', alignItems: 'center', gap: 10,
-  },
-  section: {
-    padding: '16px 10px 4px',
-    fontSize: 10.5, fontWeight: 700, color: '#9CA3AF',
-    textTransform: 'uppercase', letterSpacing: '0.06em',
-  },
-  navItem: (active) => ({
-    display: 'flex', alignItems: 'center', gap: 9,
-    padding: '8px 12px', margin: '1px 8px',
-    borderRadius: 8, cursor: 'pointer',
-    background: active ? '#FFF5F2' : 'transparent',
-    color: active ? '#E63200' : '#374151',
-    fontWeight: active ? 600 : 400,
-    fontSize: 13.5,
-    transition: 'background .12s, color .12s',
-  }),
-  navIcon: (active) => ({
-    width: 28, height: 28, borderRadius: 7,
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontSize: 14,
-    background: active ? '#E63200' : 'transparent',
-    flexShrink: 0,
-  }),
-  badge: {
-    marginLeft: 'auto', minWidth: 20, height: 18,
-    background: '#E63200', color: '#fff',
-    borderRadius: 9, fontSize: 10.5, fontWeight: 700,
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    padding: '0 5px',
-  },
-  footer: {
-    marginTop: 'auto', padding: '12px 16px 16px',
-    borderTop: '1px solid #E5E7EB', fontSize: 11.5,
-    color: '#9CA3AF',
-  },
+function Icon({ id, color }) {
+  return (
+    <div style={{ width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
+      stroke: color || 'var(--sb-text)', fill: id === 'logo' ? 'white' : 'none' }}>
+      {ICONS[id] || ICONS.gps}
+    </div>
+  )
 }
 
+function NavItem({ item, active, collapsed, badge, onClick }) {
+  const [hover, setHover] = useState(false)
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 10,
+      padding: '7px 12px', margin: '1px 8px', borderRadius: 9,
+      cursor: 'pointer', position: 'relative', whiteSpace: 'nowrap', overflow: 'visible',
+      background: active ? 'var(--sb-active-bg)' : hover ? 'var(--sb-hover)' : 'transparent',
+      transition: 'background 0.12s',
+    }}
+      onClick={onClick}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    >
+      <div style={{
+        width: 30, height: 30, borderRadius: 8, flexShrink: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: active ? 'rgba(230,50,0,0.22)' : 'var(--sb-icon-bg)',
+      }}>
+        <Icon id={item.id} color={active ? 'var(--sb-active)' : 'var(--sb-text)'} />
+      </div>
 
-function SidebarContent({ page, onNav, data, refreshing, onRefresh, lastUpdated, loadProgress, user }) {
+      {!collapsed && (
+        <span style={{
+          fontSize: 13, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis',
+          color: active ? 'var(--sb-active)' : 'var(--sb-text)',
+          fontWeight: active ? 500 : 400,
+        }}>{item.label}</span>
+      )}
+
+      {!collapsed && badge > 0 && (
+        <span style={{
+          minWidth: 18, height: 18, background: 'var(--brand)', color: '#fff',
+          borderRadius: 9, fontSize: 10, fontWeight: 700,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px',
+        }}>{badge > 99 ? '99+' : badge}</span>
+      )}
+
+      {collapsed && hover && (
+        <div style={{
+          position: 'absolute', left: 46, top: '50%', transform: 'translateY(-50%)',
+          background: 'var(--ink)', color: 'var(--bg-card)',
+          fontSize: 12, fontWeight: 500, padding: '5px 10px', borderRadius: 7,
+          whiteSpace: 'nowrap', zIndex: 300, pointerEvents: 'none',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+        }}>
+          {item.label}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function SidebarContent({ page, onNav, data, refreshing, onRefresh, lastUpdated, loadProgress, user, collapsed }) {
+  const [hoverRefresh, setHoverRefresh] = useState(false)
   const activeNav = user?.role === 'xe' ? NAV_XE : NAV
+  const stats = data?.xeTai?.stats || {}
 
-  // Group by section
   const groups = []
   let cur = { section: null, items: [] }
   activeNav.forEach(item => {
     if (item.section && item.section !== cur.section) {
       if (cur.items.length) groups.push(cur)
       cur = { section: item.section, items: [item] }
-    } else {
-      cur.items.push(item)
-    }
+    } else { cur.items.push(item) }
   })
   if (cur.items.length) groups.push(cur)
 
-  const stats = data?.xeTai?.stats || {}
+  const getBadge = (item) => {
+    if (!item.badgeKey) return 0
+    if (item.badgeKey === 'gps') return data?.gpsAlerts || 0
+    return stats[item.badgeKey] || 0
+  }
 
   return (
     <>
-      {/* Logo */}
-      <div style={S.logo}>
-        <div style={{ width: 32, height: 32, borderRadius: 8, background: '#E63200',
+      <div style={{ padding: '15px 12px 13px', borderBottom: '1px solid var(--sb-sep)',
+        display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+        <div style={{ width: 30, height: 30, borderRadius: 8, background: 'var(--brand)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <span style={{ fontSize: 18 }}>🚚</span>
+          <Icon id="logo" />
         </div>
-        <div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#111827', lineHeight: 1.2 }}>QUẢN LÝ XE TẢI</div>
-          <div style={{ fontSize: 10.5, color: '#9CA3AF' }}>Hoa Sen Group</div>
-        </div>
+        {!collapsed && (
+          <div style={{ overflow: 'hidden' }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', lineHeight: 1.3, whiteSpace: 'nowrap' }}>HSG Fleet</div>
+            <div style={{ fontSize: 10, color: 'var(--sb-text-2)', whiteSpace: 'nowrap' }}>Hoa Sen Group</div>
+          </div>
+        )}
       </div>
 
-      {/* Nav */}
-      <nav style={{ flex: 1, paddingTop: 8, paddingBottom: 8 }}>
+      <nav style={{ flex: 1, paddingTop: 8, paddingBottom: 8, overflowY: 'auto', overflowX: 'hidden' }}>
         {groups.map(g => (
           <div key={g.section || 'main'}>
-            {g.section && <div style={S.section}>{g.section}</div>}
-            {g.items.map(item => {
-              const active = page === item.id
-              const badge = item.badgeKey && stats[item.badgeKey] ? stats[item.badgeKey] : null
-              const isLoading = item.rowKey && loadProgress?.[item.rowKey] === 'loading'
-              return (
-                <div key={item.id} style={S.navItem(active)} onClick={() => onNav(item.id)}
-                  onMouseEnter={e => { if (!active) e.currentTarget.style.background = '#F9FAFB' }}
-                  onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}>
-                  <div style={S.navIcon(active)}>
-                    <span style={{ filter: active ? 'brightness(0) invert(1)' : 'none' }}>{item.sf}</span>
-                  </div>
-                  <span style={{ flex: 1 }}>{item.label}</span>
-                  {isLoading && <span style={{ width: 14, height: 14, border: '2px solid #E5E7EB', borderTopColor: '#E63200', borderRadius: '50%', animation: 'spin .6s linear infinite', display: 'inline-block' }} />}
-                  {badge && !isLoading && <span style={S.badge}>{badge}</span>}
-                </div>
-              )
-            })}
+            {g.section && !collapsed && (
+              <div style={{ padding: '10px 12px 4px', fontSize: 10, fontWeight: 700,
+                color: 'var(--sb-text-2)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                {g.section}
+              </div>
+            )}
+            {g.section && collapsed && <div style={{ height: 8 }} />}
+            {g.items.map(item => (
+              <NavItem key={item.id} item={item} active={page === item.id}
+                collapsed={collapsed} badge={getBadge(item)} onClick={() => onNav(item.id)} />
+            ))}
           </div>
         ))}
       </nav>
 
-      {/* Footer */}
-      <div style={S.footer}>
-        <button onClick={onRefresh} disabled={refreshing}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none',
-            cursor: 'pointer', color: refreshing ? '#D1D5DB' : '#6B7280', fontSize: 11.5, padding: 0 }}>
-          <span style={{ display: 'inline-block', animation: refreshing ? 'spin .8s linear infinite' : 'none' }}>↻</span>
-          Làm mới dữ liệu
+      <div style={{ padding: '10px 8px 14px', borderTop: '1px solid var(--sb-sep)', flexShrink: 0 }}>
+        <button
+          onClick={onRefresh} disabled={refreshing}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            padding: '7px 8px', borderRadius: 8, width: '100%',
+            background: hoverRefresh ? 'var(--sb-hover)' : 'none', border: 'none', cursor: 'pointer',
+          }}
+          title="Làm mới dữ liệu"
+          onMouseEnter={() => setHoverRefresh(true)}
+          onMouseLeave={() => setHoverRefresh(false)}
+        >
+          <div style={{ width: 16, height: 16, stroke: 'var(--sb-text-2)', flexShrink: 0,
+            display: 'flex', alignItems: 'center',
+            animation: refreshing ? 'spin .8s linear infinite' : 'none' }}>
+            {ICONS.refresh}
+          </div>
+          {!collapsed && (
+            <span style={{ fontSize: 12, color: 'var(--sb-text-2)', whiteSpace: 'nowrap' }}>
+              {refreshing ? 'Đang làm mới...' : 'Làm mới'}
+            </span>
+          )}
         </button>
-        {lastUpdated && (
-          <div style={{ marginTop: 4, color: '#9CA3AF', fontSize: 10.5 }}>
+        {!collapsed && lastUpdated && (
+          <div style={{ fontSize: 10, color: 'var(--sb-text-2)', padding: '2px 8px', marginTop: 2 }}>
             {lastUpdated}
           </div>
         )}
@@ -149,8 +188,8 @@ function SidebarContent({ page, onNav, data, refreshing, onRefresh, lastUpdated,
   )
 }
 
-
-export default function Sidebar({ page, onNav, data, refreshing, onRefresh, lastUpdated, loadProgress = {}, isMobile, showSidebar, onCloseSidebar, user, onLogout, collapsed, onToggleCollapse }) {
+export default function Sidebar({ page, onNav, data, refreshing, onRefresh, lastUpdated,
+  loadProgress = {}, isMobile, showSidebar, onCloseSidebar, user, collapsed, onToggleCollapse }) {
 
   const handleNav = (id) => { onNav(id); if (isMobile) onCloseSidebar() }
 
@@ -159,71 +198,60 @@ export default function Sidebar({ page, onNav, data, refreshing, onRefresh, last
       <>
         {showSidebar && (
           <div onClick={onCloseSidebar}
-            style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', zIndex:200, WebkitTapHighlightColor:'transparent' }} />
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 200 }} />
         )}
-        <aside style={{ ...S.aside, width:280, zIndex:201,
+        <aside style={{
+          width: 260, background: 'var(--sb-bg)', borderRight: '1px solid var(--sb-sep)',
+          position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 201,
+          display: 'flex', flexDirection: 'column', overflowX: 'hidden', overflowY: 'auto',
           transform: showSidebar ? 'translateX(0)' : 'translateX(-100%)',
           transition: 'transform .25s ease',
-          pointerEvents: showSidebar ? 'auto' : 'none',
-          visibility: showSidebar ? 'visible' : 'hidden',
         }}>
-          <SidebarContent page={page} onNav={handleNav} data={data}
-            refreshing={refreshing} onRefresh={onRefresh}
-            lastUpdated={lastUpdated} loadProgress={loadProgress} user={user} />
+          <SidebarContent page={page} onNav={handleNav} data={data} refreshing={refreshing}
+            onRefresh={onRefresh} lastUpdated={lastUpdated} loadProgress={loadProgress}
+            user={user} collapsed={false} />
         </aside>
       </>
     )
   }
 
-  // Desktop — collapsed mode
-  if (collapsed) {
-    return (
-      <aside style={{ ...S.aside, width:52, overflowX:'hidden', overflowY:'visible' }}>
-        {/* Toggle button */}
-        <div style={{ padding:'14px 0', display:'flex', justifyContent:'center', borderBottom:'1px solid #E5E7EB' }}>
-          <button onClick={onToggleCollapse}
-            title="Mở rộng sidebar"
-            style={{ width:32, height:32, borderRadius:8, border:'none', background:'#F3F4F6',
-              cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16 }}>
-            ›
-          </button>
-        </div>
-        {/* Icon-only nav */}
-        <nav style={{ flex:1, paddingTop:8 }}>
-          {(user?.role === 'xe' ? NAV_XE : NAV).map(item => {
-            const active = page === item.id
-            return (
-              <div key={item.id}
-                onClick={() => handleNav(item.id)}
-                title={item.label}
-                style={{ display:'flex', justifyContent:'center', padding:'6px 0', cursor:'pointer' }}>
-                <div style={{ ...S.navIcon(active), width:32, height:32 }}>
-                  <span style={{ filter: active ? 'brightness(0) invert(1)' : 'none', fontSize:15 }}>{item.sf}</span>
-                </div>
-              </div>
-            )
-          })}
-        </nav>
-      </aside>
-    )
-  }
-
-  // Desktop — expanded (normal)
   return (
-    <aside style={{ ...S.aside, transition:'width .22s ease' }}>
-      {/* Toggle collapse button — top right of logo area */}
-      <div style={{ position:'relative' }}>
+    <aside style={{
+      width: collapsed ? 56 : 'var(--sw)', background: 'var(--sb-bg)',
+      borderRight: '1px solid var(--sb-sep)',
+      position: 'fixed', top: 0, left: 0, bottom: 0,
+      display: 'flex', flexDirection: 'column', zIndex: 100,
+      overflowX: 'hidden', overflowY: 'auto',
+      transition: 'width 0.25s ease',
+    }}>
+      {/* Collapse button */}
+      <div style={{
+        position: 'absolute', top: 15,
+        right: collapsed ? '50%' : 10,
+        transform: collapsed ? 'translateX(50%)' : 'none',
+        zIndex: 1, transition: 'right 0.25s, transform 0.25s',
+      }}>
         <button onClick={onToggleCollapse}
-          title="Thu gọn sidebar"
-          style={{ position:'absolute', top:14, right:10, width:24, height:24, borderRadius:6,
-            border:'none', background:'#F3F4F6', cursor:'pointer',
-            display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, zIndex:1 }}>
-          ‹
+          title={collapsed ? 'Mở rộng' : 'Thu gọn'}
+          style={{
+            width: 22, height: 22, borderRadius: 6, border: 'none',
+            background: 'var(--sb-icon-bg)', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+          <div style={{
+            width: 13, height: 13, stroke: 'var(--sb-text-2)',
+            display: 'flex', alignItems: 'center',
+            transform: collapsed ? 'rotate(180deg)' : 'none',
+            transition: 'transform 0.25s ease',
+          }}>
+            {ICONS.collapse}
+          </div>
         </button>
       </div>
-      <SidebarContent page={page} onNav={handleNav} data={data}
-        refreshing={refreshing} onRefresh={onRefresh}
-        lastUpdated={lastUpdated} loadProgress={loadProgress} user={user} />
+
+      <SidebarContent page={page} onNav={handleNav} data={data} refreshing={refreshing}
+        onRefresh={onRefresh} lastUpdated={lastUpdated} loadProgress={loadProgress}
+        user={user} collapsed={collapsed} />
     </aside>
   )
 }
