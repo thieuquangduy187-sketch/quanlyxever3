@@ -1,869 +1,876 @@
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 📁 FRONTEND — quanlyxever3/src/pages/PageBaoDuong.jsx
-// Design: flat, no border, dùng CSS variables của app
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 
 const API = import.meta.env.VITE_API_URL || 'https://hsg-backend.onrender.com'
 const tok = () => localStorage.getItem('hsg_token') || ''
-const apiFetch = (path, opts = {}) => fetch(`${API}${path}`, {
-  ...opts,
-  headers: { Authorization: `Bearer ${tok()}`, 'Content-Type': 'application/json', ...(opts.headers || {}) },
+const apiFetch = (p, o = {}) => fetch(`${API}${p}`, {
+  ...o, headers: { Authorization: `Bearer ${tok()}`, 'Content-Type': 'application/json', ...o.headers }
 })
 
-// ── Chu kỳ BD xe tải (HSH.QLTS-05 mục 6.1.3) ────────────
+// ── Bảng chu kỳ BD xe tải (HSH.QLTS-05 mục 6.1.3) ──────────────────────
 const BD_XETAI = [
-  { moc: 5000,  items: ['Thay dầu động cơ','Kiểm tra lọc dầu/nước làm mát/dầu phanh','Kiểm tra rò rỉ','Siết bulong sàn thùng, chassis','Kiểm tra áp suất lốp','Kiểm tra ắc quy'] },
-  { moc: 10000, items: ['Thay dầu động cơ','Vệ sinh lọc gió động cơ','Kiểm tra lọc nhiên liệu','Kiểm tra hệ thống treo','Kiểm tra bạc đạn bánh xe','Kiểm tra hệ thống điện'] },
-  { moc: 15000, items: ['Thay dầu động cơ','Kiểm tra lọc dầu/nước làm mát/dầu phanh','Kiểm tra rò rỉ','Kiểm tra bố thắng','Siết bulong chassis','Kiểm tra áp suất lốp'] },
-  { moc: 20000, items: ['Thay lọc nhiên liệu','Thay lọc gió','Cân chỉnh thước lái','Bổ sung dầu hộp số, dầu cầu','Kiểm tra phốt láp'] },
-  { moc: 25000, items: ['Thay dầu động cơ','Kiểm tra lọc dầu/nước làm mát/dầu phanh','Kiểm tra rò rỉ','Siết bulong chassis','Kiểm tra áp suất lốp'] },
-  { moc: 30000, items: ['Thay dầu hộp số','Thay dầu cầu','Thay dầu phanh','Thay nước mát','Kiểm tra turbo, kim phun','Kiểm tra cầu trục, máy lạnh'] },
+  { moc: 5000,  items: ['Thay dầu động cơ', 'Kiểm tra lọc dầu, nước làm mát, dầu phanh', 'Kiểm tra rò rỉ dầu, hộp số, visai', 'Kiểm tra bố thắng, siết bulong', 'Kiểm tra áp suất lốp, ắc quy'] },
+  { moc: 10000, items: ['Thay dầu động cơ', 'Vệ sinh lọc gió động cơ', 'Kiểm tra lọc nhiên liệu', 'Kiểm tra hệ thống treo', 'Kiểm tra bạc đạn bánh xe', 'Kiểm tra hệ thống điện'] },
+  { moc: 15000, items: ['Thay dầu động cơ', 'Kiểm tra lọc dầu, nước làm mát, dầu phanh', 'Kiểm tra rò rỉ', 'Siết bulong', 'Kiểm tra lốp, ắc quy'] },
+  { moc: 20000, items: ['Thay lọc nhiên liệu', 'Thay lọc gió', 'Cân chỉnh thước lái', 'Bổ sung dầu hộp số, cầu', 'Kiểm tra phốt láp, bạc đạn moay-ơ'] },
+  { moc: 25000, items: ['Thay dầu động cơ', 'Kiểm tra lọc dầu, nước làm mát, dầu phanh', 'Kiểm tra rò rỉ, bố thắng', 'Siết bulong, kiểm tra lốp, ắc quy'] },
+  { moc: 30000, items: ['Thay dầu hộp số', 'Thay dầu cầu', 'Thay dầu phanh', 'Xả và thay nước mát', 'Kiểm tra turbo, kim phun, cầu trục, máy lạnh'] },
 ]
 
-// ── Bảng giá lốp — Tờ trình 3413/TTr/HS/PMH/0126 ────────
+const AXLE_CONFIGS = {
+  '4':  { label: '2 cầu đơn · 4 lốp', positions: ['TT','TP','ST','SP'] },
+  '6':  { label: '2 cầu · 6 lốp',     positions: ['TT','TP','STN','STT','SPN','SPT'] },
+  '10': { label: '3 cầu · 10 lốp',    positions: ['TT','TP','C1TN','C1TT','C1PN','C1PT','C2TN','C2TT','C2PN','C2PT'] },
+}
+const POS_LABELS = {
+  TT:'Trước trái', TP:'Trước phải', ST:'Sau trái', SP:'Sau phải',
+  STN:'Sau trái ngoài', STT:'Sau trái trong', SPN:'Sau phải ngoài', SPT:'Sau phải trong',
+  C1TN:'Cầu1 trái ngoài', C1TT:'Cầu1 trái trong', C1PN:'Cầu1 phải ngoài', C1PT:'Cầu1 phải trong',
+  C2TN:'Cầu2 trái ngoài', C2TT:'Cầu2 trái trong', C2PN:'Cầu2 phải ngoài', C2PT:'Cầu2 phải trong',
+}
+
+// ── Bảng giá lốp duyệt — Tờ trình 3413/TTr/HS/PMH/0126 ─────────────────
+// HT HSH · 01/01/2026 – 30/06/2026
 const TIRE_CATALOG = [
-  { id:1,  size:'900R20-(18PR)',      boBo:'kem',   loaiXe:'Thaco 6.2T (thùng lửng/cẩu)',    soLuong6T:188,
-    p1:{ ncc:'ALPHA',        hang:'Bridgestone 900R20 M789 TL', xuatXu:'Thái Lan', tdp:6534000, sdp:5450000 },
-    p2:{ ncc:'LỐP XE VIỆT', hang:'Maxxis UR288 (gai xuôi)',    xuatXu:'Thái Lan', tdp:6240000, sdp:6240000 } },
-  { id:2,  size:'11.00R20-(18PR)',    boBo:'kem',   loaiXe:'Thaco 14T (thùng bạt)',           soLuong6T:78,
-    p1:{ ncc:'LỐP XE VIỆT', hang:'Maxxis UR288',    xuatXu:'Thái Lan', tdp:7111111, sdp:7111111 },
-    p2:{ ncc:'ALPHA',        hang:'Bridgestone R150',xuatXu:'Thái Lan', tdp:8910000, sdp:7870000 } },
-  { id:3,  size:'11.00-22-(18PR)',    boBo:'kem',   loaiXe:'Chenglong 8.2–8.4T',             soLuong6T:18,
-    p1:{ ncc:'LỐP XE VIỆT', hang:'Maxxis UR288',    xuatXu:'Thái Lan', tdp:6488889, sdp:6488889 },
-    p2:{ ncc:'ALPHA',        hang:'Bridgestone R150',xuatXu:'Thái Lan', tdp:8910000, sdp:7870000 } },
-  { id:4,  size:'750-16-(18PR)',      boBo:'nylon', loaiXe:'Mitsubishi/Veam',                soLuong6T:18,
-    p1:{ ncc:'LỐP XE VIỆT', hang:'Maxxis M276',     xuatXu:'Việt Nam', tdp:2603780, sdp:2603780 },
-    p2:{ ncc:'ALPHA',        hang:'Bridgestone R288',xuatXu:'Thái Lan', tdp:4374000, sdp:3950000 } },
-  { id:5,  size:'10.00R20-(18PR)',    boBo:'kem',   loaiXe:'Hino 6.75–8.4T',                 soLuong6T:32,
-    p1:{ ncc:'LỐP XE VIỆT', hang:'Maxxis UR288',    xuatXu:'Thái Lan', tdp:6720000, sdp:6720000 },
-    p2:{ ncc:'ALPHA',        hang:'Bridgestone R150',xuatXu:'Thái Lan', tdp:8478000, sdp:7450000 } },
-  { id:6,  size:'245/70R19.5-(18PR)',boBo:'kem',   loaiXe:'Hyundai 12.35T',                  soLuong6T:6,
-    p1:{ ncc:'ALPHA',        hang:'Bridgestone',     xuatXu:'Thái Lan', tdp:5346000, sdp:4750000 },
-    p2:{ ncc:'LỐP XE VIỆT', hang:'Maxxis UR275',    xuatXu:'Thái Lan', tdp:4591667, sdp:4591667 } },
-  { id:7,  size:'8.25R16-(18PR)',     boBo:'nylon', loaiXe:'Thaco 3.45T (thùng bạt)',        soLuong6T:6,
-    p1:{ ncc:'LỐP XE VIỆT', hang:'Maxxis M276',     xuatXu:'Việt Nam', tdp:2955260, sdp:2955260 },
-    p2:{ ncc:'ALPHA',        hang:'Bridgestone BS585',xuatXu:'Thái Lan',tdp:4914000, sdp:4250000 } },
-  { id:8,  size:'7.00R16-(16PR)',     boBo:'nylon', loaiXe:'Mitsubishi/Veam (nhỏ)',          soLuong6T:48,
-    p1:{ ncc:'LỐP XE VIỆT', hang:'Maxxis MA265',    xuatXu:'Việt Nam', tdp:2083630, sdp:2083630 },
-    p2:{ ncc:'ALPHA',        hang:'DRC bố nylon',    xuatXu:'Việt Nam', tdp:2390000, sdp:2570000 } },
-  { id:9,  size:'205/65R15',          boBo:'kem',   loaiXe:'Toyota Innova',                  soLuong6T:7,
-    p1:{ ncc:'LỐP XE VIỆT', hang:'Maxxis MAP5',     xuatXu:'Thái Lan', tdp:1498148, sdp:1205000 },
-    p2:{ ncc:'ALPHA',        hang:'Bridgestone B390',xuatXu:'Thái Lan', tdp:2030400, sdp:1750000 } },
-  { id:10, size:'265/65R17',          boBo:'kem',   loaiXe:'Toyota/Ford bán tải',            soLuong6T:4,
-    p1:{ ncc:'LỐP XE VIỆT', hang:'Maxxis HT780',    xuatXu:'Thái Lan', tdp:2981481, sdp:2567000 },
-    p2:{ ncc:'ALPHA',        hang:'Bridgestone D684',xuatXu:'Thái Lan', tdp:3952800, sdp:3370000 } },
+  { id:1,  size:'900R20-(18PR)',       boBo:'kem',   loaiXe:'Thaco 6.2T (thùng lửng/cẩu)',  sl6T:188,
+    p1:{ ncc:'ALPHA',        hang:'Bridgestone 900R20 M789 TL',      xuatXu:'Thái Lan', tdp:6534000,    sdp:5450000 },
+    p2:{ ncc:'LỐP XE VIỆT', hang:'Maxxis UR288 (gai xuôi)',          xuatXu:'Thái Lan', tdp:6240000,    sdp:6240000 } },
+  { id:2,  size:'11.00R20-(18PR)',     boBo:'kem',   loaiXe:'Thaco 14T (thùng bạt)',         sl6T:78,
+    p1:{ ncc:'LỐP XE VIỆT', hang:'Maxxis UR288 (gai xuôi)',          xuatXu:'Thái Lan', tdp:7111111,    sdp:7111111 },
+    p2:{ ncc:'ALPHA',        hang:'Bridgestone R150 (gai hỗn hợp)',   xuatXu:'Thái Lan', tdp:8910000,    sdp:7870000 } },
+  { id:3,  size:'11.00-22-(18PR)',     boBo:'kem',   loaiXe:'Chenglong 8.2–8.4T',            sl6T:18,
+    p1:{ ncc:'LỐP XE VIỆT', hang:'Maxxis UR288 / 11R22.5',           xuatXu:'Thái Lan', tdp:6488889,    sdp:6488889 },
+    p2:{ ncc:'ALPHA',        hang:'Bridgestone R150 (gai hỗn hợp)',   xuatXu:'Thái Lan', tdp:8910000,    sdp:7870000 } },
+  { id:4,  size:'750-16-(18PR)',       boBo:'nylon', loaiXe:'Mitsubishi/Veam',               sl6T:18,
+    p1:{ ncc:'LỐP XE VIỆT', hang:'Maxxis M276 (gai xuôi)',           xuatXu:'Việt Nam', tdp:2603780,    sdp:2603780 },
+    p2:{ ncc:'ALPHA',        hang:'Bridgestone R288 (gai hỗn hợp)',   xuatXu:'Thái Lan', tdp:4374000,    sdp:3950000 } },
+  { id:5,  size:'10.00R20-(18PR)',     boBo:'kem',   loaiXe:'Hino 6.75–8.4T',               sl6T:32,
+    p1:{ ncc:'LỐP XE VIỆT', hang:'Maxxis UR288 (gai xuôi)',          xuatXu:'Thái Lan', tdp:6720000,    sdp:6720000 },
+    p2:{ ncc:'ALPHA',        hang:'Bridgestone R150 (gai hỗn hợp)',   xuatXu:'Thái Lan', tdp:8478000,    sdp:7450000 } },
+  { id:6,  size:'245/70R19.5-(18PR)', boBo:'kem',   loaiXe:'Hyundai 12.35T',                sl6T:6,
+    p1:{ ncc:'ALPHA',        hang:'Bridgestone (gai hỗn hợp)',        xuatXu:'Thái Lan', tdp:5346000,    sdp:4750000 },
+    p2:{ ncc:'LỐP XE VIỆT', hang:'Maxxis UR275 (gai xuôi)',          xuatXu:'Thái Lan', tdp:4591667,    sdp:4591667 } },
+  { id:7,  size:'8.25R16-(18PR)',      boBo:'nylon', loaiXe:'Thaco 3.45T (thùng bạt)',       sl6T:6,
+    p1:{ ncc:'LỐP XE VIỆT', hang:'Maxxis M276 (gai xuôi)',           xuatXu:'Việt Nam', tdp:2955260,    sdp:2955260 },
+    p2:{ ncc:'ALPHA',        hang:'Bridgestone BS585 (gai hỗn hợp)',  xuatXu:'Thái Lan', tdp:4914000,    sdp:4250000 } },
+  { id:8,  size:'7.00R16-(16PR)',      boBo:'nylon', loaiXe:'Mitsubishi/Veam (nhỏ)',         sl6T:48,
+    p1:{ ncc:'LỐP XE VIỆT', hang:'Maxxis MA265 (gai xuôi)',          xuatXu:'Việt Nam', tdp:2083630,    sdp:2083630 },
+    p2:{ ncc:'ALPHA',        hang:'DRC bố nylon (gai hỗn hợp)',       xuatXu:'Việt Nam', tdp:2390000,    sdp:2570000 } },
+  { id:9,  size:'205/65R15',           boBo:'kem',   loaiXe:'Toyota Innova',                 sl6T:7,
+    p1:{ ncc:'LỐP XE VIỆT', hang:'Maxxis MAP5 (gai xuôi)',           xuatXu:'Thái Lan', tdp:1498148,    sdp:1205000 },
+    p2:{ ncc:'ALPHA',        hang:'Bridgestone B390 (gai hỗn hợp)',   xuatXu:'Thái Lan', tdp:2030400,    sdp:1750000 } },
+  { id:10, size:'265/65R17',           boBo:'kem',   loaiXe:'Toyota/Ford bán tải',           sl6T:4,
+    p1:{ ncc:'LỐP XE VIỆT', hang:'Maxxis HT780 (gai xuôi)',          xuatXu:'Thái Lan', tdp:2981481,    sdp:2567000 },
+    p2:{ ncc:'ALPHA',        hang:'Bridgestone D684 (gai hỗn hợp)',   xuatXu:'Thái Lan', tdp:3952800,    sdp:3370000 } },
 ]
 
-// vị trí lốp theo cấu hình
-const VT_LOP = {
-  '4':  ['tt_trai','tt_phai','ts_trai','ts_phai'],
-  '6':  ['tt_trai','tt_phai','ts_nt','ts_tt','ts_np','ts_tp'],
-  '10': ['tt_trai','tt_phai','t2_nt','t2_tt','t2_np','t2_tp','t3_nt','t3_tt','t3_np','t3_tp'],
-  '12': ['tt_trai','tt_phai','t2_nt','t2_tt','t2_np','t2_tp','t3_nt','t3_tt','t3_np','t3_tp','t4_nt','t4_np'],
-}
-const VT_LABEL = {
-  tt_trai:'CT · trái', tt_phai:'CT · phải',
-  ts_trai:'CS · trái', ts_phai:'CS · phải',
-  ts_nt:'CS · ngoài trái', ts_tt:'CS · trong trái', ts_np:'CS · ngoài phải', ts_tp:'CS · trong phải',
-  t2_nt:'C2 · NT', t2_tt:'C2 · TT', t2_np:'C2 · NP', t2_tp:'C2 · TP',
-  t3_nt:'C3 · NT', t3_tt:'C3 · TT', t3_np:'C3 · NP', t3_tp:'C3 · TP',
-  t4_nt:'C4 · NT', t4_np:'C4 · NP',
-}
-const DOCS_FIELDS = [
-  { k:'dangKy',          label:'Đăng ký xe' },
-  { k:'dangKiem',        label:'Đăng kiểm' },
-  { k:'baoHiemBatBuoc',  label:'BH bắt buộc (TNDS)' },
-  { k:'baoHiemThuHai',   label:'BH thứ 2 (vật chất xe)' },
-  { k:'phuHieu',         label:'Phù hiệu' },
-  { k:'kiemDinhCau',     label:'Kiểm định cầu' },
+const TABS = [
+  { id:'overview', label:'Tổng quan' }, { id:'alert', label:'Cảnh báo BD' },
+  { id:'cost', label:'Chi phí' }, { id:'timeline', label:'Timeline xe' },
+  { id:'tire', label:'Lốp xe' }, { id:'forecast', label:'Dự báo' },
+  { id:'ocr', label:'Scan báo giá' }, { id:'docs', label:'Giấy tờ xe' },
+  { id:'gialop', label:'Giá lốp' },
 ]
-const LOAI_LABEL = { baoDuongDinhKy:'BD định kỳ', suaChuaPhatSinh:'Sửa chữa', suaChuaTaiNan:'Tai nạn', baoHanh:'Bảo hành' }
-const fmt = n => Number(n||0).toLocaleString('vi-VN')
 
-// ── Pill Badge ────────────────────────────────────────────
-function Pill({ color='var(--ink3)', bg='var(--fill-tertiary)', children }) {
+// ── Style helpers (app variables) ────────────────────────────────────────
+const S = {
+  card: {
+    background: 'var(--bg-card)', border: '1px solid var(--sep)',
+    borderRadius: 10, padding: 14,
+  },
+  secTitle: {
+    fontSize: 11, fontWeight: 600, color: 'var(--ink3)',
+    textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 10,
+  },
+  badge: (type) => {
+    const map = {
+      red:  { bg: 'var(--red-l)',   color: 'var(--apple-red)' },
+      yel:  { bg: 'rgba(230,150,0,.12)', color: 'var(--apple-orange)' },
+      grn:  { bg: 'var(--green-l)', color: 'var(--apple-green)' },
+      blu:  { bg: 'rgba(0,85,204,.10)',  color: 'var(--apple-blue)' },
+      gray: { bg: 'var(--bg-secondary)', color: 'var(--ink3)' },
+    }
+    const c = map[type] || map.gray
+    return {
+      display: 'inline-block', padding: '2px 8px', borderRadius: 20,
+      fontSize: 10, fontWeight: 600, background: c.bg, color: c.color,
+    }
+  },
+}
+
+// ── Empty state ───────────────────────────────────────────────────────────
+function EmptyState({ icon='📋', title, sub, action, onAction }) {
   return (
-    <span style={{ display:'inline-flex', alignItems:'center', padding:'2px 9px',
-      borderRadius:20, fontSize:11, fontWeight:600, color, background:bg, whiteSpace:'nowrap' }}>
-      {children}
-    </span>
-  )
-}
-
-// ── Stat card (tổng quan) ─────────────────────────────────
-function StatCard({ val, label, color='var(--ink)' }) {
-  return (
-    <div style={{ background:'var(--bg-card)', borderRadius:12, padding:'14px 16px' }}>
-      <div style={{ fontSize:26, fontWeight:700, color, lineHeight:1 }}>{val}</div>
-      <div style={{ fontSize:12, color:'var(--ink3)', marginTop:4 }}>{label}</div>
-    </div>
-  )
-}
-
-// ── Empty State ───────────────────────────────────────────
-function Empty({ icon, title, sub, cta, onCta }) {
-  return (
-    <div style={{ textAlign:'center', padding:'40px 20px' }}>
-      <div style={{ fontSize:36, marginBottom:10 }}>{icon}</div>
-      <div style={{ fontWeight:600, fontSize:14, color:'var(--ink)', marginBottom:6 }}>{title}</div>
-      <div style={{ fontSize:12, color:'var(--ink3)', marginBottom:16 }}>{sub}</div>
-      {cta && <button onClick={onCta} style={BTN_PRIMARY}>{cta}</button>}
-    </div>
-  )
-}
-
-// ── Button styles ─────────────────────────────────────────
-const BTN_PRIMARY = {
-  background:'var(--brand)', color:'#fff', border:'none',
-  borderRadius:8, padding:'8px 18px', fontSize:13, fontWeight:600, cursor:'pointer',
-}
-const BTN_GHOST = {
-  background:'var(--fill-tertiary)', color:'var(--ink2)', border:'none',
-  borderRadius:8, padding:'7px 14px', fontSize:12, cursor:'pointer',
-}
-const INPUT = {
-  width:'100%', padding:'8px 11px', background:'var(--fill-tertiary)',
-  border:'none', borderRadius:8, fontSize:13, color:'var(--ink)',
-  outline:'none', boxSizing:'border-box',
-}
-
-// ── Form thêm phiếu BDSC ──────────────────────────────────
-function FormBDSC({ vehicles, onSave, onCancel }) {
-  const [form, setForm] = useState({
-    bienSo:'', ngay:new Date().toISOString().slice(0,10),
-    kmThoiDiem:'', gara:'', tinhThanh:'', loaiBdsc:'suaChuaPhatSinh', ghiChu:'',
-  })
-  const [hm,    setHm]    = useState([{ ten:'', loai:'suaChua', donGia:'', soLuong:1, donVi:'cái' }])
-  const [files, setFiles] = useState([])
-  const [saving,setSaving]= useState(false)
-  const [warn,  setWarn]  = useState('')
-  const fileRef = useRef()
-
-  const sf = k => e => setForm(p => ({ ...p, [k]:e.target.value }))
-
-  const tongCong  = hm.filter(h=>h.loai!=='vatTu').reduce((s,h)=>s+(+h.donGia||0)*(+h.soLuong||1),0)
-  const tongVatTu = hm.filter(h=>h.loai==='vatTu').reduce((s,h)=>s+(+h.donGia||0)*(+h.soLuong||1),0)
-  const tongTien  = tongCong + tongVatTu
-
-  const handleSave = async () => {
-    if (!form.bienSo || !form.kmThoiDiem) return alert('Vui lòng chọn xe và nhập km')
-    setSaving(true)
-    try {
-      const payload = { ...form, kmThoiDiem:+form.kmThoiDiem,
-        hangMuc: hm.map(h=>({ ...h, donGia:+h.donGia||0, soLuong:+h.soLuong||1,
-          thanhTien:(+h.donGia||0)*(+h.soLuong||1) })),
-        tongCong, tongVatTu, tongTien, anhBaoGia:files.map(f=>f.name) }
-      const res  = await apiFetch('/api/bdsc', { method:'POST', body:JSON.stringify(payload) })
-      const data = await res.json()
-      if (data.canhBao) { setWarn(data.canhBao); setSaving(false); return }
-      onSave(data)
-    } catch(e) { alert(e.message); setSaving(false) }
-  }
-
-  if (warn) return (
-    <div style={{ background:'var(--bg-card)', borderRadius:12, padding:16, marginBottom:12 }}>
-      <div style={{ fontWeight:700, color:'var(--amber)', marginBottom:8 }}>⚠ Phát hiện bất thường</div>
-      <div style={{ fontSize:13, color:'var(--ink2)', marginBottom:14 }}>{warn}</div>
-      <div style={{ display:'flex', gap:8 }}>
-        <button style={{ ...BTN_PRIMARY, background:'var(--amber)' }}
-          onClick={()=>{ setWarn(''); onSave({}) }}>Vẫn lưu</button>
-        <button style={BTN_GHOST} onClick={()=>setWarn('')}>Xem lại</button>
-      </div>
-    </div>
-  )
-
-  return (
-    <div style={{ background:'var(--bg-card)', borderRadius:12, padding:16, marginBottom:12 }}>
-      <div style={{ fontWeight:700, fontSize:14, color:'var(--ink)', marginBottom:14 }}>Thêm phiếu BDSC</div>
-
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:12 }}>
-        {[
-          { label:'Biển số *', el: <select style={INPUT} value={form.bienSo} onChange={sf('bienSo')}>
-              <option value=''>— Chọn xe —</option>
-              {vehicles.map(v=>{ const b=v['BIỂN SỐ']||v['BIẼNSỐ']||v['Biển số']||''; return <option key={v._id} value={b}>{b}</option> })}
-            </select> },
-          { label:'Loại', el: <select style={INPUT} value={form.loaiBdsc} onChange={sf('loaiBdsc')}>
-              {Object.entries(LOAI_LABEL).map(([k,v])=><option key={k} value={k}>{v}</option>)}
-            </select> },
-          { label:'Ngày *',        el:<input style={INPUT} type='date' value={form.ngay} onChange={sf('ngay')} /> },
-          { label:'KM tại thời điểm *', el:<input style={INPUT} type='number' placeholder='145000' value={form.kmThoiDiem} onChange={sf('kmThoiDiem')} /> },
-          { label:'Gara',          el:<input style={INPUT} placeholder='Tên gara' value={form.gara} onChange={sf('gara')} /> },
-          { label:'Tỉnh/thành',   el:<input style={INPUT} placeholder='TP.HCM' value={form.tinhThanh} onChange={sf('tinhThanh')} /> },
-        ].map(({ label, el }) => (
-          <div key={label}>
-            <div style={{ fontSize:11, color:'var(--ink3)', marginBottom:4 }}>{label}</div>
-            {el}
-          </div>
-        ))}
-      </div>
-
-      {/* Hạng mục */}
-      <div style={{ marginBottom:12 }}>
-        <div style={{ fontSize:11, color:'var(--ink3)', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.05em' }}>Hạng mục</div>
-        {hm.map((h,i) => (
-          <div key={i} style={{ display:'grid', gridTemplateColumns:'2fr 1fr 90px 64px 58px 28px', gap:6, marginBottom:6 }}>
-            <input style={INPUT} placeholder='Tên hạng mục' value={h.ten}
-              onChange={e=>setHm(p=>p.map((x,j)=>j===i?{...x,ten:e.target.value}:x))} />
-            <select style={INPUT} value={h.loai}
-              onChange={e=>setHm(p=>p.map((x,j)=>j===i?{...x,loai:e.target.value}:x))}>
-              <option value='baoDuong'>BD định kỳ</option>
-              <option value='suaChua'>Sửa chữa</option>
-              <option value='vatTu'>Vật tư</option>
-              <option value='giaCong'>Gia công</option>
-            </select>
-            <input style={INPUT} type='number' placeholder='Đơn giá' value={h.donGia}
-              onChange={e=>setHm(p=>p.map((x,j)=>j===i?{...x,donGia:e.target.value}:x))} />
-            <input style={INPUT} type='number' placeholder='SL' value={h.soLuong}
-              onChange={e=>setHm(p=>p.map((x,j)=>j===i?{...x,soLuong:e.target.value}:x))} />
-            <input style={INPUT} placeholder='ĐVT' value={h.donVi}
-              onChange={e=>setHm(p=>p.map((x,j)=>j===i?{...x,donVi:e.target.value}:x))} />
-            <button onClick={()=>setHm(p=>p.filter((_,j)=>j!==i))}
-              style={{ ...BTN_GHOST, padding:'0 6px', color:'var(--apple-red)' }}>✕</button>
-          </div>
-        ))}
-        <button style={BTN_GHOST}
-          onClick={()=>setHm(p=>[...p,{ten:'',loai:'suaChua',donGia:'',soLuong:1,donVi:'cái'}])}>
-          + Hạng mục
+    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+      padding:'52px 24px', gap:12, textAlign:'center' }}>
+      <div style={{ fontSize:42 }}>{icon}</div>
+      <div style={{ fontWeight:600, fontSize:15, color:'var(--ink)' }}>{title}</div>
+      {sub && <div style={{ fontSize:13, color:'var(--ink3)', maxWidth:320, lineHeight:1.6 }}>{sub}</div>}
+      {action && (
+        <button onClick={onAction} style={{ marginTop:8, padding:'8px 20px', borderRadius:8,
+          background:'var(--brand)', color:'#fff', border:'none', cursor:'pointer', fontSize:13, fontWeight:600 }}>
+          {action}
         </button>
-      </div>
+      )}
+    </div>
+  )
+}
 
-      {/* Tổng */}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8, marginBottom:12,
-        padding:12, background:'var(--fill-tertiary)', borderRadius:10 }}>
-        {[['Công/gia công', fmt(tongCong)+'đ'], ['Vật tư', fmt(tongVatTu)+'đ'],
-          ['Tổng cộng', fmt(tongTien)+'đ']].map(([l,v],i) => (
-          <div key={l}>
-            <div style={{ fontSize:11, color:'var(--ink3)' }}>{l}</div>
-            <div style={{ fontWeight:700, fontSize:13, color:i===2?'var(--brand)':'var(--ink)' }}>{v}</div>
-          </div>
-        ))}
+// ── Bar row ───────────────────────────────────────────────────────────────
+function BarRow({ label, pct, val, color='var(--brand)' }) {
+  return (
+    <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8 }}>
+      <div style={{ width:100, fontSize:11, color:'var(--ink3)', textAlign:'right', flexShrink:0 }}>{label}</div>
+      <div style={{ flex:1, background:'var(--sep)', borderRadius:4, height:8, overflow:'hidden' }}>
+        <div style={{ width:`${pct}%`, height:'100%', borderRadius:4, background:color, transition:'width .6s ease' }}/>
       </div>
+      <div style={{ fontSize:11, color:'var(--ink)', width:64, textAlign:'right', flexShrink:0, fontWeight:500 }}>{val}</div>
+    </div>
+  )
+}
 
-      {/* Files */}
-      <div style={{ marginBottom:12 }}>
-        <div style={{ fontSize:11, color:'var(--ink3)', marginBottom:6 }}>Ảnh báo giá / PDF (nhiều file)</div>
-        <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-          <button style={BTN_GHOST} onClick={()=>fileRef.current?.click()}>📎 Chọn file</button>
-          <input ref={fileRef} type='file' multiple accept='image/*,.pdf' style={{ display:'none' }}
-            onChange={e=>setFiles(p=>[...p,...Array.from(e.target.files)])} />
-          <span style={{ fontSize:12, color:'var(--ink3)' }}>{files.length ? `${files.length} file` : 'Chưa chọn'}</span>
+// ── Tire diagram ──────────────────────────────────────────────────────────
+function TireView({ config, tireData, onClickTire }) {
+  const TireBox = ({ pos }) => {
+    const t = tireData?.[pos]
+    const kmMax = t?.loai === 'kem' ? 80000 : 50000
+    const kmUsed = t ? (t.kmHienTai - t.kmLapDat) : 0
+    const pct = t ? Math.min(kmUsed / kmMax, 1) : 0
+    const status = !t ? 'empty' : pct >= 1 ? 'crit' : pct >= 0.9 ? 'warn' : 'ok'
+    const colors = {
+      empty: { border:'var(--sep)',         bg:'var(--bg-secondary)' },
+      ok:    { border:'var(--apple-green)', bg:'var(--green-l)' },
+      warn:  { border:'var(--apple-orange)',bg:'rgba(230,150,0,.08)' },
+      crit:  { border:'var(--apple-red)',   bg:'var(--red-l)' },
+    }
+    const c = colors[status]
+    return (
+      <div onClick={() => onClickTire(pos, t)} title={POS_LABELS[pos]}
+        style={{ width:38, height:62, border:`2px solid ${c.border}`, borderRadius:7,
+          background:c.bg, display:'flex', flexDirection:'column', alignItems:'center',
+          justifyContent:'center', gap:3, cursor:'pointer', transition:'transform .12s' }}
+        onMouseEnter={e => e.currentTarget.style.transform='scale(1.07)'}
+        onMouseLeave={e => e.currentTarget.style.transform='scale(1)'}>
+        {t ? (
+          <>
+            <div style={{ fontSize:8, fontWeight:700, color:
+              status==='crit'?'var(--apple-red)':status==='warn'?'var(--apple-orange)':'var(--apple-green)' }}>
+              {Math.round(kmUsed/1000)}k
+            </div>
+            <div style={{ width:22, height:3, borderRadius:2, background:'var(--sep)', overflow:'hidden' }}>
+              <div style={{ width:`${pct*100}%`, height:'100%', borderRadius:2, background:
+                status==='crit'?'var(--apple-red)':status==='warn'?'var(--apple-orange)':'var(--apple-green)' }}/>
+            </div>
+          </>
+        ) : (
+          <div style={{ fontSize:14, color:'var(--ink3)', lineHeight:1 }}>+</div>
+        )}
+        <div style={{ fontSize:8, color:'var(--ink3)' }}>{pos}</div>
+      </div>
+    )
+  }
+  const AxleLabel = ({ label }) => (
+    <div style={{ width:72, height:26, background:'var(--bg-secondary)',
+      border:'1px solid var(--sep)', borderRadius:6,
+      display:'flex', alignItems:'center', justifyContent:'center',
+      fontSize:9, color:'var(--ink3)', textAlign:'center' }}>{label}</div>
+  )
+  const Bar = () => <div style={{ width:3, height:20, background:'var(--sep)', margin:'0 auto' }}/>
+
+  if (config === '4') return (
+    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:10 }}>
+      <div style={{ display:'flex', gap:72, alignItems:'center' }}><TireBox pos="TT"/><AxleLabel label="TRƯỚC"/><TireBox pos="TP"/></div>
+      <Bar/>
+      <div style={{ display:'flex', gap:72, alignItems:'center' }}><TireBox pos="ST"/><AxleLabel label="SAU"/><TireBox pos="SP"/></div>
+    </div>
+  )
+  if (config === '6') return (
+    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:10 }}>
+      <div style={{ display:'flex', gap:72, alignItems:'center' }}><TireBox pos="TT"/><AxleLabel label="CẦU TRƯỚC"/><TireBox pos="TP"/></div>
+      <Bar/>
+      <div style={{ display:'flex', gap:18, alignItems:'center' }}>
+        <TireBox pos="STN"/><TireBox pos="STT"/><AxleLabel label="CẦU SAU"/><TireBox pos="SPT"/><TireBox pos="SPN"/>
+      </div>
+    </div>
+  )
+  return (
+    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:10 }}>
+      <div style={{ display:'flex', gap:72, alignItems:'center' }}><TireBox pos="TT"/><AxleLabel label="CẦU TRƯỚC"/><TireBox pos="TP"/></div>
+      <Bar/>
+      <div style={{ display:'flex', gap:14, alignItems:'center' }}>
+        <TireBox pos="C1TN"/><TireBox pos="C1TT"/><AxleLabel label="CẦU SAU 1"/><TireBox pos="C1PT"/><TireBox pos="C1PN"/>
+      </div>
+      <Bar/>
+      <div style={{ display:'flex', gap:14, alignItems:'center' }}>
+        <TireBox pos="C2TN"/><TireBox pos="C2TT"/><AxleLabel label="CẦU SAU 2"/><TireBox pos="C2PT"/><TireBox pos="C2PN"/>
+      </div>
+    </div>
+  )
+}
+
+// ── OCR file card ─────────────────────────────────────────────────────────
+function OcrCard({ file, result, onUpdate, onRemove, idx }) {
+  const fields = [
+    { key:'bienSo',   label:'Biển số xe' },
+    { key:'km',       label:'Số KM' },
+    { key:'ngay',     label:'Ngày' },
+    { key:'garage',   label:'Garage / NCC' },
+    { key:'soRO',     label:'Số RO / Báo giá' },
+    { key:'tongTien', label:'Tổng tiền' },
+  ]
+  const inputStyle = {
+    width:'100%', padding:'6px 10px', borderRadius:6, fontSize:12,
+    background:'var(--bg)', border:'1px solid var(--sep)',
+    color:'var(--ink)', outline:'none',
+  }
+  return (
+    <div style={{ ...S.card, marginBottom:10 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <span style={{ fontSize:13, fontWeight:600, color:'var(--ink)' }}>📄 {file.name}</span>
+          {result?.aiRead && (
+            <span style={{ ...S.badge('yel'), fontSize:9 }}>AI đọc</span>
+          )}
         </div>
-        {files.length > 0 && (
-          <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginTop:6 }}>
-            {files.map((f,i)=>(
-              <span key={i} style={{ display:'inline-flex', alignItems:'center', gap:4, fontSize:11,
-                color:'var(--ink2)', background:'var(--fill-tertiary)', padding:'3px 8px', borderRadius:6 }}>
-                {f.name.length>20?f.name.slice(0,18)+'…':f.name}
-                <span style={{ cursor:'pointer', color:'var(--apple-red)' }}
-                  onClick={()=>setFiles(p=>p.filter((_,j)=>j!==i))}>✕</span>
-              </span>
+        <button onClick={() => onRemove(idx)}
+          style={{ background:'none', border:'none', cursor:'pointer', color:'var(--ink3)', fontSize:18, lineHeight:1 }}>✕</button>
+      </div>
+      {result ? (
+        <>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px 14px', marginBottom:12 }}>
+            {fields.map(f => (
+              <div key={f.key}>
+                <div style={{ fontSize:11, color:'var(--ink3)', marginBottom:3 }}>{f.label}</div>
+                <input value={result[f.key] || ''} onChange={e => onUpdate(idx, f.key, e.target.value)}
+                  style={inputStyle} onFocus={e => e.target.style.borderColor='var(--brand)'}
+                  onBlur={e => e.target.style.borderColor='var(--sep)'}/>
+              </div>
             ))}
           </div>
-        )}
-      </div>
-
-      <div style={{ marginBottom:12 }}>
-        <div style={{ fontSize:11, color:'var(--ink3)', marginBottom:4 }}>Ghi chú</div>
-        <textarea style={{ ...INPUT, height:60, resize:'vertical' }} value={form.ghiChu} onChange={sf('ghiChu')} />
-      </div>
-
-      <div style={{ display:'flex', gap:8 }}>
-        <button style={BTN_PRIMARY} onClick={handleSave} disabled={saving}>
-          {saving ? 'Đang lưu…' : 'Lưu phiếu'}
-        </button>
-        <button style={BTN_GHOST} onClick={onCancel}>Huỷ</button>
-      </div>
+          {result.hangMuc?.length > 0 && (
+            <div>
+              <div style={{ ...S.secTitle, marginBottom:6 }}>Hạng mục ({result.hangMuc.length})</div>
+              {result.hangMuc.map((h, i) => (
+                <div key={i} style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 10px',
+                  background:'var(--bg-secondary)', borderRadius:6, marginBottom:4 }}>
+                  <span style={{ flex:1, fontSize:12, color:'var(--ink)' }}>{h.ten}</span>
+                  <span style={{ fontSize:12, fontWeight:600, color:'var(--ink2)' }}>{Number(h.thanhTien||0).toLocaleString('vi-VN')}đ</span>
+                  <span style={S.badge(h.mucDich==='baoDuongDinhKy'?'grn':h.loaiChiPhi==='giaCongNgoai'?'blu':'yel')}>
+                    {h.mucDich==='baoDuongDinhKy'?'BD định kỳ':h.loaiChiPhi==='giaCongNgoai'?'Gia công':'Sửa chữa'}
+                  </span>
+                  {h.canhBao && <span style={S.badge('red')}>⚠ {h.canhBao}</span>}
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      ) : (
+        <div style={{ textAlign:'center', padding:'20px 0', color:'var(--ink3)', fontSize:12 }}>Đang xử lý...</div>
+      )}
     </div>
   )
 }
 
-// ── Sơ đồ lốp ────────────────────────────────────────────
-function LopDiagram({ cauHinh, viTriLop, kmHienTai, onClickVt }) {
-  const vts = VT_LOP[cauHinh] || VT_LOP['6']
-  return (
-    <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
-      {vts.map(vt => {
-        const d = (viTriLop||[]).find(v=>v.viTri===vt)
-        const km = d && kmHienTai ? kmHienTai-(d.kmLap||0) : null
-        const chu = d?.boBo==='kem' ? 80000 : 50000
-        const pct = km ? km/chu : 0
-        const clr = pct>=1 ? 'var(--apple-red)' : pct>=0.85 ? 'var(--amber)' : pct>0 ? 'var(--green)' : 'var(--ink3)'
-        const bg  = pct>=1 ? 'rgba(215,0,21,.08)' : pct>=0.85 ? 'rgba(196,85,0,.08)' : pct>0 ? 'rgba(26,127,55,.08)' : 'var(--fill-tertiary)'
-        return (
-          <div key={vt} onClick={()=>onClickVt(vt,d||{})}
-            style={{ minWidth:80, padding:'8px 10px', background:bg, borderRadius:10, cursor:'pointer',
-              textAlign:'center', transition:'opacity .15s' }}>
-            <div style={{ fontSize:10, color:'var(--ink3)', marginBottom:2 }}>{VT_LABEL[vt]||vt}</div>
-            <div style={{ fontSize:11, fontWeight:600, color:clr }}>{d?.loaiLop||'—'}</div>
-            {km!==null && <div style={{ fontSize:10, color:clr }}>{(km/1000).toFixed(0)}k km</div>}
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
-// ── Modal lốp ────────────────────────────────────────────
-function TireModal({ viTri, data, onSave, onClose }) {
-  const [f, setF] = useState({ viTri, loaiLop:'', boBo:'kem', thuongHieu:'', ncc:'', kmLap:'', ngayLap:'', ...data })
-  const sf = k => e => setF(p=>({...p,[k]:e.target.value}))
-  const match = TIRE_CATALOG.find(t => f.loaiLop && (f.loaiLop.includes(t.size.replace('R','').split('-')[0]) || t.size===f.loaiLop))
-  return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.45)', zIndex:1000,
-      display:'flex', alignItems:'center', justifyContent:'center' }}>
-      <div style={{ background:'var(--bg-card)', borderRadius:16, padding:20, width:340,
-        maxHeight:'88vh', overflowY:'auto' }}>
-        <div style={{ fontWeight:700, fontSize:14, color:'var(--ink)', marginBottom:14 }}>
-          {VT_LABEL[viTri]||viTri}
-        </div>
-        {[
-          { label:'Size lốp', el:<select style={INPUT} value={f.loaiLop} onChange={sf('loaiLop')}>
-              <option value=''>— Chọn size —</option>
-              {TIRE_CATALOG.map(t=><option key={t.id} value={t.size}>{t.size} · {t.loaiXe}</option>)}
-            </select> },
-          { label:'Loại bố', el:<select style={INPUT} value={f.boBo} onChange={sf('boBo')}>
-              <option value='nylon'>Bố nylon (thay 50.000km)</option>
-              <option value='kem'>Bố kẽm (thay 80.000km)</option>
-            </select> },
-          { label:'Thương hiệu', el:<input style={INPUT} placeholder='Maxxis / Bridgestone / DRC' value={f.thuongHieu} onChange={sf('thuongHieu')} /> },
-          { label:'NCC', el:<input style={INPUT} placeholder='LỐP XE VIỆT / ALPHA' value={f.ncc} onChange={sf('ncc')} /> },
-        ].map(({label,el})=>(
-          <div key={label} style={{ marginBottom:10 }}>
-            <div style={{ fontSize:11, color:'var(--ink3)', marginBottom:4 }}>{label}</div>
-            {el}
-          </div>
-        ))}
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:10 }}>
-          {[['KM lúc lắp','number','145000','kmLap'],['Ngày lắp','date','','ngayLap']].map(([l,t,ph,k])=>(
-            <div key={k}>
-              <div style={{ fontSize:11, color:'var(--ink3)', marginBottom:4 }}>{l}</div>
-              <input style={INPUT} type={t} placeholder={ph} value={f[k]} onChange={sf(k)} />
-            </div>
-          ))}
-        </div>
-        {match && (
-          <div style={{ padding:'10px 12px', background:'rgba(0,85,204,.07)', borderRadius:10, marginBottom:12 }}>
-            <div style={{ fontSize:11, color:'var(--apple-blue)', fontWeight:600, marginBottom:4 }}>
-              💡 Giá duyệt TTr 3413/2026 · đến 30/06/2026
-            </div>
-            <div style={{ fontSize:13, color:'var(--ink)', fontWeight:700 }}>
-              {fmt(match.p1.sdp)}đ <span style={{ fontWeight:400, color:'var(--ink3)' }}>({match.p1.ncc})</span>
-            </div>
-          </div>
-        )}
-        <div style={{ display:'flex', gap:8 }}>
-          <button style={BTN_GHOST} onClick={onClose}>Đóng</button>
-          <button style={{ ...BTN_PRIMARY, flex:1 }} onClick={()=>onSave(f)}>Lưu</button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ══════════════════════════════════════════════════════════
-// MAIN
-// ══════════════════════════════════════════════════════════
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 export default function PageBaoDuong({ token, user }) {
-  const TABS = [
-    { id:'overview', label:'Tổng quan' },
-    { id:'alert',    label:'Cảnh báo' },
-    { id:'bdsc',     label:'Phiếu BDSC' },
-    { id:'timeline', label:'Timeline' },
-    { id:'tire',     label:'Lốp xe' },
-    { id:'docs',     label:'Giấy tờ' },
-    { id:'catalog',  label:'Bảng giá lốp' },
-  ]
-
-  const [tab,        setTab]       = useState('overview')
-  const [vehicles,   setVehicles]  = useState([])
-  const [bdAlerts,   setBdAlerts]  = useState([])
-  const [docsAlerts, setDocsAlerts]= useState([])
-  const [history,    setHistory]   = useState([])
-  const [loading,    setLoading]   = useState(true)
-  const [showForm,   setShowForm]  = useState(false)
-
-  const [selVe,    setSelVe]    = useState('')
-  const [veHistory,setVeHistory]= useState([])
-
-  const [tireVe,   setTireVe]   = useState('')
-  const [lopData,  setLopData]  = useState({ cauHinh:'6', viTriLop:[] })
-  const [tireModal,setTireModal]= useState(null)
-
-  const [docsVe,   setDocsVe]   = useState('')
-  const [docsData, setDocsData] = useState({})
+  const [tab, setTab]             = useState('overview')
+  const [vehicles, setVehicles]   = useState([])
+  const [bdHistory, setBdHistory] = useState([])
+  const [tireData, setTireData]   = useState({})
+  const [loadingVe, setLoadingVe] = useState(true)
+  const [selectedVe, setSelectedVe] = useState('')
+  const [tireVe, setTireVe]       = useState('')
+  const [axleCfg, setAxleCfg]     = useState('6')
+  const [tireModal, setTireModal] = useState(null)
+  const [ocrFiles, setOcrFiles]   = useState([])
+  const [ocrResults, setOcrResults] = useState([])
+  const [ocrLoading, setOcrLoading] = useState(false)
+  const fileInputRef = useRef()
 
   useEffect(() => {
-    Promise.all([
-      apiFetch('/api/xe/all').then(r=>r.json()).catch(()=>[]),
-      apiFetch('/api/bdsc/alerts').then(r=>r.json()).catch(()=>[]),
-      apiFetch('/api/bdsc/docs-alerts').then(r=>r.json()).catch(()=>[]),
-      apiFetch('/api/bdsc?limit=100').then(r=>r.json()).catch(()=>({ data:[] })),
-    ]).then(([xe,al,da,bd]) => {
-      setVehicles(Array.isArray(xe)?xe:[])
-      setBdAlerts(Array.isArray(al)?al:[])
-      setDocsAlerts(Array.isArray(da)?da:[])
-      setHistory(Array.isArray(bd?.data)?bd.data:[])
-    }).finally(()=>setLoading(false))
+    apiFetch('/api/xe/all').then(r => r.json())
+      .then(d => { setVehicles(Array.isArray(d) ? d : []); setLoadingVe(false) })
+      .catch(() => setLoadingVe(false))
+    apiFetch('/api/bdsc').then(r => r.json())
+      .then(d => Array.isArray(d) && setBdHistory(d))
+      .catch(() => {})
   }, [])
 
-  const loadVeHistory = async (bs) => {
-    if (!bs) return
-    const d = await apiFetch(`/api/bdsc/history/${bs}`).then(r=>r.json()).catch(()=>[])
-    setVeHistory(Array.isArray(d)?d:[])
+  const processOcr = useCallback(async (newFiles) => {
+    setOcrLoading(true)
+    const results = []
+    for (const f of newFiles) {
+      try {
+        const b64 = await new Promise((res, rej) => {
+          const reader = new FileReader()
+          reader.onload = () => res(reader.result.split(',')[1])
+          reader.onerror = rej
+          reader.readAsDataURL(f.file)
+        })
+        const resp = await apiFetch('/api/bdsc/ocr', {
+          method: 'POST',
+          body: JSON.stringify({ base64: b64, mimeType: f.file.type || 'image/jpeg', filename: f.file.name })
+        })
+        results.push(resp.ok ? { ...(await resp.json()), aiRead: true }
+          : { bienSo:'', km:'', ngay:'', garage:'', soRO:'', tongTien:'', hangMuc:[], aiRead:false })
+      } catch {
+        results.push({ bienSo:'', km:'', ngay:'', garage:'', soRO:'', tongTien:'', hangMuc:[], aiRead:false })
+      }
+    }
+    setOcrResults(prev => [...prev, ...results])
+    setOcrLoading(false)
+  }, [])
+
+  const handleFileSelect = useCallback((e) => {
+    const selected = Array.from(e.target.files)
+    const wrapped = selected.map(f => ({ file: f, preview: f.type.startsWith('image/') ? URL.createObjectURL(f) : null }))
+    setOcrFiles(prev => [...prev, ...wrapped])
+    processOcr(wrapped)
+    e.target.value = ''
+  }, [processOcr])
+
+  const handleDrop = useCallback((e) => {
+    e.preventDefault()
+    const dropped = Array.from(e.dataTransfer.files).map(f => ({ file: f, preview: f.type.startsWith('image/') ? URL.createObjectURL(f) : null }))
+    setOcrFiles(prev => [...prev, ...dropped])
+    processOcr(dropped)
+  }, [processOcr])
+
+  const submitAllOcr = async () => {
+    let saved = 0
+    for (const result of ocrResults) {
+      if (!result.bienSo || !result.km) continue
+      const resp = await apiFetch('/api/bdsc', { method:'POST', body: JSON.stringify(result) })
+      if (resp.ok) saved++
+    }
+    setBdHistory(prev => [...ocrResults.filter(r=>r.bienSo), ...prev])
+    setOcrFiles([]); setOcrResults([])
+    alert(`Đã lưu ${saved} báo giá`)
   }
 
-  const loadTire = async (bs) => {
-    if (!bs) return
-    const d = await apiFetch(`/api/bdsc/tire/${bs}`).then(r=>r.json()).catch(()=>({ cauHinh:'6', viTriLop:[] }))
-    setLopData(d)
+  const bdAlerts = vehicles.map(xe => {
+    const km = xe.kmGPS || 0
+    if (!km) return null
+    const lastBdKm = bdHistory.find(h => h.bienSo === xe.bienSo)?.km || 0
+    const mocTiep = Math.ceil(km / 5000) * 5000
+    const conLai = mocTiep - km
+    const pct = Math.min((km - lastBdKm) / 5000, 1)
+    if (pct < 0.7) return null
+    return { xe, km, mocTiep, conLai, pct, status: pct >= 1 ? 'crit' : 'warn' }
+  }).filter(Boolean)
+
+  // ── SELECT styles ──────────────────────────────────────────────────────
+  const selectStyle = {
+    padding:'7px 12px', borderRadius:8, fontSize:12, cursor:'pointer',
+    border:'1px solid var(--sep)', background:'var(--bg-card)',
+    color:'var(--ink)', outline:'none',
   }
 
-  const loadDocs = async (bs) => {
-    if (!bs) return
-    const d = await apiFetch(`/api/bdsc/docs/${bs}`).then(r=>r.json()).catch(()=>({}))
-    setDocsData(d||{})
-  }
-
-  const saveTireVt = async (vtData) => {
-    const next = { ...lopData, viTriLop: [...(lopData.viTriLop||[]).filter(v=>v.viTri!==vtData.viTri), vtData] }
-    const res  = await apiFetch(`/api/bdsc/tire/${tireVe}`, { method:'PUT', body:JSON.stringify(next) })
-    const d    = await res.json(); setLopData(d); setTireModal(null)
-  }
-
-  const saveDocs = async () => {
-    if (!docsVe) return
-    await apiFetch(`/api/bdsc/docs/${docsVe}`, { method:'PUT', body:JSON.stringify(docsData) })
-  }
-
-  const critBD   = bdAlerts.filter(a=>a.status==='crit').length
-  const warnBD   = bdAlerts.filter(a=>a.status==='warn').length
-  const critDocs = docsAlerts.filter(a=>a.diffDays<=15).length
-
-  if (loading) return (
-    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:200, color:'var(--ink3)', fontSize:13 }}>
-      Đang tải…
-    </div>
-  )
+  const alertRowStyle = (status) => ({
+    display:'flex', alignItems:'center', gap:12, padding:'10px 14px',
+    borderRadius:8, background:'var(--bg-card)', border:`1px solid ${status==='crit'?'rgba(215,0,21,.25)':status==='warn'?'rgba(196,85,0,.2)':'var(--sep)'}`,
+    marginBottom:6,
+  })
 
   return (
-    <div style={{ paddingBottom:40 }}>
-
-      {/* ── Header ── */}
-      <div style={{ padding:'16px 16px 0', display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:10 }}>
-        <div>
-          <div style={{ fontSize:20, fontWeight:700, color:'var(--ink)' }}>Bảo dưỡng & Sửa chữa</div>
-          <div style={{ fontSize:12, color:'var(--ink3)', marginTop:2 }}>
-            {vehicles.length} xe · {history.length} phiếu BDSC
-          </div>
-        </div>
-        <button style={BTN_PRIMARY} onClick={()=>{ setShowForm(true); setTab('bdsc') }}>
-          + Thêm phiếu
-        </button>
-      </div>
-
-      {/* ── Tab bar ── */}
-      <div style={{ display:'flex', overflowX:'auto', padding:'0 16px', gap:2, marginBottom:14,
-        borderBottom:'1px solid var(--sep)' }}>
+    <div style={{ minHeight:'100vh' }}>
+      {/* ── Tab nav ────────────────────────────────────────────────────── */}
+      <div style={{ display:'flex', gap:4, marginBottom:16, overflowX:'auto',
+        paddingBottom:2, borderBottom:'1px solid var(--sep)' }}>
         {TABS.map(t => (
-          <button key={t.id} onClick={()=>setTab(t.id)} style={{
-            padding:'9px 14px', fontSize:13, fontWeight:tab===t.id?600:400,
-            background:'transparent', border:'none', borderBottom:tab===t.id?'2px solid var(--brand)':'2px solid transparent',
-            color:tab===t.id?'var(--brand)':'var(--ink3)', cursor:'pointer', whiteSpace:'nowrap',
-            display:'flex', alignItems:'center', gap:5,
-          }}>
+          <button key={t.id} onClick={() => setTab(t.id)}
+            style={{ padding:'7px 16px', borderRadius:8, border:'none', cursor:'pointer',
+              fontSize:12, fontWeight:500, whiteSpace:'nowrap', transition:'all .15s',
+              background: tab===t.id ? 'var(--brand)' : 'transparent',
+              color: tab===t.id ? '#fff' : 'var(--ink3)' }}>
             {t.label}
-            {t.id==='alert' && (critBD+warnBD+critDocs)>0 && (
-              <span style={{ background:'var(--apple-red)', color:'#fff',
-                borderRadius:10, padding:'1px 6px', fontSize:10, fontWeight:700 }}>
-                {critBD+warnBD+critDocs}
-              </span>
-            )}
           </button>
         ))}
       </div>
 
-      <div style={{ padding:'0 16px' }}>
-
-        {/* ══ TỔNG QUAN ══ */}
-        {tab==='overview' && (
-          <>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:14 }}>
-              <StatCard val={critBD}          label='Xe quá hạn BD'       color='var(--apple-red)' />
-              <StatCard val={warnBD}          label='Xe sắp đến hạn'      color='var(--amber)' />
-              <StatCard val={critDocs}        label='Giấy tờ sắp hết hạn' color='var(--amber)' />
-              <StatCard val={history.length}  label='Tổng phiếu BDSC'     color='var(--brand)' />
-            </div>
-
-            <div style={{ fontSize:12, color:'var(--ink3)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:8 }}>
-              Phiếu BDSC gần nhất
-            </div>
-            {history.length === 0
-              ? <Empty icon='🔧' title='Chưa có phiếu nào'
-                  sub='Nhấn "+ Thêm phiếu" để bắt đầu ghi nhận bảo dưỡng & sửa chữa'
-                  cta='+ Thêm phiếu' onCta={()=>{ setShowForm(true); setTab('bdsc') }} />
-              : history.slice(0,5).map(h=>(
-                <div key={h._id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center',
-                  padding:'10px 0', borderBottom:'1px solid var(--sep)' }}>
-                  <div>
-                    <span style={{ fontWeight:600, color:'var(--ink)', fontSize:13 }}>{h.bienSo}</span>
-                    <span style={{ fontSize:12, color:'var(--ink3)', marginLeft:8 }}>
-                      {new Date(h.ngay).toLocaleDateString('vi-VN')} · {fmt(h.kmThoiDiem)}km
-                    </span>
-                  </div>
-                  <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-                    {h.canhBao && <Pill color='var(--amber)' bg='rgba(196,85,0,.1)'>⚠</Pill>}
-                    <Pill color={h.loaiBdsc==='baoDuongDinhKy'?'var(--green)':'var(--apple-blue)'}
-                      bg={h.loaiBdsc==='baoDuongDinhKy'?'rgba(26,127,55,.1)':'rgba(0,85,204,.1)'}>
-                      {LOAI_LABEL[h.loaiBdsc]||h.loaiBdsc}
-                    </Pill>
-                    <span style={{ fontWeight:700, fontSize:13, color:'var(--ink)' }}>{fmt(h.tongTien)}đ</span>
-                  </div>
-                </div>
-              ))
-            }
-
-            <div style={{ fontSize:12, color:'var(--ink3)', textTransform:'uppercase', letterSpacing:'0.05em', marginTop:20, marginBottom:8 }}>
-              Chu kỳ bảo dưỡng xe tải (HSH.QLTS-05 · 6.1.3)
-            </div>
-            {BD_XETAI.map(b=>(
-              <div key={b.moc} style={{ display:'flex', gap:10, padding:'8px 0', borderBottom:'1px solid var(--sep)', fontSize:12 }}>
-                <span style={{ fontWeight:700, color:'var(--brand)', minWidth:52 }}>{(b.moc).toLocaleString()}km</span>
-                <span style={{ color:'var(--ink2)' }}>{b.items.slice(0,3).join(' · ')}{b.items.length>3?` +${b.items.length-3}`:''}</span>
+      {/* ── TỔNG QUAN ─────────────────────────────────────────────────── */}
+      {tab==='overview' && (
+        <div>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10, marginBottom:14 }}>
+            {[
+              { label:'Xe đến hạn BD', val: bdAlerts.length, color: bdAlerts.length>0?'var(--apple-red)':'var(--ink)', sub:'trong 30 ngày tới' },
+              { label:'Lần BDSC đã ghi nhận', val: bdHistory.length, color:'var(--ink)', sub:'tổng cộng' },
+              { label:'Xe trong hệ thống', val: vehicles.length, color:'var(--ink)', sub:'đang theo dõi' },
+              { label:'Báo giá chờ xác nhận', val: ocrResults.length, color: ocrResults.length>0?'var(--brand)':'var(--ink)', sub:'cần review' },
+            ].map((c,i) => (
+              <div key={i} style={S.card}>
+                <div style={{ fontSize:11, color:'var(--ink3)', marginBottom:4 }}>{c.label}</div>
+                <div style={{ fontSize:26, fontWeight:700, color:c.color, lineHeight:1.2 }}>{c.val}</div>
+                <div style={{ fontSize:11, color:'var(--ink3)', marginTop:2 }}>{c.sub}</div>
               </div>
             ))}
-          </>
-        )}
-
-        {/* ══ CẢNH BÁO ══ */}
-        {tab==='alert' && (
-          <>
-            {bdAlerts.length===0 && docsAlerts.length===0
-              ? <Empty icon='✅' title='Không có cảnh báo'
-                  sub={vehicles.length===0 ? 'Chưa có xe trong hệ thống' : 'Tất cả xe đang trong chu kỳ bảo dưỡng an toàn'} />
-              : null
-            }
-
-            {bdAlerts.length>0 && (
-              <>
-                <div style={{ fontSize:12, color:'var(--ink3)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:8 }}>
-                  Bảo dưỡng định kỳ
-                </div>
-                {bdAlerts.map((a,i)=>(
-                  <div key={i} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 0', borderBottom:'1px solid var(--sep)' }}>
-                    <Pill color={a.status==='crit'?'var(--apple-red)':'var(--amber)'}
-                      bg={a.status==='crit'?'rgba(215,0,21,.1)':'rgba(196,85,0,.1)'}>
-                      {a.status==='crit'?'Quá hạn':Math.round((a.pct||0)*100)+'%'}
-                    </Pill>
+          </div>
+          {bdAlerts.length===0 && bdHistory.length===0 ? (
+            <div style={S.card}>
+              <EmptyState icon="🚛" title="Chưa có dữ liệu bảo dưỡng"
+                sub="Bắt đầu bằng cách scan báo giá sửa chữa. Hệ thống sẽ tự động tính toán chu kỳ khi có đủ dữ liệu."
+                action="Scan báo giá đầu tiên" onAction={() => setTab('ocr')} />
+            </div>
+          ) : (
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+              <div style={S.card}>
+                <div style={S.secTitle}>Xe cần bảo dưỡng sớm</div>
+                {bdAlerts.slice(0,5).map((a,i) => (
+                  <div key={i} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 0',
+                    borderBottom:'1px solid var(--sep)' }}>
+                    <span style={S.badge(a.status==='crit'?'red':'yel')}>{a.status==='crit'?'Quá hạn':'Sắp đến'}</span>
                     <div style={{ flex:1 }}>
-                      <span style={{ fontWeight:600, color:'var(--ink)' }}>{a.bienSo}</span>
-                      <span style={{ fontSize:12, color:'var(--ink3)', marginLeft:8 }}>
-                        Mốc {fmt(a.mocTiepTheo)}km · còn {fmt(a.conLai)}km
-                      </span>
+                      <div style={{ fontSize:13, fontWeight:600, color:'var(--ink)' }}>{a.xe.bienSo}</div>
+                      <div style={{ fontSize:11, color:'var(--ink3)' }}>Mốc {a.mocTiep.toLocaleString()}km · Còn {a.conLai}km</div>
                     </div>
-                    {a.ngayCuoiBD && (
-                      <span style={{ fontSize:11, color:'var(--ink3)' }}>
-                        BD cuối: {new Date(a.ngayCuoiBD).toLocaleDateString('vi-VN')}
-                      </span>
-                    )}
                   </div>
                 ))}
-              </>
-            )}
+              </div>
+              <div style={S.card}>
+                <div style={S.secTitle}>BDSC ghi nhận gần nhất</div>
+                {bdHistory.slice(0,5).map((h,i) => (
+                  <div key={i} style={{ display:'flex', justifyContent:'space-between', alignItems:'center',
+                    padding:'6px 0', borderBottom:'1px solid var(--sep)', fontSize:12 }}>
+                    <span style={{ fontWeight:600, color:'var(--ink)' }}>{h.bienSo}</span>
+                    <span style={{ color:'var(--ink3)' }}>{h.ngay}</span>
+                    <span style={{ fontWeight:600, color:'var(--ink)' }}>{Number(h.tongTien||0).toLocaleString('vi-VN')}đ</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
-            {docsAlerts.length>0 && (
-              <>
-                <div style={{ fontSize:12, color:'var(--ink3)', textTransform:'uppercase', letterSpacing:'0.05em', marginTop:20, marginBottom:8 }}>
-                  Giấy tờ sắp hết hạn
+      {/* ── CẢNH BÁO BD ────────────────────────────────────────────────── */}
+      {tab==='alert' && (
+        <div>
+          {bdAlerts.length===0 ? (
+            <div style={S.card}>
+              <EmptyState icon="✅" title="Không có cảnh báo"
+                sub={vehicles.length===0
+                  ? 'Chưa có xe nào trong hệ thống hoặc chưa có dữ liệu km GPS.'
+                  : 'Tất cả xe trong chu kỳ an toàn. Hệ thống cảnh báo khi xe đạt 70% chu kỳ.'} />
+            </div>
+          ) : bdAlerts.map((a,i) => (
+            <div key={i} style={alertRowStyle(a.status)}>
+              <div style={{ width:34, height:34, borderRadius:8, display:'flex', alignItems:'center',
+                justifyContent:'center', fontSize:11, fontWeight:700, flexShrink:0,
+                background: a.status==='crit'?'var(--red-l)':'rgba(196,85,0,.1)',
+                color: a.status==='crit'?'var(--apple-red)':'var(--apple-orange)' }}>
+                {a.status==='crit'?'QUÁ':Math.round(a.pct*100)+'%'}
+              </div>
+              <div style={{ flex:1 }}>
+                <div style={{ fontWeight:600, fontSize:13, color:'var(--ink)' }}>{a.xe.bienSo} · {a.xe.tenTaiSan||a.xe.loaiXe}</div>
+                <div style={{ fontSize:12, color:'var(--ink3)', marginTop:2 }}>
+                  Mốc {a.mocTiep.toLocaleString()}km · KM hiện tại {a.km.toLocaleString()}km · Còn {a.conLai}km
                 </div>
-                {docsAlerts.map((a,i)=>{
-                  const lbl = DOCS_FIELDS.find(f=>f.k===a.field)?.label||a.field
-                  return (
-                    <div key={i} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 0', borderBottom:'1px solid var(--sep)' }}>
-                      <Pill color={a.diffDays<=0?'var(--apple-red)':a.diffDays<=15?'var(--apple-red)':'var(--amber)'}
-                        bg={a.diffDays<=15?'rgba(215,0,21,.1)':'rgba(196,85,0,.1)'}>
-                        {a.diffDays<=0?'Hết hạn':`${a.diffDays}ngày`}
-                      </Pill>
-                      <span style={{ fontWeight:600, color:'var(--ink)' }}>{a.bienSo}</span>
-                      <span style={{ fontSize:12, color:'var(--ink3)' }}>— {lbl}</span>
-                      <span style={{ marginLeft:'auto', fontSize:11, color:'var(--ink3)' }}>
-                        {new Date(a.ngayHetHan).toLocaleDateString('vi-VN')}
-                      </span>
-                    </div>
-                  )
-                })}
-              </>
-            )}
-          </>
-        )}
+              </div>
+              <span style={S.badge(a.status==='crit'?'red':'yel')}>{a.status==='crit'?'Quá hạn':'Sắp đến'}</span>
+            </div>
+          ))}
 
-        {/* ══ PHIẾU BDSC ══ */}
-        {tab==='bdsc' && (
-          <>
-            {showForm
-              ? <FormBDSC vehicles={vehicles}
-                  onSave={d=>{ setShowForm(false); if(d?._id) setHistory(p=>[d,...p]) }}
-                  onCancel={()=>setShowForm(false)} />
-              : <button style={{ ...BTN_PRIMARY, marginBottom:14 }} onClick={()=>setShowForm(true)}>
-                  + Thêm phiếu BDSC
-                </button>
-            }
-            {history.length===0
-              ? <Empty icon='🔧' title='Chưa có phiếu nào'
-                  sub='Ghi nhận mỗi lần BDSC để theo dõi chi phí và phát hiện bất thường' />
-              : history.map(h=>(
-                <div key={h._id} style={{ padding:'10px 0', borderBottom:'1px solid var(--sep)' }}>
-                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
-                    <div>
-                      <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:4 }}>
-                        <span style={{ fontWeight:600, color:'var(--ink)', fontSize:13 }}>{h.bienSo}</span>
-                        <Pill color={h.loaiBdsc==='baoDuongDinhKy'?'var(--green)':'var(--apple-blue)'}
-                          bg={h.loaiBdsc==='baoDuongDinhKy'?'rgba(26,127,55,.1)':'rgba(0,85,204,.1)'}>
-                          {LOAI_LABEL[h.loaiBdsc]}
-                        </Pill>
-                        {h.canhBao && <Pill color='var(--amber)' bg='rgba(196,85,0,.1)'>⚠ Bất thường</Pill>}
-                      </div>
-                      <div style={{ fontSize:12, color:'var(--ink3)' }}>
-                        {new Date(h.ngay).toLocaleDateString('vi-VN')} · {fmt(h.kmThoiDiem)}km
-                        {h.gara ? ` · ${h.gara}` : ''}{h.tinhThanh ? ` (${h.tinhThanh})` : ''}
-                      </div>
-                      {(h.hangMuc||[]).length>0 && (
-                        <div style={{ fontSize:12, color:'var(--ink2)', marginTop:3 }}>
-                          {h.hangMuc.map(m=>m.ten).slice(0,3).join(' · ')}
-                          {h.hangMuc.length>3?` +${h.hangMuc.length-3} nữa`:''}
-                        </div>
-                      )}
-                      {h.canhBao && <div style={{ fontSize:11, color:'var(--amber)', marginTop:3 }}>{h.canhBao}</div>}
-                    </div>
-                    <div style={{ textAlign:'right', flexShrink:0 }}>
-                      <div style={{ fontWeight:700, fontSize:14, color:'var(--ink)' }}>{fmt(h.tongTien)}đ</div>
-                      {h.tongCong>0 && <div style={{ fontSize:11, color:'var(--ink3)' }}>Công {fmt(h.tongCong)}đ</div>}
-                    </div>
+          <div style={{ ...S.card, marginTop:14 }}>
+            <div style={S.secTitle}>Chu kỳ bảo dưỡng xe tải (quy định HSH.QLTS-05, mục 6.1.3 · lặp mỗi 30.000km)</div>
+            {BD_XETAI.map(b => (
+              <div key={b.moc} style={{ display:'flex', gap:12, padding:'7px 0',
+                borderBottom:'1px solid var(--sep)', fontSize:12 }}>
+                <span style={{ fontWeight:700, color:'var(--brand)', minWidth:60, flexShrink:0 }}>{b.moc.toLocaleString()}km</span>
+                <span style={{ color:'var(--ink3)' }}>{b.items.join(' · ')}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── CHI PHÍ ─────────────────────────────────────────────────────── */}
+      {tab==='cost' && (
+        bdHistory.length===0
+          ? <div style={S.card}><EmptyState icon="📊" title="Chưa có dữ liệu chi phí"
+              sub="Sau khi nhập báo giá qua Scan, hệ thống tự động tổng hợp chi phí theo xe và theo garage."
+              action="Scan báo giá" onAction={() => setTab('ocr')} /></div>
+          : (() => {
+              const byXe = bdHistory.reduce((acc, h) => {
+                if (!acc[h.bienSo]) acc[h.bienSo] = 0
+                acc[h.bienSo] += Number(h.tongTien||0)
+                return acc
+              }, {})
+              const sorted = Object.entries(byXe).sort((a,b) => b[1]-a[1]).slice(0,8)
+              const maxVal = sorted[0]?.[1] || 1
+              const byGarage = bdHistory.reduce((acc,h) => {
+                if (!h.garage) return acc
+                if (!acc[h.garage]) acc[h.garage] = 0
+                acc[h.garage] += Number(h.tongTien||0)
+                return acc
+              }, {})
+              const sortedGarage = Object.entries(byGarage).sort((a,b)=>b[1]-a[1]).slice(0,6)
+              const maxG = sortedGarage[0]?.[1] || 1
+              return (
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+                  <div style={S.card}>
+                    <div style={S.secTitle}>Chi phí theo xe (tổng cộng)</div>
+                    {sorted.map(([bs, val], i) => (
+                      <BarRow key={bs} label={bs} pct={val/maxVal*100}
+                        val={val>=1e6?(val/1e6).toFixed(1)+'tr':(val/1e3).toFixed(0)+'k'}
+                        color={i===0?'var(--apple-red)':i<3?'var(--brand)':'var(--apple-green)'} />
+                    ))}
+                  </div>
+                  <div style={S.card}>
+                    <div style={S.secTitle}>Chi phí theo garage</div>
+                    {sortedGarage.map(([g, val]) => (
+                      <BarRow key={g} label={g.slice(0,16)} pct={val/maxG*100}
+                        val={val>=1e6?(val/1e6).toFixed(1)+'tr':(val/1e3).toFixed(0)+'k'} />
+                    ))}
+                    {sortedGarage.length===0 && <div style={{ fontSize:12, color:'var(--ink3)' }}>Chưa có dữ liệu garage</div>}
                   </div>
                 </div>
-              ))
-            }
-          </>
-        )}
+              )
+            })()
+      )}
 
-        {/* ══ TIMELINE ══ */}
-        {tab==='timeline' && (
-          <>
-            <div style={{ marginBottom:14 }}>
-              <div style={{ fontSize:11, color:'var(--ink3)', marginBottom:4 }}>Chọn xe</div>
-              <select style={INPUT} value={selVe} onChange={e=>{ setSelVe(e.target.value); loadVeHistory(e.target.value) }}>
-                <option value=''>— Chọn xe —</option>
-                {vehicles.map(v=>{ const b=v['BIỂN SỐ']||v['BIẼNSỐ']||v['Biển số']||''; return <option key={v._id} value={b}>{b}</option> })}
-              </select>
-            </div>
-            {!selVe
-              ? <Empty icon='📈' title='Chọn xe để xem timeline' sub='Timeline hiển thị toàn bộ lịch sử BDSC theo km' />
-              : veHistory.length===0
-                ? <Empty icon='📭' title={`${selVe} chưa có phiếu BDSC nào`} sub='' />
-                : (()=>{
-                  const total = veHistory.reduce((s,h)=>s+(h.tongTien||0),0)
-                  return (
-                    <>
-                      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10, marginBottom:16 }}>
-                        <StatCard val={veHistory.length} label='Lần sửa' color='var(--brand)' />
-                        <StatCard val={fmt(total)+'đ'} label='Tổng chi phí' color='var(--ink)' />
-                        <StatCard val={veHistory.length?fmt(Math.round(total/veHistory.length))+'đ':'—'} label='Trung bình/lần' color='var(--ink3)' />
+      {/* ── TIMELINE ────────────────────────────────────────────────────── */}
+      {tab==='timeline' && (
+        <div>
+          <select value={selectedVe} onChange={e => setSelectedVe(e.target.value)}
+            style={{ ...selectStyle, marginBottom:14, width:280 }}>
+            <option value="">-- Chọn xe --</option>
+            {vehicles.map(v => <option key={v._id} value={v.bienSo}>{v.bienSo} · {v.tenTaiSan||v.loaiXe}</option>)}
+          </select>
+          {!selectedVe
+            ? <div style={S.card}><EmptyState icon="🔍" title="Chọn xe để xem timeline" /></div>
+            : bdHistory.filter(h=>h.bienSo===selectedVe).length===0
+            ? <div style={S.card}><EmptyState icon="📋" title={`Chưa có lịch sử cho xe ${selectedVe}`}
+                action="Scan báo giá" onAction={() => setTab('ocr')} /></div>
+            : (
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 280px', gap:14 }}>
+                <div style={S.card}>
+                  <div style={{ position:'relative', paddingLeft:22 }}>
+                    <div style={{ position:'absolute', left:7, top:0, bottom:0, width:2, background:'var(--sep)' }}/>
+                    {bdHistory.filter(h=>h.bienSo===selectedVe).map((h,i) => (
+                      <div key={i} style={{ position:'relative', marginBottom:18 }}>
+                        <div style={{ position:'absolute', left:-18, top:4, width:10, height:10, borderRadius:'50%',
+                          border:`2px solid ${h.loai==='baoDuong'?'var(--apple-green)':'var(--brand)'}`,
+                          background: h.loai==='baoDuong'?'var(--green-l)':'var(--brand-l)' }}/>
+                        <div style={{ fontSize:10, color:'var(--ink3)', marginBottom:2 }}>{h.km?.toLocaleString()}km · {h.ngay}</div>
+                        <div style={{ fontSize:13, fontWeight:600, color:'var(--ink)' }}>
+                          {h.garage} · {Number(h.tongTien||0).toLocaleString('vi-VN')}đ
+                        </div>
+                        <div style={{ fontSize:12, color:'var(--ink3)' }}>
+                          {h.hangMuc?.slice(0,3).map(m=>m.ten).join(' · ')}
+                        </div>
                       </div>
-                      <div style={{ position:'relative', paddingLeft:20 }}>
-                        <div style={{ position:'absolute', left:6, top:6, bottom:6, width:2, background:'var(--sep)' }} />
-                        {[...veHistory].sort((a,b)=>b.kmThoiDiem-a.kmThoiDiem).map(h=>(
-                          <div key={h._id} style={{ position:'relative', marginBottom:14 }}>
-                            <div style={{ position:'absolute', left:-17, top:4, width:10, height:10, borderRadius:'50%',
-                              background:h.canhBao?'var(--amber)':'var(--brand)', border:'2px solid var(--bg)' }} />
-                            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
-                              <div>
-                                <div style={{ display:'flex', gap:6, alignItems:'center', marginBottom:2 }}>
-                                  <Pill color={h.loaiBdsc==='baoDuongDinhKy'?'var(--green)':'var(--apple-blue)'}
-                                    bg={h.loaiBdsc==='baoDuongDinhKy'?'rgba(26,127,55,.1)':'rgba(0,85,204,.1)'}>
-                                    {LOAI_LABEL[h.loaiBdsc]}
-                                  </Pill>
-                                  <span style={{ fontSize:12, fontWeight:600, color:'var(--ink)' }}>{fmt(h.kmThoiDiem)}km</span>
-                                  <span style={{ fontSize:11, color:'var(--ink3)' }}>{new Date(h.ngay).toLocaleDateString('vi-VN')}</span>
-                                </div>
-                                {h.gara && <span style={{ fontSize:12, color:'var(--ink3)' }}>{h.gara}</span>}
-                                {(h.hangMuc||[]).length>0 && (
-                                  <div style={{ fontSize:12, color:'var(--ink2)', marginTop:2 }}>
-                                    {h.hangMuc.map(m=>m.ten).slice(0,3).join(' · ')}
-                                  </div>
-                                )}
-                                {h.canhBao && <div style={{ fontSize:11, color:'var(--amber)', marginTop:2 }}>⚠ {h.canhBao}</div>}
-                              </div>
-                              <span style={{ fontWeight:700, color:'var(--ink)', fontSize:13, flexShrink:0, marginLeft:8 }}>
-                                {fmt(h.tongTien)}đ
-                              </span>
-                            </div>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  {(() => {
+                    const veHistory = bdHistory.filter(h=>h.bienSo===selectedVe)
+                    const total = veHistory.reduce((s,h)=>s+Number(h.tongTien||0),0)
+                    return (
+                      <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                        {[
+                          { label:'Tổng chi phí', val: total>=1e6?(total/1e6).toFixed(1)+'tr':(total/1e3).toFixed(0)+'k đ' },
+                          { label:'Số lần BDSC', val: veHistory.length },
+                          { label:'Lần gần nhất', val: veHistory[0]?.ngay || '—' },
+                        ].map((s,i) => (
+                          <div key={i} style={{ ...S.card, padding:12 }}>
+                            <div style={{ fontSize:11, color:'var(--ink3)' }}>{s.label}</div>
+                            <div style={{ fontSize:18, fontWeight:700, color:'var(--ink)', marginTop:2 }}>{s.val}</div>
                           </div>
                         ))}
                       </div>
-                    </>
-                  )
-                })()
-            }
-          </>
-        )}
-
-        {/* ══ LỐP XE ══ */}
-        {tab==='tire' && (
-          <>
-            <div style={{ display:'flex', gap:8, marginBottom:14 }}>
-              <div style={{ flex:1 }}>
-                <div style={{ fontSize:11, color:'var(--ink3)', marginBottom:4 }}>Chọn xe</div>
-                <select style={INPUT} value={tireVe} onChange={e=>{ setTireVe(e.target.value); loadTire(e.target.value) }}>
-                  <option value=''>— Chọn xe —</option>
-                  {vehicles.map(v=>{ const b=v['BIỂN SỐ']||v['BIẼNSỐ']||v['Biển số']||''; return <option key={v._id} value={b}>{b}</option> })}
-                </select>
-              </div>
-              {tireVe && (
-                <div>
-                  <div style={{ fontSize:11, color:'var(--ink3)', marginBottom:4 }}>Cấu hình</div>
-                  <select style={{ ...INPUT, width:130 }} value={lopData.cauHinh||'6'}
-                    onChange={e=>setLopData(p=>({...p,cauHinh:e.target.value}))}>
-                    <option value='4'>4 lốp · 2 cầu</option>
-                    <option value='6'>6 lốp · 2 cầu sau kép</option>
-                    <option value='10'>10 lốp · 3 cầu kép</option>
-                    <option value='12'>12 lốp · 4 cầu</option>
-                  </select>
+                    )
+                  })()}
                 </div>
-              )}
-            </div>
+              </div>
+            )
+          }
+        </div>
+      )}
 
-            {!tireVe
-              ? <Empty icon='⭕' title='Chọn xe để quản lý lốp'
-                  sub='Click vào từng vị trí để cập nhật. Màu = % chu kỳ còn lại. Đảo mỗi 10.000km.' />
-              : (
-                <>
-                  <LopDiagram cauHinh={lopData.cauHinh||'6'} viTriLop={lopData.viTriLop||[]}
-                    kmHienTai={null} onClickVt={(vt,d)=>setTireModal({viTri:vt,data:d})} />
-                  <div style={{ display:'flex', gap:12, marginTop:10, marginBottom:12, fontSize:11, color:'var(--ink3)' }}>
-                    <span style={{ color:'var(--green)' }}>● An toàn</span>
-                    <span style={{ color:'var(--amber)' }}>● Sắp hạn (85%+)</span>
-                    <span style={{ color:'var(--apple-red)' }}>● Quá hạn</span>
-                    <span>● Chưa nhập</span>
-                  </div>
-                  <button style={BTN_PRIMARY} onClick={async()=>{
-                    const r = await apiFetch(`/api/bdsc/tire/${tireVe}`,{ method:'PUT', body:JSON.stringify(lopData) })
-                    const d = await r.json(); setLopData(d)
-                  }}>Lưu cấu hình lốp</button>
-                </>
-              )
-            }
-            {tireModal && (
-              <TireModal viTri={tireModal.viTri} data={tireModal.data}
-                onSave={saveTireVt} onClose={()=>setTireModal(null)} />
-            )}
-          </>
-        )}
-
-        {/* ══ GIẤY TỜ ══ */}
-        {tab==='docs' && (
-          <>
-            <div style={{ marginBottom:14 }}>
-              <div style={{ fontSize:11, color:'var(--ink3)', marginBottom:4 }}>Chọn xe</div>
-              <select style={INPUT} value={docsVe} onChange={e=>{ setDocsVe(e.target.value); loadDocs(e.target.value) }}>
-                <option value=''>— Chọn xe —</option>
-                {vehicles.map(v=>{ const b=v['BIỂN SỐ']||v['BIẼNSỐ']||v['Biển số']||''; return <option key={v._id} value={b}>{b}</option> })}
+      {/* ── LỐP XE ──────────────────────────────────────────────────────── */}
+      {tab==='tire' && (
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1.1fr', gap:14 }}>
+          <div>
+            <div style={{ display:'flex', gap:8, marginBottom:14, flexWrap:'wrap' }}>
+              <select value={tireVe} onChange={e => setTireVe(e.target.value)} style={{ ...selectStyle, flex:1, minWidth:160 }}>
+                <option value="">-- Chọn xe --</option>
+                {vehicles.map(v => <option key={v._id} value={v.bienSo}>{v.bienSo}</option>)}
+              </select>
+              <select value={axleCfg} onChange={e => setAxleCfg(e.target.value)} style={selectStyle}>
+                {Object.entries(AXLE_CONFIGS).map(([k,v]) => <option key={k} value={k}>{v.label}</option>)}
               </select>
             </div>
-            {!docsVe
-              ? <Empty icon='📄' title='Chọn xe để quản lý giấy tờ'
-                  sub='Theo dõi hạn đăng kiểm, bảo hiểm, phù hiệu — cảnh báo tự động 30 ngày trước' />
+            {!tireVe
+              ? <div style={S.card}><EmptyState icon="🔧" title="Chọn xe để xem sơ đồ lốp" /></div>
               : (
-                <>
-                  {DOCS_FIELDS.map(({ k, label }) => {
-                    const val  = docsData[k] ? new Date(docsData[k]).toISOString().slice(0,10) : ''
-                    const diff = docsData[k] ? Math.ceil((new Date(docsData[k])-new Date())/86400000) : null
-                    return (
-                      <div key={k} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 0', borderBottom:'1px solid var(--sep)' }}>
-                        <div style={{ flex:1 }}>
-                          <div style={{ fontSize:11, color:'var(--ink3)', marginBottom:4 }}>{label}</div>
-                          <input style={INPUT} type='date' value={val}
-                            onChange={e=>setDocsData(p=>({...p,[k]:e.target.value}))} />
-                        </div>
-                        {diff!==null && (
-                          <Pill color={diff<=0?'var(--apple-red)':diff<=15?'var(--apple-red)':diff<=30?'var(--amber)':'var(--green)'}
-                            bg={diff<=15?'rgba(215,0,21,.1)':diff<=30?'rgba(196,85,0,.1)':'rgba(26,127,55,.1)'}>
-                            {diff<=0?'Hết hạn':diff<=30?`${diff} ngày`:'OK'}
-                          </Pill>
-                        )}
-                      </div>
-                    )
-                  })}
-                  <div style={{ marginTop:10, marginBottom:14 }}>
-                    <div style={{ fontSize:11, color:'var(--ink3)', marginBottom:4 }}>Ghi chú</div>
-                    <textarea style={{ ...INPUT, height:60, resize:'vertical' }}
-                      value={docsData.ghiChu||''} onChange={e=>setDocsData(p=>({...p,ghiChu:e.target.value}))} />
+                <div style={{ ...S.card, display:'flex', flexDirection:'column', alignItems:'center', padding:'24px 16px' }}>
+                  <TireView config={axleCfg} tireData={tireData[tireVe]||{}}
+                    onClickTire={(pos, data) => setTireModal({ pos, data, ve: tireVe })} />
+                  <div style={{ display:'flex', gap:16, marginTop:16, fontSize:11 }}>
+                    <span><span style={{ color:'var(--apple-green)' }}>■</span> Tốt</span>
+                    <span><span style={{ color:'var(--apple-orange)' }}>■</span> Sắp đến hạn</span>
+                    <span><span style={{ color:'var(--apple-red)' }}>■</span> Cần thay</span>
+                    <span><span style={{ color:'var(--sep)' }}>■</span> Chưa nhập</span>
                   </div>
-                  <button style={BTN_PRIMARY} onClick={saveDocs}>Lưu giấy tờ</button>
-                </>
+                  <div style={{ fontSize:11, color:'var(--ink3)', marginTop:6 }}>Click ô lốp để nhập thông tin</div>
+                </div>
               )
             }
-          </>
-        )}
+          </div>
+          <div style={S.card}>
+            <div style={S.secTitle}>Quy định thay lốp (mục 6.2 HSH.QLTS-05)</div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8, marginBottom:14 }}>
+              {[
+                { val:'50.000km', label:'Lốp bố nylon', color:'var(--brand)' },
+                { val:'80.000km', label:'Lốp bố kẽm', color:'var(--apple-blue)' },
+                { val:'10.000km', label:'Chu kỳ đảo lốp', color:'var(--apple-green)' },
+              ].map((s,i) => (
+                <div key={i} style={{ background:'var(--bg-secondary)', borderRadius:8, padding:10, textAlign:'center' }}>
+                  <div style={{ fontSize:16, fontWeight:700, color:s.color }}>{s.val}</div>
+                  <div style={{ fontSize:10, color:'var(--ink3)', marginTop:2 }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ fontSize:12, color:'var(--ink3)', lineHeight:1.7 }}>
+              <strong style={{ color:'var(--ink2)' }}>Đảo lốp cầu trước:</strong><br/>
+              • Chu kỳ 1: Hoán đổi lốp trái ↔ phải<br/>
+              • Chu kỳ 2: Lật đổi lốp từ mặt phía trong ra ngoài<br/><br/>
+              <strong style={{ color:'var(--ink2)' }}>Đảo lốp cầu sau:</strong><br/>
+              • Chu kỳ 1: Đảo lốp vị trí trong ↔ ngoài mỗi cặp<br/>
+              • Chu kỳ 2: Lật đổi lốp từ mặt phía trong ra ngoài
+            </div>
+          </div>
+        </div>
+      )}
 
-        {/* ══ BẢNG GIÁ LỐP ══ */}
-        {tab==='catalog' && (
-          <>
-            <div style={{ padding:'10px 14px', background:'rgba(0,85,204,.07)', borderRadius:10, marginBottom:14 }}>
-              <div style={{ fontWeight:600, fontSize:13, color:'var(--ink)', marginBottom:2 }}>
-                Tờ trình 3413/TTr/HS/PMH/0126
-              </div>
-              <div style={{ fontSize:12, color:'var(--ink3)' }}>
-                Mua lốp xe thường xuyên HT HSH · 01/01/2026 – 30/06/2026
-              </div>
-              <div style={{ display:'flex', gap:14, marginTop:6, fontSize:12 }}>
-                <span><strong>Ưu tiên 1:</strong> LỐP XE VIỆT (Maxxis)</span>
-                <span><strong>Ưu tiên 2:</strong> ALPHA (Bridgestone/DRC)</span>
+      {/* ── DỰ BÁO ──────────────────────────────────────────────────────── */}
+      {tab==='forecast' && (
+        <div style={S.card}>
+          <EmptyState icon="📈" title="Chưa đủ dữ liệu để dự báo"
+            sub="Cần ít nhất 3 tháng dữ liệu km GPS và lịch sử BDSC để tính tốc độ chạy trung bình và dự báo ngân sách tháng tới."
+            action="Xem cảnh báo BD" onAction={() => setTab('alert')} />
+        </div>
+      )}
+
+      {/* ── SCAN BÁO GIÁ ────────────────────────────────────────────────── */}
+      {tab==='ocr' && (
+        <div>
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor='var(--brand)' }}
+            onDragLeave={e => e.currentTarget.style.borderColor='rgba(230,50,0,.3)'}
+            onDrop={handleDrop}
+            style={{ border:'2px dashed rgba(230,50,0,.3)', borderRadius:12, padding:32,
+              textAlign:'center', cursor:'pointer', background:'var(--brand-l)',
+              marginBottom:16, transition:'border-color .15s' }}>
+            <input ref={fileInputRef} type="file" multiple accept="image/*,.pdf"
+              style={{ display:'none' }} onChange={handleFileSelect} />
+            <div style={{ fontSize:36, marginBottom:8 }}>📷</div>
+            <div style={{ fontWeight:600, fontSize:14, color:'var(--ink)', marginBottom:4 }}>
+              Kéo thả hoặc click để tải báo giá
+            </div>
+            <div style={{ fontSize:12, color:'var(--ink3)', marginBottom:12 }}>
+              Hỗ trợ JPG · PNG · PDF · Nhiều file cùng lúc · AI tự đọc và điền các trường
+            </div>
+            <button style={{ padding:'8px 24px', borderRadius:8, border:'none',
+              background:'var(--brand)', color:'#fff', cursor:'pointer', fontWeight:600, fontSize:13 }}>
+              Chọn file
+            </button>
+          </div>
+
+          {ocrLoading && (
+            <div style={{ textAlign:'center', padding:12, color:'var(--brand)', fontSize:13,
+              display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
+              <div style={{ width:14, height:14, border:'2px solid var(--sep)',
+                borderTopColor:'var(--brand)', borderRadius:'50%', animation:'spin .6s linear infinite' }}/>
+              Đang phân tích báo giá với AI...
+            </div>
+          )}
+
+          {ocrFiles.length===0 && !ocrLoading
+            ? <div style={S.card}><EmptyState icon="🧾" title="Chưa có báo giá nào"
+                sub="Chụp ảnh hoặc scan file PDF báo giá. AI tự động đọc biển số, km, hạng mục và chi phí. Có thể chỉnh sửa trước khi lưu." /></div>
+            : ocrFiles.map((f, i) => (
+                <OcrCard key={i} idx={i} file={f.file} result={ocrResults[i]}
+                  onUpdate={(idx, field, val) => setOcrResults(prev => prev.map((r,j) => j===idx ? {...r,[field]:val} : r))}
+                  onRemove={(idx) => { setOcrFiles(p=>p.filter((_,j)=>j!==idx)); setOcrResults(p=>p.filter((_,j)=>j!==idx)) }} />
+              ))
+          }
+
+          {ocrResults.filter(r=>r?.bienSo).length > 0 && (
+            <div style={{ display:'flex', justifyContent:'flex-end', gap:10, marginTop:4 }}>
+              <button onClick={() => { setOcrFiles([]); setOcrResults([]) }}
+                style={{ padding:'8px 20px', borderRadius:8, border:'1px solid var(--sep)',
+                  background:'transparent', color:'var(--ink3)', cursor:'pointer', fontSize:13 }}>
+                Hủy tất cả
+              </button>
+              <button onClick={submitAllOcr}
+                style={{ padding:'8px 24px', borderRadius:8, border:'none',
+                  background:'var(--brand)', color:'#fff', cursor:'pointer', fontWeight:600, fontSize:13 }}>
+                Xác nhận & Lưu {ocrResults.filter(r=>r?.bienSo).length} báo giá
+              </button>
+            </div>
+          )}
+
+          <div style={{ marginTop:14, padding:12, borderRadius:8,
+            background:'rgba(0,85,204,.06)', border:'1px solid rgba(0,85,204,.15)',
+            fontSize:11, color:'var(--ink3)' }}>
+            <strong style={{ color:'var(--apple-blue)' }}>Lưu ý:</strong> Tính năng OCR cần route{' '}
+            <code style={{ background:'var(--bg-secondary)', padding:'1px 5px', borderRadius:4 }}>POST /api/bdsc/ocr</code>
+            {' '}trên backend. Nếu backend chưa có, các trường sẽ để trống để nhập tay.
+          </div>
+        </div>
+      )}
+
+      {/* ── GIẤY TỜ XE ──────────────────────────────────────────────────── */}
+      {tab==='docs' && (
+        vehicles.length===0
+          ? <div style={S.card}><EmptyState icon="📄" title="Chưa có xe nào để theo dõi giấy tờ" /></div>
+          : <div style={S.card}>
+              <div style={{ overflowX:'auto' }}>
+                <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
+                  <thead>
+                    <tr>
+                      {['Biển số','Đăng kiểm','Bảo hiểm thân vỏ','Phù hiệu','Kiểm định cầu','GPLX NLX'].map(h => (
+                        <th key={h} style={{ padding:'8px 12px', textAlign:'left', fontWeight:600,
+                          fontSize:11, color:'var(--ink3)', textTransform:'uppercase', letterSpacing:'.04em',
+                          borderBottom:'1px solid var(--sep)' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {vehicles.slice(0,20).map(v => (
+                      <tr key={v._id} style={{ borderBottom:'1px solid var(--sep)' }}>
+                        <td style={{ padding:'9px 12px', fontWeight:600, color:'var(--ink)' }}>{v.bienSo}</td>
+                        {[null,null,null,null,null].map((_,i) => (
+                          <td key={i} style={{ padding:'9px 12px' }}>
+                            <span style={S.badge('gray')}>Chưa nhập</span>
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div style={{ marginTop:12, fontSize:11, color:'var(--ink3)' }}>
+                  Nhập ngày hết hạn cho từng xe — hệ thống cảnh báo trước 30 ngày.
+                </div>
               </div>
             </div>
+      )}
 
-            {TIRE_CATALOG.map(t=>(
-              <div key={t.id} style={{ padding:'12px 0', borderBottom:'1px solid var(--sep)' }}>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                    <span style={{ fontWeight:700, fontSize:14, color:'var(--ink)' }}>{t.size}</span>
-                    <Pill color={t.boBo==='kem'?'var(--apple-blue)':'var(--green)'}
-                      bg={t.boBo==='kem'?'rgba(0,85,204,.1)':'rgba(26,127,55,.1)'}>
-                      Bố {t.boBo}
-                    </Pill>
-                  </div>
-                  <span style={{ fontSize:12, color:'var(--ink3)' }}>SL 6T: <strong>{t.soLuong6T}</strong></span>
+      {/* ── GIÁ LỐP ────────────────────────────────────────────────────── */}
+      {tab==='gialop' && (
+        <div>
+          <div style={{ ...S.card, marginBottom:12, background:'rgba(0,85,204,.06)',
+            border:'1px solid rgba(0,85,204,.15)' }}>
+            <div style={{ fontWeight:600, fontSize:13, color:'var(--ink)', marginBottom:2 }}>
+              Tờ trình 3413/TTr/HS/PMH/0126 — Mua lốp xe thường xuyên HT HSH
+            </div>
+            <div style={{ fontSize:12, color:'var(--ink3)' }}>
+              Hiệu lực 01/01/2026 – 30/06/2026 · Duyệt 2 NCC: <strong>LỐP XE VIỆT</strong> (Maxxis) & <strong>ALPHA</strong> (Bridgestone/DRC)
+            </div>
+          </div>
+
+          {TIRE_CATALOG.map(t => (
+            <div key={t.id} style={{ ...S.card, marginBottom:8 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:8 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                  <span style={{ fontWeight:700, fontSize:14, color:'var(--ink)' }}>{t.size}</span>
+                  <span style={S.badge(t.boBo==='kem'?'blu':'grn')}>Bố {t.boBo}</span>
                 </div>
-                <div style={{ fontSize:12, color:'var(--ink3)', marginBottom:8 }}>🚛 {t.loaiXe}</div>
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-                  {[t.p1,t.p2].map((p,pi)=>(
-                    <div key={pi} style={{ padding:'10px 12px', background:'var(--fill-tertiary)', borderRadius:10 }}>
-                      <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:6 }}>
-                        <Pill color={pi===0?'var(--green)':'var(--ink3)'}
-                          bg={pi===0?'rgba(26,127,55,.1)':'var(--fill-secondary)'}>
-                          {pi===0?'Ưu tiên 1':'Ưu tiên 2'}
-                        </Pill>
-                        <span style={{ fontSize:12, fontWeight:600, color:'var(--ink)' }}>{p.ncc}</span>
-                      </div>
-                      <div style={{ fontSize:11, color:'var(--ink3)' }}>{p.hang} · {p.xuatXu}</div>
-                      <div style={{ marginTop:6, fontSize:12 }}>
+                <span style={{ fontSize:11, color:'var(--ink3)' }}>
+                  SL 6 tháng: <strong style={{ color:'var(--ink)' }}>{t.sl6T}</strong> lốp
+                </span>
+              </div>
+
+              <div style={{ fontSize:12, color:'var(--ink3)', marginBottom:10 }}>🚛 {t.loaiXe}</div>
+
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                {[t.p1, t.p2].map((p, pi) => (
+                  <div key={pi} style={{ padding:'10px 12px', background:'var(--bg-secondary)',
+                    borderRadius:8, border:`1px solid ${pi===0?'rgba(26,127,55,.25)':'var(--sep)'}` }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:6 }}>
+                      <span style={S.badge(pi===0?'grn':'gray')}>Ưu tiên {pi+1}</span>
+                      <span style={{ fontSize:12, fontWeight:600, color:'var(--ink)' }}>{p.ncc}</span>
+                    </div>
+                    <div style={{ fontSize:11, color:'var(--ink3)', marginBottom:6 }}>
+                      {p.hang} · {p.xuatXu}
+                    </div>
+                    <div style={{ display:'flex', gap:12, fontSize:12 }}>
+                      <div>
                         <span style={{ color:'var(--ink3)' }}>TĐP: </span>
-                        <span style={{ fontWeight:600, color:'var(--ink)' }}>{fmt(p.tdp)}đ</span>
+                        <span style={{ fontWeight:500, color:'var(--ink2)' }}>
+                          {p.tdp.toLocaleString('vi-VN')}đ
+                        </span>
                       </div>
-                      <div style={{ fontSize:12 }}>
+                      <div>
                         <span style={{ color:'var(--ink3)' }}>SĐP: </span>
-                        <span style={{ fontWeight:700, color:'var(--brand)' }}>{fmt(p.sdp)}đ</span>
+                        <span style={{ fontWeight:700, color:'var(--brand)' }}>
+                          {p.sdp.toLocaleString('vi-VN')}đ
+                        </span>
                       </div>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── TIRE MODAL ──────────────────────────────────────────────────── */}
+      {tireModal && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.55)',
+          display:'flex', alignItems:'center', justifyContent:'center', zIndex:999 }}
+          onClick={() => setTireModal(null)}>
+          <div style={{ ...S.card, width:300, boxShadow:'0 20px 60px rgba(0,0,0,.3)' }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ fontWeight:700, fontSize:14, color:'var(--ink)', marginBottom:14 }}>
+              Lốp {tireModal.pos} — {POS_LABELS[tireModal.pos]}
+            </div>
+            {[
+              { key:'kmLapDat', label:'KM lúc lắp đặt' },
+              { key:'loai', label:'Loại lốp (nylon / kem)' },
+              { key:'ngayLap', label:'Ngày lắp (dd/mm/yyyy)' },
+              { key:'thuongHieu', label:'Thương hiệu' },
+            ].map(f => (
+              <div key={f.key} style={{ marginBottom:10 }}>
+                <div style={{ fontSize:11, color:'var(--ink3)', marginBottom:3 }}>{f.label}</div>
+                <input defaultValue={tireModal.data?.[f.key]||''}
+                  onChange={e => {
+                    setTireData(prev => {
+                      const next = { ...prev, [tireModal.ve]: { ...(prev[tireModal.ve]||{}),
+                        [tireModal.pos]: { ...(prev[tireModal.ve]?.[tireModal.pos]||{}), [f.key]: e.target.value }}}
+                      return next
+                    })
+                  }}
+                  style={{ width:'100%', padding:'6px 10px', borderRadius:6, fontSize:12,
+                    border:'1px solid var(--sep)', background:'var(--bg)',
+                    color:'var(--ink)', outline:'none' }}
+                  onFocus={e => e.target.style.borderColor='var(--brand)'}
+                  onBlur={e => e.target.style.borderColor='var(--sep)'}/>
               </div>
             ))}
-          </>
-        )}
+            <div style={{ display:'flex', gap:8, marginTop:14 }}>
+              <button onClick={() => setTireModal(null)}
+                style={{ flex:1, padding:8, borderRadius:8, border:'1px solid var(--sep)',
+                  background:'transparent', color:'var(--ink3)', cursor:'pointer', fontSize:13 }}>
+                Đóng
+              </button>
+              <button onClick={() => setTireModal(null)}
+                style={{ flex:1, padding:8, borderRadius:8, border:'none',
+                  background:'var(--brand)', color:'#fff', cursor:'pointer', fontSize:13, fontWeight:600 }}>
+                Lưu
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-      </div>
-
-      <style>{`@keyframes spin { to { transform:rotate(360deg) } }`}</style>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   )
 }
