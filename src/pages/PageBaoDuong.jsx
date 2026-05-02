@@ -409,13 +409,6 @@ export default function PageBaoDuong({ token, user }) {
     setOcrResults(prev => [...prev, ...results])
     setOcrLoading(false)
   }, [])
-      } catch (_) {
-        results.push({ bienSo:'', km:'', ngay:'', garage:'', soRO:'', tongTien:'', hangMuc:[], aiRead:false })
-      }
-    }
-    setOcrResults(prev => [...prev, ...results])
-    setOcrLoading(false)
-  }, [])
 
   const handleFileSelect = useCallback((e) => {
     const selected = Array.from(e.target.files)
