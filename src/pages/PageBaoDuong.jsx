@@ -311,7 +311,17 @@ function OcrCard({ file, result, onUpdate, onRemove, idx, onSaveTire }) {
         </div>
       )}
 
-      {/* Warning banner */}
+      {/* Warning banner — phiếu level (từ backend detectAnomaly) */}
+      {result.canhBaoPhieu && (
+        <div style={{ padding:'10px 12px', background:'rgba(196,85,0,.1)', borderRadius:8,
+          border:'1px solid rgba(196,85,0,.25)', marginBottom:12 }}>
+          <div style={{ fontSize:12, color:'var(--apple-orange)' }}>
+            AI phát hiện: {result.canhBaoPhieu}
+          </div>
+        </div>
+      )}
+
+      {/* Warning banner — hạng mục level */}
       {warnings.length > 0 && (
         <div style={{ padding:'10px 12px', background:'rgba(196,85,0,.1)', borderRadius:8,
           border:'1px solid rgba(196,85,0,.25)', marginBottom:12 }}>
