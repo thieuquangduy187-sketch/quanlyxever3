@@ -1,8 +1,8 @@
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 📁 FRONTEND — quanlyxever3/src/pages/PageBaoDuong.jsx
-// Quản lý bảo dưỡng, sửa chữa, lốp xe, giấy tờ
+// Design: flat, no border, dùng CSS variables của app
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 const API = import.meta.env.VITE_API_URL || 'https://hsg-backend.onrender.com'
 const tok = () => localStorage.getItem('hsg_token') || ''
@@ -11,298 +11,292 @@ const apiFetch = (path, opts = {}) => fetch(`${API}${path}`, {
   headers: { Authorization: `Bearer ${tok()}`, 'Content-Type': 'application/json', ...(opts.headers || {}) },
 })
 
-// ── Bảng chu kỳ BD xe tải (HSH.QLTS-05 mục 6.1.3) ──────
+// ── Chu kỳ BD xe tải (HSH.QLTS-05 mục 6.1.3) ────────────
 const BD_XETAI = [
-  { moc: 5000,  items: ['Thay dầu động cơ', 'Kiểm tra lọc dầu/nước làm mát/dầu phanh', 'Kiểm tra rò rỉ', 'Siết bulong sàn thùng, chassis', 'Kiểm tra áp suất lốp', 'Kiểm tra ắc quy'] },
-  { moc: 10000, items: ['Thay dầu động cơ', 'Vệ sinh lọc gió động cơ', 'Kiểm tra lọc nhiên liệu', 'Kiểm tra hệ thống treo', 'Kiểm tra bạc đạn bánh xe', 'Kiểm tra hệ thống điện'] },
-  { moc: 15000, items: ['Thay dầu động cơ', 'Kiểm tra lọc dầu/nước làm mát/dầu phanh', 'Kiểm tra rò rỉ', 'Kiểm tra bố thắng', 'Siết bulong chassis', 'Kiểm tra áp suất lốp'] },
-  { moc: 20000, items: ['Thay lọc nhiên liệu', 'Thay lọc gió', 'Cân chỉnh thước lái', 'Bổ sung dầu hộp số, dầu cầu', 'Kiểm tra phốt láp'] },
-  { moc: 25000, items: ['Thay dầu động cơ', 'Kiểm tra lọc dầu/nước làm mát/dầu phanh', 'Kiểm tra rò rỉ', 'Siết bulong chassis', 'Kiểm tra áp suất lốp'] },
-  { moc: 30000, items: ['Thay dầu hộp số', 'Thay dầu cầu', 'Thay dầu phanh', 'Thay nước mát', 'Kiểm tra turbo, kim phun', 'Kiểm tra cầu trục, máy lạnh'] },
+  { moc: 5000,  items: ['Thay dầu động cơ','Kiểm tra lọc dầu/nước làm mát/dầu phanh','Kiểm tra rò rỉ','Siết bulong sàn thùng, chassis','Kiểm tra áp suất lốp','Kiểm tra ắc quy'] },
+  { moc: 10000, items: ['Thay dầu động cơ','Vệ sinh lọc gió động cơ','Kiểm tra lọc nhiên liệu','Kiểm tra hệ thống treo','Kiểm tra bạc đạn bánh xe','Kiểm tra hệ thống điện'] },
+  { moc: 15000, items: ['Thay dầu động cơ','Kiểm tra lọc dầu/nước làm mát/dầu phanh','Kiểm tra rò rỉ','Kiểm tra bố thắng','Siết bulong chassis','Kiểm tra áp suất lốp'] },
+  { moc: 20000, items: ['Thay lọc nhiên liệu','Thay lọc gió','Cân chỉnh thước lái','Bổ sung dầu hộp số, dầu cầu','Kiểm tra phốt láp'] },
+  { moc: 25000, items: ['Thay dầu động cơ','Kiểm tra lọc dầu/nước làm mát/dầu phanh','Kiểm tra rò rỉ','Siết bulong chassis','Kiểm tra áp suất lốp'] },
+  { moc: 30000, items: ['Thay dầu hộp số','Thay dầu cầu','Thay dầu phanh','Thay nước mát','Kiểm tra turbo, kim phun','Kiểm tra cầu trục, máy lạnh'] },
 ]
 
-// ── Bảng giá lốp duyệt — Tờ trình 3413/TTr/HS/PMH/0126 (HT HSH) ────────────
-// Hiệu lực: 01/01/2026 – 30/06/2026
-// NCC ưu tiên 1 (LỐP XE VIỆT – Maxxis), ưu tiên 2 (ALPHA – Bridgestone/DRC)
+// ── Bảng giá lốp — Tờ trình 3413/TTr/HS/PMH/0126 ────────
 const TIRE_CATALOG = [
-  {
-    id: 1, size: '900R20-(18PR)', boBo: 'kem',
-    loaiXe: 'Xe tải thùng lửng/cẩu Thaco 6.2T',
-    soLuong6T: 188,
-    p1: { ncc: 'LỐP XE VIỆT', hang: 'Maxxis UR288', xuatXu: 'Thái Lan', tdp: 6534000, sdp: 5450000 },
-    p2: { ncc: 'ALPHA', hang: 'Maxxis UM938', xuatXu: 'Thái Lan', tdp: 6151111, sdp: 6151111 },
-  },
-  {
-    id: 2, size: '11.00R20-(18PR)', boBo: 'kem',
-    loaiXe: 'Xe tải thùng bạt Thaco 14T',
-    soLuong6T: 78,
-    p1: { ncc: 'LỐP XE VIỆT', hang: 'Maxxis UR288', xuatXu: 'Thái Lan', tdp: 7111111, sdp: 7111111 },
-    p2: { ncc: 'ALPHA', hang: 'Bridgestone R150', xuatXu: 'Thái Lan', tdp: 8910000, sdp: 7870000 },
-  },
-  {
-    id: 3, size: '11.00-22-(18PR)', boBo: 'kem',
-    loaiXe: 'Xe tải thùng bạt Chenglong 8.2–8.4T',
-    soLuong6T: 18,
-    p1: { ncc: 'LỐP XE VIỆT', hang: 'Maxxis UR288 / 11R22.5', xuatXu: 'Thái Lan', tdp: 6488889, sdp: 6488889 },
-    p2: { ncc: 'ALPHA', hang: 'Bridgestone R150', xuatXu: 'Thái Lan', tdp: 8910000, sdp: 7870000 },
-  },
-  {
-    id: 4, size: '750-16-(18PR)', boBo: 'nylon',
-    loaiXe: 'Xe tải Mitsubishi/Veam',
-    soLuong6T: 18,
-    p1: { ncc: 'LỐP XE VIỆT', hang: 'Maxxis M276', xuatXu: 'Việt Nam', tdp: 2603780, sdp: 2603780 },
-    p2: { ncc: 'ALPHA', hang: 'Bridgestone R288', xuatXu: 'Thái Lan', tdp: 4374000, sdp: 3950000 },
-  },
-  {
-    id: 5, size: '10.00R20-(18PR)', boBo: 'kem',
-    loaiXe: 'Xe tải Hino 6.75–8.4T',
-    soLuong6T: 32,
-    p1: { ncc: 'LỐP XE VIỆT', hang: 'Maxxis UR288', xuatXu: 'Thái Lan', tdp: 6720000, sdp: 6720000 },
-    p2: { ncc: 'ALPHA', hang: 'Bridgestone R150', xuatXu: 'Thái Lan', tdp: 8478000, sdp: 7450000 },
-  },
-  {
-    id: 6, size: '245/70R19.5-(18PR)', boBo: 'kem',
-    loaiXe: 'Xe tải Hyundai 12.35T',
-    soLuong6T: 6,
-    p1: { ncc: 'ALPHA', hang: 'Bridgestone', xuatXu: 'Thái Lan', tdp: 5346000, sdp: 4750000 },
-    p2: { ncc: 'LỐP XE VIỆT', hang: 'Maxxis UR275', xuatXu: 'Thái Lan', tdp: 4591667, sdp: 4591667 },
-  },
-  {
-    id: 7, size: '8.25R16-(18PR)', boBo: 'nylon',
-    loaiXe: 'Xe tải thùng bạt Thaco 3.45T',
-    soLuong6T: 6,
-    p1: { ncc: 'LỐP XE VIỆT', hang: 'Maxxis M276', xuatXu: 'Việt Nam', tdp: 2955260, sdp: 2955260 },
-    p2: { ncc: 'ALPHA', hang: 'Bridgestone BS585', xuatXu: 'Thái Lan', tdp: 4914000, sdp: 4250000 },
-  },
-  {
-    id: 8, size: '7.00R16-(16PR)', boBo: 'nylon',
-    loaiXe: 'Xe tải Mitsubishi/Veam (nhỏ)',
-    soLuong6T: 48,
-    p1: { ncc: 'LỐP XE VIỆT', hang: 'Maxxis MA265', xuatXu: 'Việt Nam', tdp: 2083630, sdp: 2083630 },
-    p2: { ncc: 'ALPHA', hang: 'DRC bố nylon', xuatXu: 'Việt Nam', tdp: 2390000, sdp: 2570000 },
-  },
-  {
-    id: 9, size: '205/65R15', boBo: 'kem',
-    loaiXe: 'Xe ô tô Toyota Innova',
-    soLuong6T: 7,
-    p1: { ncc: 'LỐP XE VIỆT', hang: 'Maxxis MAP5', xuatXu: 'Thái Lan', tdp: 1498148, sdp: 1205000 },
-    p2: { ncc: 'ALPHA', hang: 'Bridgestone B390', xuatXu: 'Thái Lan', tdp: 2030400, sdp: 1750000 },
-  },
-  {
-    id: 10, size: '265/65R17', boBo: 'kem',
-    loaiXe: 'Xe bán tải Toyota/Ford',
-    soLuong6T: 4,
-    p1: { ncc: 'LỐP XE VIỆT', hang: 'Maxxis HT780', xuatXu: 'Thái Lan', tdp: 2981481, sdp: 2567000 },
-    p2: { ncc: 'ALPHA', hang: 'Bridgestone D684', xuatXu: 'Thái Lan', tdp: 3952800, sdp: 3370000 },
-  },
+  { id:1,  size:'900R20-(18PR)',      boBo:'kem',   loaiXe:'Thaco 6.2T (thùng lửng/cẩu)',    soLuong6T:188,
+    p1:{ ncc:'LỐP XE VIỆT', hang:'Maxxis UR288',    xuatXu:'Thái Lan', tdp:6534000, sdp:5450000 },
+    p2:{ ncc:'ALPHA',        hang:'Maxxis UM938',    xuatXu:'Thái Lan', tdp:6151111, sdp:6151111 } },
+  { id:2,  size:'11.00R20-(18PR)',    boBo:'kem',   loaiXe:'Thaco 14T (thùng bạt)',           soLuong6T:78,
+    p1:{ ncc:'LỐP XE VIỆT', hang:'Maxxis UR288',    xuatXu:'Thái Lan', tdp:7111111, sdp:7111111 },
+    p2:{ ncc:'ALPHA',        hang:'Bridgestone R150',xuatXu:'Thái Lan', tdp:8910000, sdp:7870000 } },
+  { id:3,  size:'11.00-22-(18PR)',    boBo:'kem',   loaiXe:'Chenglong 8.2–8.4T',             soLuong6T:18,
+    p1:{ ncc:'LỐP XE VIỆT', hang:'Maxxis UR288',    xuatXu:'Thái Lan', tdp:6488889, sdp:6488889 },
+    p2:{ ncc:'ALPHA',        hang:'Bridgestone R150',xuatXu:'Thái Lan', tdp:8910000, sdp:7870000 } },
+  { id:4,  size:'750-16-(18PR)',      boBo:'nylon', loaiXe:'Mitsubishi/Veam',                soLuong6T:18,
+    p1:{ ncc:'LỐP XE VIỆT', hang:'Maxxis M276',     xuatXu:'Việt Nam', tdp:2603780, sdp:2603780 },
+    p2:{ ncc:'ALPHA',        hang:'Bridgestone R288',xuatXu:'Thái Lan', tdp:4374000, sdp:3950000 } },
+  { id:5,  size:'10.00R20-(18PR)',    boBo:'kem',   loaiXe:'Hino 6.75–8.4T',                 soLuong6T:32,
+    p1:{ ncc:'LỐP XE VIỆT', hang:'Maxxis UR288',    xuatXu:'Thái Lan', tdp:6720000, sdp:6720000 },
+    p2:{ ncc:'ALPHA',        hang:'Bridgestone R150',xuatXu:'Thái Lan', tdp:8478000, sdp:7450000 } },
+  { id:6,  size:'245/70R19.5-(18PR)',boBo:'kem',   loaiXe:'Hyundai 12.35T',                  soLuong6T:6,
+    p1:{ ncc:'ALPHA',        hang:'Bridgestone',     xuatXu:'Thái Lan', tdp:5346000, sdp:4750000 },
+    p2:{ ncc:'LỐP XE VIỆT', hang:'Maxxis UR275',    xuatXu:'Thái Lan', tdp:4591667, sdp:4591667 } },
+  { id:7,  size:'8.25R16-(18PR)',     boBo:'nylon', loaiXe:'Thaco 3.45T (thùng bạt)',        soLuong6T:6,
+    p1:{ ncc:'LỐP XE VIỆT', hang:'Maxxis M276',     xuatXu:'Việt Nam', tdp:2955260, sdp:2955260 },
+    p2:{ ncc:'ALPHA',        hang:'Bridgestone BS585',xuatXu:'Thái Lan',tdp:4914000, sdp:4250000 } },
+  { id:8,  size:'7.00R16-(16PR)',     boBo:'nylon', loaiXe:'Mitsubishi/Veam (nhỏ)',          soLuong6T:48,
+    p1:{ ncc:'LỐP XE VIỆT', hang:'Maxxis MA265',    xuatXu:'Việt Nam', tdp:2083630, sdp:2083630 },
+    p2:{ ncc:'ALPHA',        hang:'DRC bố nylon',    xuatXu:'Việt Nam', tdp:2390000, sdp:2570000 } },
+  { id:9,  size:'205/65R15',          boBo:'kem',   loaiXe:'Toyota Innova',                  soLuong6T:7,
+    p1:{ ncc:'LỐP XE VIỆT', hang:'Maxxis MAP5',     xuatXu:'Thái Lan', tdp:1498148, sdp:1205000 },
+    p2:{ ncc:'ALPHA',        hang:'Bridgestone B390',xuatXu:'Thái Lan', tdp:2030400, sdp:1750000 } },
+  { id:10, size:'265/65R17',          boBo:'kem',   loaiXe:'Toyota/Ford bán tải',            soLuong6T:4,
+    p1:{ ncc:'LỐP XE VIỆT', hang:'Maxxis HT780',    xuatXu:'Thái Lan', tdp:2981481, sdp:2567000 },
+    p2:{ ncc:'ALPHA',        hang:'Bridgestone D684',xuatXu:'Thái Lan', tdp:3952800, sdp:3370000 } },
 ]
 
+// vị trí lốp theo cấu hình
 const VT_LOP = {
-  '4':  ['trucTruoc_trai','trucTruoc_phai','trucSau_trai','trucSau_phai'],
-  '6':  ['trucTruoc_trai','trucTruoc_phai','trucSau_ngoaiTrai','trucSau_trongTrai','trucSau_ngoaiPhai','trucSau_trongPhai'],
-  '10': ['trucTruoc_trai','trucTruoc_phai','truc2_ngoaiTrai','truc2_trongTrai','truc2_ngoaiPhai','truc2_trongPhai','truc3_ngoaiTrai','truc3_trongTrai','truc3_ngoaiPhai','truc3_trongPhai'],
-  '12': ['trucTruoc_trai','trucTruoc_phai','truc2_ngoaiTrai','truc2_trongTrai','truc2_ngoaiPhai','truc2_trongPhai','truc3_ngoaiTrai','truc3_trongTrai','truc3_ngoaiPhai','truc3_trongPhai','truc4_ngoaiTrai','truc4_ngoaiPhai'],
+  '4':  ['tt_trai','tt_phai','ts_trai','ts_phai'],
+  '6':  ['tt_trai','tt_phai','ts_nt','ts_tt','ts_np','ts_tp'],
+  '10': ['tt_trai','tt_phai','t2_nt','t2_tt','t2_np','t2_tp','t3_nt','t3_tt','t3_np','t3_tp'],
+  '12': ['tt_trai','tt_phai','t2_nt','t2_tt','t2_np','t2_tp','t3_nt','t3_tt','t3_np','t3_tp','t4_nt','t4_np'],
 }
-const VT_LABEL = { trucTruoc:'Cầu trước', truc2:'Cầu 2', truc3:'Cầu 3', truc4:'Cầu 4', trai:'Trái', phai:'Phải', ngoai:'Ngoài', trong:'Trong' }
-function viTriLabel(vt) {
-  return vt.replace(/_/g,' ').replace(/([A-Z])/g,' $1').replace('truc Truoc','Cầu trước').replace('truc 2','Cầu 2').replace('truc 3','Cầu 3').replace('truc 4','Cầu 4').replace('ngoai Trai','ngoài trái').replace('ngoai Phai','ngoài phải').replace('trong Trai','trong trái').replace('trong Phai','trong phải').replace('trai','trái').replace('phai','phải')
+const VT_LABEL = {
+  tt_trai:'CT · trái', tt_phai:'CT · phải',
+  ts_trai:'CS · trái', ts_phai:'CS · phải',
+  ts_nt:'CS · ngoài trái', ts_tt:'CS · trong trái', ts_np:'CS · ngoài phải', ts_tp:'CS · trong phải',
+  t2_nt:'C2 · NT', t2_tt:'C2 · TT', t2_np:'C2 · NP', t2_tp:'C2 · TP',
+  t3_nt:'C3 · NT', t3_tt:'C3 · TT', t3_np:'C3 · NP', t3_tp:'C3 · TP',
+  t4_nt:'C4 · NT', t4_np:'C4 · NP',
 }
+const DOCS_FIELDS = [
+  { k:'dangKy',          label:'Đăng ký xe' },
+  { k:'dangKiem',        label:'Đăng kiểm' },
+  { k:'baoHiemBatBuoc',  label:'BH bắt buộc (TNDS)' },
+  { k:'baoHiemThuHai',   label:'BH thứ 2 (vật chất xe)' },
+  { k:'phuHieu',         label:'Phù hiệu' },
+  { k:'kiemDinhCau',     label:'Kiểm định cầu' },
+]
+const LOAI_LABEL = { baoDuongDinhKy:'BD định kỳ', suaChuaPhatSinh:'Sửa chữa', suaChuaTaiNan:'Tai nạn', baoHanh:'Bảo hành' }
+const fmt = n => Number(n||0).toLocaleString('vi-VN')
 
-const DOCS_LABEL = { dangKy:'Đăng ký xe', dangKiem:'Đăng kiểm', baoHiemBatBuoc:'BH bắt buộc (TNDS)', baoHiemThuHai:'BH thứ 2 (xe)', phuHieu:'Phù hiệu', kiemDinhCau:'Kiểm định cầu' }
-const LOAI_BDSC_LABEL = { baoDuongDinhKy:'BD định kỳ', suaChuaPhatSinh:'Sửa chữa', suaChuaTaiNan:'Tai nạn', baoHanh:'Bảo hành' }
-
-// ━━━ Styles ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-const card  = { background:'var(--color-bg-secondary)', border:'1px solid var(--color-border-secondary)', borderRadius:10, padding:'12px 14px', marginBottom:8 }
-const s     = { fontSize:12, color:'var(--color-text-secondary)' }
-const sectionTitle = { fontSize:12, fontWeight:700, color:'var(--color-text-secondary)', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:8 }
-const inputStyle = { width:'100%', padding:'7px 10px', background:'var(--color-bg-tertiary)', border:'1px solid var(--color-border-secondary)', borderRadius:7, fontSize:13, color:'var(--color-text-primary)', boxSizing:'border-box' }
-const btnPrimary = { background:'var(--color-accent)', color:'#fff', border:'none', borderRadius:7, padding:'8px 16px', fontSize:13, cursor:'pointer', fontWeight:600 }
-const btnSecondary = { background:'var(--color-bg-tertiary)', color:'var(--color-text-primary)', border:'1px solid var(--color-border-secondary)', borderRadius:7, padding:'7px 14px', fontSize:12, cursor:'pointer' }
-
-function Badge({ type='grn', children }) {
-  const clr = { grn:'#22c55e', yel:'#f59e0b', red:'#ef4444', blu:'#3b82f6', gry:'#6b7280' }
-  const bg  = { grn:'rgba(34,197,94,.12)', yel:'rgba(245,158,11,.12)', red:'rgba(239,68,68,.12)', blu:'rgba(59,130,246,.12)', gry:'rgba(107,114,128,.12)' }
-  return <span style={{ background:bg[type]||bg.gry, color:clr[type]||clr.gry, borderRadius:5, padding:'2px 8px', fontSize:11, fontWeight:600, whiteSpace:'nowrap' }}>{children}</span>
-}
-
-function EmptyState({ icon, title, sub, action, onAction }) {
+// ── Pill Badge ────────────────────────────────────────────
+function Pill({ color='var(--ink3)', bg='var(--fill-tertiary)', children }) {
   return (
-    <div style={{ textAlign:'center', padding:'32px 16px', color:'var(--color-text-secondary)' }}>
-      <div style={{ fontSize:32, marginBottom:8 }}>{icon}</div>
-      <div style={{ fontSize:14, fontWeight:600, color:'var(--color-text-primary)', marginBottom:6 }}>{title}</div>
-      <div style={{ fontSize:12, marginBottom:16, maxWidth:280, margin:'0 auto 16px' }}>{sub}</div>
-      {action && <button style={btnPrimary} onClick={onAction}>{action}</button>}
+    <span style={{ display:'inline-flex', alignItems:'center', padding:'2px 9px',
+      borderRadius:20, fontSize:11, fontWeight:600, color, background:bg, whiteSpace:'nowrap' }}>
+      {children}
+    </span>
+  )
+}
+
+// ── Stat card (tổng quan) ─────────────────────────────────
+function StatCard({ val, label, color='var(--ink)' }) {
+  return (
+    <div style={{ background:'var(--bg-card)', borderRadius:12, padding:'14px 16px' }}>
+      <div style={{ fontSize:26, fontWeight:700, color, lineHeight:1 }}>{val}</div>
+      <div style={{ fontSize:12, color:'var(--ink3)', marginTop:4 }}>{label}</div>
     </div>
   )
 }
 
-// ── Form nhập phiếu BDSC ──────────────────────────────────
+// ── Empty State ───────────────────────────────────────────
+function Empty({ icon, title, sub, cta, onCta }) {
+  return (
+    <div style={{ textAlign:'center', padding:'40px 20px' }}>
+      <div style={{ fontSize:36, marginBottom:10 }}>{icon}</div>
+      <div style={{ fontWeight:600, fontSize:14, color:'var(--ink)', marginBottom:6 }}>{title}</div>
+      <div style={{ fontSize:12, color:'var(--ink3)', marginBottom:16 }}>{sub}</div>
+      {cta && <button onClick={onCta} style={BTN_PRIMARY}>{cta}</button>}
+    </div>
+  )
+}
+
+// ── Button styles ─────────────────────────────────────────
+const BTN_PRIMARY = {
+  background:'var(--brand)', color:'#fff', border:'none',
+  borderRadius:8, padding:'8px 18px', fontSize:13, fontWeight:600, cursor:'pointer',
+}
+const BTN_GHOST = {
+  background:'var(--fill-tertiary)', color:'var(--ink2)', border:'none',
+  borderRadius:8, padding:'7px 14px', fontSize:12, cursor:'pointer',
+}
+const INPUT = {
+  width:'100%', padding:'8px 11px', background:'var(--fill-tertiary)',
+  border:'none', borderRadius:8, fontSize:13, color:'var(--ink)',
+  outline:'none', boxSizing:'border-box',
+}
+
+// ── Form thêm phiếu BDSC ──────────────────────────────────
 function FormBDSC({ vehicles, onSave, onCancel }) {
   const [form, setForm] = useState({
-    bienSo:'', ngay: new Date().toISOString().slice(0,10), kmThoiDiem:'',
-    gara:'', tinhThanh:'', loaiBdsc:'suaChuaPhatSinh', ghiChu:'',
-    tongCong:0, tongVatTu:0, tongTien:0,
+    bienSo:'', ngay:new Date().toISOString().slice(0,10),
+    kmThoiDiem:'', gara:'', tinhThanh:'', loaiBdsc:'suaChuaPhatSinh', ghiChu:'',
   })
-  const [hangMuc, setHangMuc] = useState([{ ten:'', loai:'suaChua', donGia:0, soLuong:1, donVi:'cái' }])
-  const [files,   setFiles]   = useState([])
-  const [saving,  setSaving]  = useState(false)
-  const [warning, setWarning] = useState('')
+  const [hm,    setHm]    = useState([{ ten:'', loai:'suaChua', donGia:'', soLuong:1, donVi:'cái' }])
+  const [files, setFiles] = useState([])
+  const [saving,setSaving]= useState(false)
+  const [warn,  setWarn]  = useState('')
   const fileRef = useRef()
 
-  const setF = k => e => setForm(p => ({ ...p, [k]: e.target.value }))
+  const sf = k => e => setForm(p => ({ ...p, [k]:e.target.value }))
 
-  const updateHM = (i, k, v) => setHangMuc(p => p.map((h,j) => j===i ? { ...h, [k]:v, thanhTien: k==='donGia'||k==='soLuong' ? (k==='donGia'?+v:h.donGia)*(k==='soLuong'?+v:h.soLuong) : h.thanhTien } : h))
-  const addHM    = () => setHangMuc(p => [...p, { ten:'', loai:'suaChua', donGia:0, soLuong:1, donVi:'cái', thanhTien:0 }])
-  const removeHM = i  => setHangMuc(p => p.filter((_,j) => j!==i))
-
-  useEffect(() => {
-    const cong   = hangMuc.filter(h => ['baoDuong','suaChua','giaCong'].includes(h.loai)).reduce((s,h)=>s+(+h.donGia*(+h.soLuong||1)),0)
-    const vatTu  = hangMuc.filter(h => h.loai==='vatTu').reduce((s,h)=>s+(+h.donGia*(+h.soLuong||1)),0)
-    setForm(p => ({ ...p, tongCong:cong, tongVatTu:vatTu, tongTien:cong+vatTu }))
-  }, [hangMuc])
+  const tongCong  = hm.filter(h=>h.loai!=='vatTu').reduce((s,h)=>s+(+h.donGia||0)*(+h.soLuong||1),0)
+  const tongVatTu = hm.filter(h=>h.loai==='vatTu').reduce((s,h)=>s+(+h.donGia||0)*(+h.soLuong||1),0)
+  const tongTien  = tongCong + tongVatTu
 
   const handleSave = async () => {
-    if (!form.bienSo || !form.kmThoiDiem) return
+    if (!form.bienSo || !form.kmThoiDiem) return alert('Vui lòng chọn xe và nhập km')
     setSaving(true)
     try {
-      const payload = { ...form, kmThoiDiem:+form.kmThoiDiem, hangMuc,
-        anhBaoGia: files.map(f => f.name) }
-      const res = await apiFetch('/api/bdsc', { method:'POST', body: JSON.stringify(payload) })
+      const payload = { ...form, kmThoiDiem:+form.kmThoiDiem,
+        hangMuc: hm.map(h=>({ ...h, donGia:+h.donGia||0, soLuong:+h.soLuong||1,
+          thanhTien:(+h.donGia||0)*(+h.soLuong||1) })),
+        tongCong, tongVatTu, tongTien, anhBaoGia:files.map(f=>f.name) }
+      const res  = await apiFetch('/api/bdsc', { method:'POST', body:JSON.stringify(payload) })
       const data = await res.json()
-      if (data.canhBao) setWarning(data.canhBao)
-      else onSave(data)
-    } catch(e) { alert(e.message) } finally { setSaving(false) }
+      if (data.canhBao) { setWarn(data.canhBao); setSaving(false); return }
+      onSave(data)
+    } catch(e) { alert(e.message); setSaving(false) }
   }
 
-  if (warning) return (
-    <div style={{ ...card, borderColor:'rgba(245,158,11,.4)', background:'rgba(245,158,11,.05)' }}>
-      <div style={{ fontWeight:700, marginBottom:8, color:'#f59e0b' }}>⚠ Phát hiện bất thường</div>
-      <div style={{ fontSize:13, marginBottom:12 }}>{warning}</div>
+  if (warn) return (
+    <div style={{ background:'var(--bg-card)', borderRadius:12, padding:16, marginBottom:12 }}>
+      <div style={{ fontWeight:700, color:'var(--amber)', marginBottom:8 }}>⚠ Phát hiện bất thường</div>
+      <div style={{ fontSize:13, color:'var(--ink2)', marginBottom:14 }}>{warn}</div>
       <div style={{ display:'flex', gap:8 }}>
-        <button style={{ ...btnPrimary, background:'#f59e0b' }} onClick={()=>{ setWarning(''); onSave({}) }}>Vẫn lưu</button>
-        <button style={btnSecondary} onClick={()=>setWarning('')}>Kiểm tra lại</button>
+        <button style={{ ...BTN_PRIMARY, background:'var(--amber)' }}
+          onClick={()=>{ setWarn(''); onSave({}) }}>Vẫn lưu</button>
+        <button style={BTN_GHOST} onClick={()=>setWarn('')}>Xem lại</button>
       </div>
     </div>
   )
 
   return (
-    <div style={card}>
-      <div style={{ ...sectionTitle, marginBottom:14 }}>📝 Thêm phiếu BDSC</div>
+    <div style={{ background:'var(--bg-card)', borderRadius:12, padding:16, marginBottom:12 }}>
+      <div style={{ fontWeight:700, fontSize:14, color:'var(--ink)', marginBottom:14 }}>Thêm phiếu BDSC</div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:10 }}>
-        <div>
-          <label style={s}>Biển số *</label>
-          <select style={inputStyle} value={form.bienSo} onChange={setF('bienSo')}>
-            <option value=''>— Chọn xe —</option>
-            {vehicles.map(v => <option key={v._id} value={v['BIỂN SỐ']||v['BIẼNSỐ']||v['Biển số']||''}>{v['BIỂN SỐ']||v['BIẼNSỐ']||v['Biển số']}</option>)}
-          </select>
-        </div>
-        <div>
-          <label style={s}>Loại</label>
-          <select style={inputStyle} value={form.loaiBdsc} onChange={setF('loaiBdsc')}>
-            {Object.entries(LOAI_BDSC_LABEL).map(([k,v])=><option key={k} value={k}>{v}</option>)}
-          </select>
-        </div>
-        <div>
-          <label style={s}>Ngày *</label>
-          <input style={inputStyle} type='date' value={form.ngay} onChange={setF('ngay')} />
-        </div>
-        <div>
-          <label style={s}>KM tại thời điểm *</label>
-          <input style={inputStyle} type='number' placeholder='VD: 145000' value={form.kmThoiDiem} onChange={setF('kmThoiDiem')} />
-        </div>
-        <div>
-          <label style={s}>Gara / Đơn vị sửa</label>
-          <input style={inputStyle} placeholder='Tên gara' value={form.gara} onChange={setF('gara')} />
-        </div>
-        <div>
-          <label style={s}>Tỉnh/thành</label>
-          <input style={inputStyle} placeholder='VD: TP.HCM' value={form.tinhThanh} onChange={setF('tinhThanh')} />
-        </div>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:12 }}>
+        {[
+          { label:'Biển số *', el: <select style={INPUT} value={form.bienSo} onChange={sf('bienSo')}>
+              <option value=''>— Chọn xe —</option>
+              {vehicles.map(v=>{ const b=v['BIỂN SỐ']||v['BIẼNSỐ']||v['Biển số']||''; return <option key={v._id} value={b}>{b}</option> })}
+            </select> },
+          { label:'Loại', el: <select style={INPUT} value={form.loaiBdsc} onChange={sf('loaiBdsc')}>
+              {Object.entries(LOAI_LABEL).map(([k,v])=><option key={k} value={k}>{v}</option>)}
+            </select> },
+          { label:'Ngày *',        el:<input style={INPUT} type='date' value={form.ngay} onChange={sf('ngay')} /> },
+          { label:'KM tại thời điểm *', el:<input style={INPUT} type='number' placeholder='145000' value={form.kmThoiDiem} onChange={sf('kmThoiDiem')} /> },
+          { label:'Gara',          el:<input style={INPUT} placeholder='Tên gara' value={form.gara} onChange={sf('gara')} /> },
+          { label:'Tỉnh/thành',   el:<input style={INPUT} placeholder='TP.HCM' value={form.tinhThanh} onChange={sf('tinhThanh')} /> },
+        ].map(({ label, el }) => (
+          <div key={label}>
+            <div style={{ fontSize:11, color:'var(--ink3)', marginBottom:4 }}>{label}</div>
+            {el}
+          </div>
+        ))}
       </div>
 
       {/* Hạng mục */}
-      <div style={{ marginBottom:10 }}>
-        <div style={{ ...sectionTitle, marginBottom:6 }}>Hạng mục</div>
-        {hangMuc.map((hm, i) => (
-          <div key={i} style={{ display:'grid', gridTemplateColumns:'2fr 1fr 80px 70px 50px 28px', gap:6, marginBottom:6, alignItems:'center' }}>
-            <input style={inputStyle} placeholder='Tên hạng mục' value={hm.ten} onChange={e => updateHM(i,'ten',e.target.value)} />
-            <select style={inputStyle} value={hm.loai} onChange={e => updateHM(i,'loai',e.target.value)}>
+      <div style={{ marginBottom:12 }}>
+        <div style={{ fontSize:11, color:'var(--ink3)', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.05em' }}>Hạng mục</div>
+        {hm.map((h,i) => (
+          <div key={i} style={{ display:'grid', gridTemplateColumns:'2fr 1fr 90px 64px 58px 28px', gap:6, marginBottom:6 }}>
+            <input style={INPUT} placeholder='Tên hạng mục' value={h.ten}
+              onChange={e=>setHm(p=>p.map((x,j)=>j===i?{...x,ten:e.target.value}:x))} />
+            <select style={INPUT} value={h.loai}
+              onChange={e=>setHm(p=>p.map((x,j)=>j===i?{...x,loai:e.target.value}:x))}>
               <option value='baoDuong'>BD định kỳ</option>
               <option value='suaChua'>Sửa chữa</option>
               <option value='vatTu'>Vật tư</option>
               <option value='giaCong'>Gia công</option>
             </select>
-            <input style={inputStyle} type='number' placeholder='Đơn giá' value={hm.donGia||''} onChange={e => updateHM(i,'donGia',e.target.value)} />
-            <input style={inputStyle} type='number' placeholder='SL' value={hm.soLuong} onChange={e => updateHM(i,'soLuong',e.target.value)} />
-            <input style={inputStyle} placeholder='ĐVT' value={hm.donVi} onChange={e => updateHM(i,'donVi',e.target.value)} />
-            <button style={{ ...btnSecondary, padding:'4px 8px', color:'#ef4444' }} onClick={() => removeHM(i)}>✕</button>
+            <input style={INPUT} type='number' placeholder='Đơn giá' value={h.donGia}
+              onChange={e=>setHm(p=>p.map((x,j)=>j===i?{...x,donGia:e.target.value}:x))} />
+            <input style={INPUT} type='number' placeholder='SL' value={h.soLuong}
+              onChange={e=>setHm(p=>p.map((x,j)=>j===i?{...x,soLuong:e.target.value}:x))} />
+            <input style={INPUT} placeholder='ĐVT' value={h.donVi}
+              onChange={e=>setHm(p=>p.map((x,j)=>j===i?{...x,donVi:e.target.value}:x))} />
+            <button onClick={()=>setHm(p=>p.filter((_,j)=>j!==i))}
+              style={{ ...BTN_GHOST, padding:'0 6px', color:'var(--apple-red)' }}>✕</button>
           </div>
         ))}
-        <button style={btnSecondary} onClick={addHM}>+ Thêm hạng mục</button>
+        <button style={BTN_GHOST}
+          onClick={()=>setHm(p=>[...p,{ten:'',loai:'suaChua',donGia:'',soLuong:1,donVi:'cái'}])}>
+          + Hạng mục
+        </button>
       </div>
 
-      {/* Tổng tiền */}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8, marginBottom:10, padding:'10px', background:'var(--color-bg-tertiary)', borderRadius:8 }}>
-        <div><span style={s}>Công/gia công</span><div style={{ fontWeight:700 }}>{form.tongCong.toLocaleString('vi-VN')}đ</div></div>
-        <div><span style={s}>Vật tư</span><div style={{ fontWeight:700 }}>{form.tongVatTu.toLocaleString('vi-VN')}đ</div></div>
-        <div><span style={s}>Tổng cộng</span><div style={{ fontWeight:700, color:'var(--color-accent)' }}>{form.tongTien.toLocaleString('vi-VN')}đ</div></div>
+      {/* Tổng */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8, marginBottom:12,
+        padding:12, background:'var(--fill-tertiary)', borderRadius:10 }}>
+        {[['Công/gia công', fmt(tongCong)+'đ'], ['Vật tư', fmt(tongVatTu)+'đ'],
+          ['Tổng cộng', fmt(tongTien)+'đ']].map(([l,v],i) => (
+          <div key={l}>
+            <div style={{ fontSize:11, color:'var(--ink3)' }}>{l}</div>
+            <div style={{ fontWeight:700, fontSize:13, color:i===2?'var(--brand)':'var(--ink)' }}>{v}</div>
+          </div>
+        ))}
       </div>
 
-      {/* Ảnh/PDF */}
-      <div style={{ marginBottom:10 }}>
-        <label style={s}>Ảnh báo giá / PDF (nhiều file)</label>
-        <div style={{ display:'flex', gap:8, alignItems:'center', marginTop:4 }}>
-          <button style={btnSecondary} onClick={() => fileRef.current?.click()}>📎 Chọn file</button>
+      {/* Files */}
+      <div style={{ marginBottom:12 }}>
+        <div style={{ fontSize:11, color:'var(--ink3)', marginBottom:6 }}>Ảnh báo giá / PDF (nhiều file)</div>
+        <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+          <button style={BTN_GHOST} onClick={()=>fileRef.current?.click()}>📎 Chọn file</button>
           <input ref={fileRef} type='file' multiple accept='image/*,.pdf' style={{ display:'none' }}
-            onChange={e => setFiles(prev => [...prev, ...Array.from(e.target.files)])} />
-          <span style={s}>{files.length > 0 ? `${files.length} file đã chọn` : 'Chưa chọn'}</span>
+            onChange={e=>setFiles(p=>[...p,...Array.from(e.target.files)])} />
+          <span style={{ fontSize:12, color:'var(--ink3)' }}>{files.length ? `${files.length} file` : 'Chưa chọn'}</span>
         </div>
         {files.length > 0 && (
           <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginTop:6 }}>
-            {files.map((f,i) => (
-              <span key={i} style={{ ...s, background:'var(--color-bg-tertiary)', padding:'2px 8px', borderRadius:5, display:'flex', alignItems:'center', gap:4 }}>
-                {f.name.length > 20 ? f.name.slice(0,18)+'…' : f.name}
-                <span style={{ cursor:'pointer', color:'#ef4444' }} onClick={() => setFiles(p=>p.filter((_,j)=>j!==i))}>✕</span>
+            {files.map((f,i)=>(
+              <span key={i} style={{ display:'inline-flex', alignItems:'center', gap:4, fontSize:11,
+                color:'var(--ink2)', background:'var(--fill-tertiary)', padding:'3px 8px', borderRadius:6 }}>
+                {f.name.length>20?f.name.slice(0,18)+'…':f.name}
+                <span style={{ cursor:'pointer', color:'var(--apple-red)' }}
+                  onClick={()=>setFiles(p=>p.filter((_,j)=>j!==i))}>✕</span>
               </span>
             ))}
           </div>
         )}
       </div>
 
-      <div style={{ marginBottom:10 }}>
-        <label style={s}>Ghi chú</label>
-        <textarea style={{ ...inputStyle, height:60, resize:'vertical' }} value={form.ghiChu} onChange={setF('ghiChu')} />
+      <div style={{ marginBottom:12 }}>
+        <div style={{ fontSize:11, color:'var(--ink3)', marginBottom:4 }}>Ghi chú</div>
+        <textarea style={{ ...INPUT, height:60, resize:'vertical' }} value={form.ghiChu} onChange={sf('ghiChu')} />
       </div>
 
       <div style={{ display:'flex', gap:8 }}>
-        <button style={btnPrimary} onClick={handleSave} disabled={saving}>{saving ? 'Đang lưu…' : 'Lưu phiếu'}</button>
-        <button style={btnSecondary} onClick={onCancel}>Huỷ</button>
+        <button style={BTN_PRIMARY} onClick={handleSave} disabled={saving}>
+          {saving ? 'Đang lưu…' : 'Lưu phiếu'}
+        </button>
+        <button style={BTN_GHOST} onClick={onCancel}>Huỷ</button>
       </div>
     </div>
   )
 }
 
-// ── Sơ đồ lốp xe ─────────────────────────────────────────
-function LopDiagram({ bienSo, cauHinh, viTriLop, kmHienTai, onClickVt }) {
-  const vitri = VT_LOP[cauHinh] || VT_LOP['6']
+// ── Sơ đồ lốp ────────────────────────────────────────────
+function LopDiagram({ cauHinh, viTriLop, kmHienTai, onClickVt }) {
+  const vts = VT_LOP[cauHinh] || VT_LOP['6']
   return (
-    <div style={{ position:'relative', padding:'12px 0' }}>
-      {vitri.map(vt => {
-        const data = (viTriLop || []).find(v => v.viTri === vt)
-        const kmChay = data && kmHienTai ? kmHienTai - (data.kmLap || 0) : null
-        const chuKy  = data?.boBo === 'kem' ? 80000 : 50000
-        const pct    = kmChay ? kmChay / chuKy : 0
-        const color  = pct >= 1 ? '#ef4444' : pct >= 0.85 ? '#f59e0b' : pct > 0 ? '#22c55e' : 'var(--color-border-secondary)'
+    <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
+      {vts.map(vt => {
+        const d = (viTriLop||[]).find(v=>v.viTri===vt)
+        const km = d && kmHienTai ? kmHienTai-(d.kmLap||0) : null
+        const chu = d?.boBo==='kem' ? 80000 : 50000
+        const pct = km ? km/chu : 0
+        const clr = pct>=1 ? 'var(--apple-red)' : pct>=0.85 ? 'var(--amber)' : pct>0 ? 'var(--green)' : 'var(--ink3)'
+        const bg  = pct>=1 ? 'rgba(215,0,21,.08)' : pct>=0.85 ? 'rgba(196,85,0,.08)' : pct>0 ? 'rgba(26,127,55,.08)' : 'var(--fill-tertiary)'
         return (
-          <div key={vt} onClick={() => onClickVt(vt, data)}
-            style={{ display:'inline-block', margin:4, padding:'8px 10px', border:`2px solid ${color}`, borderRadius:8,
-              background: data ? `${color}18` : 'transparent', cursor:'pointer', minWidth:70, textAlign:'center' }}>
-            <div style={{ fontSize:10, color:'var(--color-text-secondary)', marginBottom:2 }}>{viTriLabel(vt)}</div>
-            {data?.loaiLop
-              ? <div style={{ fontSize:11, fontWeight:600 }}>{data.loaiLop}</div>
-              : <div style={{ fontSize:11, color:'var(--color-border-secondary)' }}>—</div>}
-            {kmChay !== null && <div style={{ fontSize:10, color }}>{(kmChay/1000).toFixed(0)}k km</div>}
+          <div key={vt} onClick={()=>onClickVt(vt,d||{})}
+            style={{ minWidth:80, padding:'8px 10px', background:bg, borderRadius:10, cursor:'pointer',
+              textAlign:'center', transition:'opacity .15s' }}>
+            <div style={{ fontSize:10, color:'var(--ink3)', marginBottom:2 }}>{VT_LABEL[vt]||vt}</div>
+            <div style={{ fontSize:11, fontWeight:600, color:clr }}>{d?.loaiLop||'—'}</div>
+            {km!==null && <div style={{ fontSize:10, color:clr }}>{(km/1000).toFixed(0)}k km</div>}
           </div>
         )
       })}
@@ -310,55 +304,57 @@ function LopDiagram({ bienSo, cauHinh, viTriLop, kmHienTai, onClickVt }) {
   )
 }
 
-// ── Modal cập nhật 1 vị trí lốp ──────────────────────────
+// ── Modal lốp ────────────────────────────────────────────
 function TireModal({ viTri, data, onSave, onClose }) {
-  const [form, setForm] = useState({ viTri, loaiLop:'', boBo:'kem', thuongHieu:'', ncc:'', kmLap:'', ngayLap:'', ghiChu:'', ...data })
-  const sf = k => e => setForm(p => ({ ...p, [k]: e.target.value }))
-
-  // gợi ý giá từ catalog
-  const match = TIRE_CATALOG.find(t => form.loaiLop && form.loaiLop.includes(t.size.split('-')[0]))
-  const giaSDP = match ? match.p1.sdp : null
-
+  const [f, setF] = useState({ viTri, loaiLop:'', boBo:'kem', thuongHieu:'', ncc:'', kmLap:'', ngayLap:'', ...data })
+  const sf = k => e => setF(p=>({...p,[k]:e.target.value}))
+  const match = TIRE_CATALOG.find(t => f.loaiLop && (f.loaiLop.includes(t.size.replace('R','').split('-')[0]) || t.size===f.loaiLop))
   return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.5)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center' }}>
-      <div style={{ ...card, width:340, marginBottom:0, maxHeight:'90vh', overflowY:'auto' }}>
-        <div style={{ fontWeight:700, marginBottom:12 }}>🔧 {viTriLabel(viTri)}</div>
-        <label style={s}>Kích thước lốp</label>
-        <select style={{ ...inputStyle, marginBottom:8 }} value={form.loaiLop} onChange={sf('loaiLop')}>
-          <option value=''>— Chọn size —</option>
-          {TIRE_CATALOG.map(t => <option key={t.id} value={t.size}>{t.size} — {t.loaiXe}</option>)}
-        </select>
-        <label style={s}>Bố lốp</label>
-        <select style={{ ...inputStyle, marginBottom:8 }} value={form.boBo} onChange={sf('boBo')}>
-          <option value='nylon'>Bố nylon (thay 50k km)</option>
-          <option value='kem'>Bố kẽm (thay 80k km)</option>
-        </select>
-        <label style={s}>Thương hiệu</label>
-        <input style={{ ...inputStyle, marginBottom:8 }} placeholder='Maxxis / Bridgestone / DRC' value={form.thuongHieu} onChange={sf('thuongHieu')} />
-        <label style={s}>NCC</label>
-        <input style={{ ...inputStyle, marginBottom:8 }} placeholder='LỐP XE VIỆT / ALPHA' value={form.ncc} onChange={sf('ncc')} />
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:8 }}>
-          <div>
-            <label style={s}>KM lúc lắp</label>
-            <input style={inputStyle} type='number' value={form.kmLap} onChange={sf('kmLap')} />
-          </div>
-          <div>
-            <label style={s}>Ngày lắp</label>
-            <input style={inputStyle} type='date' value={form.ngayLap} onChange={sf('ngayLap')} />
-          </div>
+    <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.45)', zIndex:1000,
+      display:'flex', alignItems:'center', justifyContent:'center' }}>
+      <div style={{ background:'var(--bg-card)', borderRadius:16, padding:20, width:340,
+        maxHeight:'88vh', overflowY:'auto' }}>
+        <div style={{ fontWeight:700, fontSize:14, color:'var(--ink)', marginBottom:14 }}>
+          {VT_LABEL[viTri]||viTri}
         </div>
-        {giaSDP && (
-          <div style={{ ...card, marginBottom:8, borderColor:'rgba(59,130,246,.3)', background:'rgba(59,130,246,.05)' }}>
-            <div style={{ fontSize:11, color:'#3b82f6' }}>💡 Giá duyệt TTr 3413/2026</div>
-            <div style={{ fontSize:13, fontWeight:600 }}>{giaSDP.toLocaleString('vi-VN')}đ ({match.p1.ncc})</div>
-            <div style={{ fontSize:11, color:'var(--color-text-secondary)' }}>Hiệu lực đến 30/06/2026</div>
+        {[
+          { label:'Size lốp', el:<select style={INPUT} value={f.loaiLop} onChange={sf('loaiLop')}>
+              <option value=''>— Chọn size —</option>
+              {TIRE_CATALOG.map(t=><option key={t.id} value={t.size}>{t.size} · {t.loaiXe}</option>)}
+            </select> },
+          { label:'Loại bố', el:<select style={INPUT} value={f.boBo} onChange={sf('boBo')}>
+              <option value='nylon'>Bố nylon (thay 50.000km)</option>
+              <option value='kem'>Bố kẽm (thay 80.000km)</option>
+            </select> },
+          { label:'Thương hiệu', el:<input style={INPUT} placeholder='Maxxis / Bridgestone / DRC' value={f.thuongHieu} onChange={sf('thuongHieu')} /> },
+          { label:'NCC', el:<input style={INPUT} placeholder='LỐP XE VIỆT / ALPHA' value={f.ncc} onChange={sf('ncc')} /> },
+        ].map(({label,el})=>(
+          <div key={label} style={{ marginBottom:10 }}>
+            <div style={{ fontSize:11, color:'var(--ink3)', marginBottom:4 }}>{label}</div>
+            {el}
+          </div>
+        ))}
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:10 }}>
+          {[['KM lúc lắp','number','145000','kmLap'],['Ngày lắp','date','','ngayLap']].map(([l,t,ph,k])=>(
+            <div key={k}>
+              <div style={{ fontSize:11, color:'var(--ink3)', marginBottom:4 }}>{l}</div>
+              <input style={INPUT} type={t} placeholder={ph} value={f[k]} onChange={sf(k)} />
+            </div>
+          ))}
+        </div>
+        {match && (
+          <div style={{ padding:'10px 12px', background:'rgba(0,85,204,.07)', borderRadius:10, marginBottom:12 }}>
+            <div style={{ fontSize:11, color:'var(--apple-blue)', fontWeight:600, marginBottom:4 }}>
+              💡 Giá duyệt TTr 3413/2026 · đến 30/06/2026
+            </div>
+            <div style={{ fontSize:13, color:'var(--ink)', fontWeight:700 }}>
+              {fmt(match.p1.sdp)}đ <span style={{ fontWeight:400, color:'var(--ink3)' }}>({match.p1.ncc})</span>
+            </div>
           </div>
         )}
-        <label style={s}>Ghi chú</label>
-        <input style={{ ...inputStyle, marginBottom:12 }} value={form.ghiChu} onChange={sf('ghiChu')} />
         <div style={{ display:'flex', gap:8 }}>
-          <button style={btnPrimary} onClick={() => onSave(form)}>Lưu</button>
-          <button style={btnSecondary} onClick={onClose}>Huỷ</button>
+          <button style={BTN_GHOST} onClick={onClose}>Đóng</button>
+          <button style={{ ...BTN_PRIMARY, flex:1 }} onClick={()=>onSave(f)}>Lưu</button>
         </div>
       </div>
     </div>
@@ -366,18 +362,19 @@ function TireModal({ viTri, data, onSave, onClose }) {
 }
 
 // ══════════════════════════════════════════════════════════
-// MAIN — PageBaoDuong
+// MAIN
 // ══════════════════════════════════════════════════════════
 export default function PageBaoDuong({ token, user }) {
   const TABS = [
-    { id:'overview', label:'Tổng quan', icon:'📊' },
-    { id:'alert',    label:'Cảnh báo',  icon:'🔔' },
-    { id:'bdsc',     label:'Phiếu BDSC',icon:'🔧' },
-    { id:'timeline', label:'Timeline',  icon:'📈' },
-    { id:'tire',     label:'Lốp xe',    icon:'⭕' },
-    { id:'docs',     label:'Giấy tờ',   icon:'📄' },
-    { id:'catalog',  label:'Bảng giá lốp',icon:'💰' },
+    { id:'overview', label:'Tổng quan' },
+    { id:'alert',    label:'Cảnh báo' },
+    { id:'bdsc',     label:'Phiếu BDSC' },
+    { id:'timeline', label:'Timeline' },
+    { id:'tire',     label:'Lốp xe' },
+    { id:'docs',     label:'Giấy tờ' },
+    { id:'catalog',  label:'Bảng giá lốp' },
   ]
+
   const [tab,        setTab]       = useState('overview')
   const [vehicles,   setVehicles]  = useState([])
   const [bdAlerts,   setBdAlerts]  = useState([])
@@ -386,20 +383,15 @@ export default function PageBaoDuong({ token, user }) {
   const [loading,    setLoading]   = useState(true)
   const [showForm,   setShowForm]  = useState(false)
 
-  // Timeline
-  const [selVe, setSelVe] = useState('')
+  const [selVe,    setSelVe]    = useState('')
+  const [veHistory,setVeHistory]= useState([])
 
-  // Lốp xe
-  const [tireVe,    setTireVe]    = useState('')
-  const [lopData,   setLopData]   = useState({ cauHinh:'6', viTriLop:[] })
-  const [tireModal, setTireModal] = useState(null)
-  const [tireLoading, setTireLoading] = useState(false)
-  const [kmMap, setKmMap]         = useState({})
+  const [tireVe,   setTireVe]   = useState('')
+  const [lopData,  setLopData]  = useState({ cauHinh:'6', viTriLop:[] })
+  const [tireModal,setTireModal]= useState(null)
 
-  // Giấy tờ
-  const [docsVe,  setDocsVe]  = useState('')
-  const [docsData,setDocsData]= useState({})
-  const [docsSaving, setDocsSaving] = useState(false)
+  const [docsVe,   setDocsVe]   = useState('')
+  const [docsData, setDocsData] = useState({})
 
   useEffect(() => {
     Promise.all([
@@ -407,84 +399,84 @@ export default function PageBaoDuong({ token, user }) {
       apiFetch('/api/bdsc/alerts').then(r=>r.json()).catch(()=>[]),
       apiFetch('/api/bdsc/docs-alerts').then(r=>r.json()).catch(()=>[]),
       apiFetch('/api/bdsc?limit=100').then(r=>r.json()).catch(()=>({ data:[] })),
-    ]).then(([xe, al, da, bd]) => {
-      setVehicles(Array.isArray(xe) ? xe : [])
-      setBdAlerts(Array.isArray(al) ? al : [])
-      setDocsAlerts(Array.isArray(da) ? da : [])
-      setHistory(Array.isArray(bd?.data) ? bd.data : [])
-    }).finally(() => setLoading(false))
+    ]).then(([xe,al,da,bd]) => {
+      setVehicles(Array.isArray(xe)?xe:[])
+      setBdAlerts(Array.isArray(al)?al:[])
+      setDocsAlerts(Array.isArray(da)?da:[])
+      setHistory(Array.isArray(bd?.data)?bd.data:[])
+    }).finally(()=>setLoading(false))
   }, [])
 
-  const fetchTire = async (bs) => {
+  const loadVeHistory = async (bs) => {
     if (!bs) return
-    setTireLoading(true)
-    try {
-      const [lopRes, kmRes] = await Promise.all([
-        apiFetch(`/api/bdsc/tire/${bs}`).then(r=>r.json()),
-        apiFetch('/api/bdsc/tire-alerts').then(r=>r.json()).catch(()=>[]),
-      ])
-      setLopData(lopRes || { cauHinh:'6', viTriLop:[] })
-    } catch(e) {} finally { setTireLoading(false) }
+    const d = await apiFetch(`/api/bdsc/history/${bs}`).then(r=>r.json()).catch(()=>[])
+    setVeHistory(Array.isArray(d)?d:[])
   }
 
-  const fetchDocs = async (bs) => {
+  const loadTire = async (bs) => {
     if (!bs) return
-    try {
-      const d = await apiFetch(`/api/bdsc/docs/${bs}`).then(r=>r.json())
-      setDocsData(d || {})
-    } catch(e) {}
+    const d = await apiFetch(`/api/bdsc/tire/${bs}`).then(r=>r.json()).catch(()=>({ cauHinh:'6', viTriLop:[] }))
+    setLopData(d)
+  }
+
+  const loadDocs = async (bs) => {
+    if (!bs) return
+    const d = await apiFetch(`/api/bdsc/docs/${bs}`).then(r=>r.json()).catch(()=>({}))
+    setDocsData(d||{})
   }
 
   const saveTireVt = async (vtData) => {
-    const newLop = { ...lopData }
-    const idx = (newLop.viTriLop||[]).findIndex(v=>v.viTri===vtData.viTri)
-    if (idx >= 0) newLop.viTriLop[idx] = vtData
-    else newLop.viTriLop = [...(newLop.viTriLop||[]), vtData]
-    const res = await apiFetch(`/api/bdsc/tire/${tireVe}`, { method:'PUT', body: JSON.stringify(newLop) })
-    const saved = await res.json()
-    setLopData(saved)
-    setTireModal(null)
+    const next = { ...lopData, viTriLop: [...(lopData.viTriLop||[]).filter(v=>v.viTri!==vtData.viTri), vtData] }
+    const res  = await apiFetch(`/api/bdsc/tire/${tireVe}`, { method:'PUT', body:JSON.stringify(next) })
+    const d    = await res.json(); setLopData(d); setTireModal(null)
   }
 
   const saveDocs = async () => {
     if (!docsVe) return
-    setDocsSaving(true)
-    try {
-      await apiFetch(`/api/bdsc/docs/${docsVe}`, { method:'PUT', body: JSON.stringify(docsData) })
-      alert('Đã lưu giấy tờ xe')
-    } catch(e) { alert(e.message) } finally { setDocsSaving(false) }
+    await apiFetch(`/api/bdsc/docs/${docsVe}`, { method:'PUT', body:JSON.stringify(docsData) })
   }
 
-  const critCount  = bdAlerts.filter(a=>a.status==='crit').length
-  const warnCount  = bdAlerts.filter(a=>a.status==='warn').length
-  const docsCrit   = docsAlerts.filter(a=>a.status!=='warn').length
+  const critBD   = bdAlerts.filter(a=>a.status==='crit').length
+  const warnBD   = bdAlerts.filter(a=>a.status==='warn').length
+  const critDocs = docsAlerts.filter(a=>a.diffDays<=15).length
 
-  if (loading) return <div style={{ padding:24, color:'var(--color-text-secondary)' }}>Đang tải…</div>
+  if (loading) return (
+    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:200, color:'var(--ink3)', fontSize:13 }}>
+      Đang tải…
+    </div>
+  )
 
   return (
-    <div style={{ padding:'0 0 40px' }}>
+    <div style={{ paddingBottom:40 }}>
+
       {/* ── Header ── */}
-      <div style={{ padding:'16px 16px 0', display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
+      <div style={{ padding:'16px 16px 0', display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:10 }}>
         <div>
-          <div style={{ fontSize:18, fontWeight:700 }}>Bảo dưỡng & Sửa chữa</div>
-          <div style={s}>{vehicles.length} xe · {history.length} phiếu BDSC</div>
+          <div style={{ fontSize:20, fontWeight:700, color:'var(--ink)' }}>Bảo dưỡng & Sửa chữa</div>
+          <div style={{ fontSize:12, color:'var(--ink3)', marginTop:2 }}>
+            {vehicles.length} xe · {history.length} phiếu BDSC
+          </div>
         </div>
-        <button style={btnPrimary} onClick={()=>{ setShowForm(true); setTab('bdsc') }}>+ Thêm phiếu</button>
+        <button style={BTN_PRIMARY} onClick={()=>{ setShowForm(true); setTab('bdsc') }}>
+          + Thêm phiếu
+        </button>
       </div>
 
-      {/* ── Tabs ── */}
-      <div style={{ display:'flex', overflowX:'auto', padding:'0 16px', gap:4, borderBottom:'1px solid var(--color-border-secondary)', marginBottom:12 }}>
+      {/* ── Tab bar ── */}
+      <div style={{ display:'flex', overflowX:'auto', padding:'0 16px', gap:2, marginBottom:14,
+        borderBottom:'1px solid var(--sep)' }}>
         {TABS.map(t => (
           <button key={t.id} onClick={()=>setTab(t.id)} style={{
-            padding:'8px 14px', fontSize:12, fontWeight:600, whiteSpace:'nowrap',
-            background:'transparent', border:'none', cursor:'pointer',
-            borderBottom: tab===t.id ? '2px solid var(--color-accent)' : '2px solid transparent',
-            color: tab===t.id ? 'var(--color-accent)' : 'var(--color-text-secondary)',
+            padding:'9px 14px', fontSize:13, fontWeight:tab===t.id?600:400,
+            background:'transparent', border:'none', borderBottom:tab===t.id?'2px solid var(--brand)':'2px solid transparent',
+            color:tab===t.id?'var(--brand)':'var(--ink3)', cursor:'pointer', whiteSpace:'nowrap',
+            display:'flex', alignItems:'center', gap:5,
           }}>
-            {t.icon} {t.label}
-            {t.id==='alert' && (critCount+warnCount) > 0 && (
-              <span style={{ marginLeft:4, background:critCount>0?'#ef4444':'#f59e0b', color:'#fff', borderRadius:10, padding:'1px 6px', fontSize:10 }}>
-                {critCount+warnCount}
+            {t.label}
+            {t.id==='alert' && (critBD+warnBD+critDocs)>0 && (
+              <span style={{ background:'var(--apple-red)', color:'#fff',
+                borderRadius:10, padding:'1px 6px', fontSize:10, fontWeight:700 }}>
+                {critBD+warnBD+critDocs}
               </span>
             )}
           </button>
@@ -494,325 +486,384 @@ export default function PageBaoDuong({ token, user }) {
       <div style={{ padding:'0 16px' }}>
 
         {/* ══ TỔNG QUAN ══ */}
-        {tab === 'overview' && (
-          <div>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:12 }}>
-              {[
-                { label:'Xe quá hạn BD', val:critCount, clr:'#ef4444' },
-                { label:'Xe sắp đến hạn', val:warnCount, clr:'#f59e0b' },
-                { label:'Giấy tờ hết hạn sớm', val:docsCrit, clr:'#f59e0b' },
-                { label:'Tổng phiếu BDSC', val:history.length, clr:'var(--color-accent)' },
-              ].map(m => (
-                <div key={m.label} style={card}>
-                  <div style={{ fontSize:24, fontWeight:700, color:m.clr }}>{m.val}</div>
-                  <div style={s}>{m.label}</div>
-                </div>
-              ))}
+        {tab==='overview' && (
+          <>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:14 }}>
+              <StatCard val={critBD}          label='Xe quá hạn BD'       color='var(--apple-red)' />
+              <StatCard val={warnBD}          label='Xe sắp đến hạn'      color='var(--amber)' />
+              <StatCard val={critDocs}        label='Giấy tờ sắp hết hạn' color='var(--amber)' />
+              <StatCard val={history.length}  label='Tổng phiếu BDSC'     color='var(--brand)' />
             </div>
 
-            {/* Recent BDSC */}
-            <div style={card}>
-              <div style={sectionTitle}>Phiếu BDSC gần nhất</div>
-              {history.length === 0
-                ? <EmptyState icon='🔧' title='Chưa có phiếu' sub='Nhấn "+ Thêm phiếu" để bắt đầu ghi nhận' action='Thêm phiếu' onAction={()=>{ setShowForm(true); setTab('bdsc') }} />
-                : history.slice(0,5).map(h => (
-                  <div key={h._id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'8px 0', borderBottom:'1px solid var(--color-border-tertiary)', fontSize:12 }}>
-                    <div>
-                      <span style={{ fontWeight:700 }}>{h.bienSo}</span>
-                      <span style={{ ...s, marginLeft:8 }}>{new Date(h.ngay).toLocaleDateString('vi-VN')} · {(h.kmThoiDiem||0).toLocaleString()}km</span>
-                    </div>
-                    <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-                      {h.canhBao && <Badge type='yel'>⚠</Badge>}
-                      <Badge type={h.loaiBdsc==='baoDuongDinhKy'?'grn':'blu'}>{LOAI_BDSC_LABEL[h.loaiBdsc]||h.loaiBdsc}</Badge>
-                      <span style={{ fontWeight:700 }}>{(h.tongTien||0).toLocaleString('vi-VN')}đ</span>
-                    </div>
+            <div style={{ fontSize:12, color:'var(--ink3)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:8 }}>
+              Phiếu BDSC gần nhất
+            </div>
+            {history.length === 0
+              ? <Empty icon='🔧' title='Chưa có phiếu nào'
+                  sub='Nhấn "+ Thêm phiếu" để bắt đầu ghi nhận bảo dưỡng & sửa chữa'
+                  cta='+ Thêm phiếu' onCta={()=>{ setShowForm(true); setTab('bdsc') }} />
+              : history.slice(0,5).map(h=>(
+                <div key={h._id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center',
+                  padding:'10px 0', borderBottom:'1px solid var(--sep)' }}>
+                  <div>
+                    <span style={{ fontWeight:600, color:'var(--ink)', fontSize:13 }}>{h.bienSo}</span>
+                    <span style={{ fontSize:12, color:'var(--ink3)', marginLeft:8 }}>
+                      {new Date(h.ngay).toLocaleDateString('vi-VN')} · {fmt(h.kmThoiDiem)}km
+                    </span>
                   </div>
-                ))
-              }
-            </div>
-
-            {/* BD schedule preview */}
-            <div style={card}>
-              <div style={sectionTitle}>Chu kỳ bảo dưỡng xe tải (HSH.QLTS-05)</div>
-              {BD_XETAI.map(b => (
-                <div key={b.moc} style={{ display:'flex', gap:10, padding:'6px 0', borderBottom:'1px solid var(--color-border-tertiary)', fontSize:12 }}>
-                  <span style={{ fontWeight:700, color:'#f97316', minWidth:55 }}>{(b.moc).toLocaleString()}km</span>
-                  <span style={s}>{b.items.slice(0,3).join(' · ')}{b.items.length>3?` +${b.items.length-3} hạng mục`:''}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ══ CẢNH BÁO BD ══ */}
-        {tab === 'alert' && (
-          <div>
-            {bdAlerts.length === 0
-              ? <EmptyState icon='✅' title='Không có cảnh báo' sub={vehicles.length===0 ? 'Chưa có xe trong hệ thống' : 'Tất cả xe đang trong chu kỳ an toàn. Hệ thống cảnh báo khi xe đạt 90% chu kỳ.'} />
-              : bdAlerts.map((a,i) => (
-                <div key={i} style={{ ...card, borderColor:a.status==='crit'?'rgba(239,68,68,.3)':'rgba(245,158,11,.2)', background:a.status==='crit'?'rgba(239,68,68,.05)':'transparent' }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                    <Badge type={a.status==='crit'?'red':'yel'}>{a.status==='crit'?'Quá hạn':Math.round((a.pct||0)*100)+'%'}</Badge>
-                    <div style={{ flex:1 }}>
-                      <span style={{ fontWeight:700, fontSize:13 }}>{a.bienSo}</span>
-                      <span style={s}> · Mốc {(a.mocTiepTheo||0).toLocaleString()}km · Còn {(a.conLai||0).toLocaleString()}km</span>
-                    </div>
-                    {a.ngayCuoiBD && <span style={s}>BD: {new Date(a.ngayCuoiBD).toLocaleDateString('vi-VN')}</span>}
+                  <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                    {h.canhBao && <Pill color='var(--amber)' bg='rgba(196,85,0,.1)'>⚠</Pill>}
+                    <Pill color={h.loaiBdsc==='baoDuongDinhKy'?'var(--green)':'var(--apple-blue)'}
+                      bg={h.loaiBdsc==='baoDuongDinhKy'?'rgba(26,127,55,.1)':'rgba(0,85,204,.1)'}>
+                      {LOAI_LABEL[h.loaiBdsc]||h.loaiBdsc}
+                    </Pill>
+                    <span style={{ fontWeight:700, fontSize:13, color:'var(--ink)' }}>{fmt(h.tongTien)}đ</span>
                   </div>
                 </div>
               ))
             }
 
-            {docsAlerts.length > 0 && (
-              <div style={{ marginTop:16 }}>
-                <div style={sectionTitle}>Giấy tờ sắp hết hạn</div>
-                {docsAlerts.map((a,i) => (
-                  <div key={i} style={{ ...card, borderColor:a.status==='expired'?'rgba(239,68,68,.3)':'rgba(245,158,11,.2)' }}>
-                    <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                      <Badge type={a.status==='expired'?'red':a.status==='crit'?'yel':'yel'}>
-                        {a.status==='expired'?'Hết hạn':a.diffDays+'ngày'}
-                      </Badge>
-                      <span style={{ fontWeight:700 }}>{a.bienSo}</span>
-                      <span style={s}>— {DOCS_LABEL[a.field]}</span>
-                      <span style={{ marginLeft:'auto', ...s }}>{new Date(a.ngayHetHan).toLocaleDateString('vi-VN')}</span>
+            <div style={{ fontSize:12, color:'var(--ink3)', textTransform:'uppercase', letterSpacing:'0.05em', marginTop:20, marginBottom:8 }}>
+              Chu kỳ bảo dưỡng xe tải (HSH.QLTS-05 · 6.1.3)
+            </div>
+            {BD_XETAI.map(b=>(
+              <div key={b.moc} style={{ display:'flex', gap:10, padding:'8px 0', borderBottom:'1px solid var(--sep)', fontSize:12 }}>
+                <span style={{ fontWeight:700, color:'var(--brand)', minWidth:52 }}>{(b.moc).toLocaleString()}km</span>
+                <span style={{ color:'var(--ink2)' }}>{b.items.slice(0,3).join(' · ')}{b.items.length>3?` +${b.items.length-3}`:''}</span>
+              </div>
+            ))}
+          </>
+        )}
+
+        {/* ══ CẢNH BÁO ══ */}
+        {tab==='alert' && (
+          <>
+            {bdAlerts.length===0 && docsAlerts.length===0
+              ? <Empty icon='✅' title='Không có cảnh báo'
+                  sub={vehicles.length===0 ? 'Chưa có xe trong hệ thống' : 'Tất cả xe đang trong chu kỳ bảo dưỡng an toàn'} />
+              : null
+            }
+
+            {bdAlerts.length>0 && (
+              <>
+                <div style={{ fontSize:12, color:'var(--ink3)', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:8 }}>
+                  Bảo dưỡng định kỳ
+                </div>
+                {bdAlerts.map((a,i)=>(
+                  <div key={i} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 0', borderBottom:'1px solid var(--sep)' }}>
+                    <Pill color={a.status==='crit'?'var(--apple-red)':'var(--amber)'}
+                      bg={a.status==='crit'?'rgba(215,0,21,.1)':'rgba(196,85,0,.1)'}>
+                      {a.status==='crit'?'Quá hạn':Math.round((a.pct||0)*100)+'%'}
+                    </Pill>
+                    <div style={{ flex:1 }}>
+                      <span style={{ fontWeight:600, color:'var(--ink)' }}>{a.bienSo}</span>
+                      <span style={{ fontSize:12, color:'var(--ink3)', marginLeft:8 }}>
+                        Mốc {fmt(a.mocTiepTheo)}km · còn {fmt(a.conLai)}km
+                      </span>
                     </div>
+                    {a.ngayCuoiBD && (
+                      <span style={{ fontSize:11, color:'var(--ink3)' }}>
+                        BD cuối: {new Date(a.ngayCuoiBD).toLocaleDateString('vi-VN')}
+                      </span>
+                    )}
                   </div>
                 ))}
-              </div>
+              </>
             )}
-          </div>
+
+            {docsAlerts.length>0 && (
+              <>
+                <div style={{ fontSize:12, color:'var(--ink3)', textTransform:'uppercase', letterSpacing:'0.05em', marginTop:20, marginBottom:8 }}>
+                  Giấy tờ sắp hết hạn
+                </div>
+                {docsAlerts.map((a,i)=>{
+                  const lbl = DOCS_FIELDS.find(f=>f.k===a.field)?.label||a.field
+                  return (
+                    <div key={i} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 0', borderBottom:'1px solid var(--sep)' }}>
+                      <Pill color={a.diffDays<=0?'var(--apple-red)':a.diffDays<=15?'var(--apple-red)':'var(--amber)'}
+                        bg={a.diffDays<=15?'rgba(215,0,21,.1)':'rgba(196,85,0,.1)'}>
+                        {a.diffDays<=0?'Hết hạn':`${a.diffDays}ngày`}
+                      </Pill>
+                      <span style={{ fontWeight:600, color:'var(--ink)' }}>{a.bienSo}</span>
+                      <span style={{ fontSize:12, color:'var(--ink3)' }}>— {lbl}</span>
+                      <span style={{ marginLeft:'auto', fontSize:11, color:'var(--ink3)' }}>
+                        {new Date(a.ngayHetHan).toLocaleDateString('vi-VN')}
+                      </span>
+                    </div>
+                  )
+                })}
+              </>
+            )}
+          </>
         )}
 
         {/* ══ PHIẾU BDSC ══ */}
-        {tab === 'bdsc' && (
-          <div>
-            {showForm && (
-              <FormBDSC vehicles={vehicles} onSave={doc=>{ setShowForm(false); setHistory(p=>[doc,...p]) }} onCancel={()=>setShowForm(false)} />
-            )}
-            {!showForm && (
-              <button style={{ ...btnPrimary, marginBottom:12 }} onClick={()=>setShowForm(true)}>+ Thêm phiếu BDSC</button>
-            )}
-            {history.length === 0
-              ? <EmptyState icon='🔧' title='Chưa có phiếu nào' sub='Ghi nhận mỗi lần bảo dưỡng, sửa chữa để theo dõi chi phí và phát hiện bất thường.' />
-              : history.map(h => (
-                <div key={h._id} style={{ ...card, ...(h.canhBao ? { borderColor:'rgba(245,158,11,.3)', background:'rgba(245,158,11,.03)' } : {}) }}>
+        {tab==='bdsc' && (
+          <>
+            {showForm
+              ? <FormBDSC vehicles={vehicles}
+                  onSave={d=>{ setShowForm(false); if(d?._id) setHistory(p=>[d,...p]) }}
+                  onCancel={()=>setShowForm(false)} />
+              : <button style={{ ...BTN_PRIMARY, marginBottom:14 }} onClick={()=>setShowForm(true)}>
+                  + Thêm phiếu BDSC
+                </button>
+            }
+            {history.length===0
+              ? <Empty icon='🔧' title='Chưa có phiếu nào'
+                  sub='Ghi nhận mỗi lần BDSC để theo dõi chi phí và phát hiện bất thường' />
+              : history.map(h=>(
+                <div key={h._id} style={{ padding:'10px 0', borderBottom:'1px solid var(--sep)' }}>
                   <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
                     <div>
-                      <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-                        <span style={{ fontWeight:700 }}>{h.bienSo}</span>
-                        <Badge type={h.loaiBdsc==='baoDuongDinhKy'?'grn':'blu'}>{LOAI_BDSC_LABEL[h.loaiBdsc]}</Badge>
-                        {h.canhBao && <Badge type='yel'>⚠ Bất thường</Badge>}
+                      <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:4 }}>
+                        <span style={{ fontWeight:600, color:'var(--ink)', fontSize:13 }}>{h.bienSo}</span>
+                        <Pill color={h.loaiBdsc==='baoDuongDinhKy'?'var(--green)':'var(--apple-blue)'}
+                          bg={h.loaiBdsc==='baoDuongDinhKy'?'rgba(26,127,55,.1)':'rgba(0,85,204,.1)'}>
+                          {LOAI_LABEL[h.loaiBdsc]}
+                        </Pill>
+                        {h.canhBao && <Pill color='var(--amber)' bg='rgba(196,85,0,.1)'>⚠ Bất thường</Pill>}
                       </div>
-                      <div style={{ ...s, marginTop:3 }}>
-                        {new Date(h.ngay).toLocaleDateString('vi-VN')} · {(h.kmThoiDiem||0).toLocaleString()}km
-                        {h.gara && ` · ${h.gara}`}{h.tinhThanh && ` (${h.tinhThanh})`}
+                      <div style={{ fontSize:12, color:'var(--ink3)' }}>
+                        {new Date(h.ngay).toLocaleDateString('vi-VN')} · {fmt(h.kmThoiDiem)}km
+                        {h.gara ? ` · ${h.gara}` : ''}{h.tinhThanh ? ` (${h.tinhThanh})` : ''}
                       </div>
-                      <div style={{ fontSize:12, marginTop:4, color:'var(--color-text-secondary)' }}>
-                        {(h.hangMuc||[]).map(hm=>hm.ten).slice(0,3).join(', ')}{(h.hangMuc||[]).length>3?` +${(h.hangMuc.length-3)} nữa`:''}
-                      </div>
-                      {h.canhBao && <div style={{ fontSize:11, color:'#f59e0b', marginTop:4 }}>{h.canhBao}</div>}
+                      {(h.hangMuc||[]).length>0 && (
+                        <div style={{ fontSize:12, color:'var(--ink2)', marginTop:3 }}>
+                          {h.hangMuc.map(m=>m.ten).slice(0,3).join(' · ')}
+                          {h.hangMuc.length>3?` +${h.hangMuc.length-3} nữa`:''}
+                        </div>
+                      )}
+                      {h.canhBao && <div style={{ fontSize:11, color:'var(--amber)', marginTop:3 }}>{h.canhBao}</div>}
                     </div>
-                    <div style={{ textAlign:'right' }}>
-                      <div style={{ fontWeight:700, fontSize:14 }}>{(h.tongTien||0).toLocaleString('vi-VN')}đ</div>
-                      <div style={s}>{h.tongCong?`Công: ${h.tongCong.toLocaleString()}đ`:''}</div>
+                    <div style={{ textAlign:'right', flexShrink:0 }}>
+                      <div style={{ fontWeight:700, fontSize:14, color:'var(--ink)' }}>{fmt(h.tongTien)}đ</div>
+                      {h.tongCong>0 && <div style={{ fontSize:11, color:'var(--ink3)' }}>Công {fmt(h.tongCong)}đ</div>}
                     </div>
                   </div>
                 </div>
               ))
             }
-          </div>
+          </>
         )}
 
         {/* ══ TIMELINE ══ */}
-        {tab === 'timeline' && (
-          <div>
-            <div style={{ marginBottom:12 }}>
-              <label style={s}>Chọn xe để xem timeline</label>
-              <select style={{ ...inputStyle, marginTop:4 }} value={selVe} onChange={e=>setSelVe(e.target.value)}>
+        {tab==='timeline' && (
+          <>
+            <div style={{ marginBottom:14 }}>
+              <div style={{ fontSize:11, color:'var(--ink3)', marginBottom:4 }}>Chọn xe</div>
+              <select style={INPUT} value={selVe} onChange={e=>{ setSelVe(e.target.value); loadVeHistory(e.target.value) }}>
                 <option value=''>— Chọn xe —</option>
-                {vehicles.map(v => { const bs=v['BIỂN SỐ']||v['BIẼNSỐ']||v['Biển số']||''; return <option key={v._id} value={bs}>{bs}</option> })}
+                {vehicles.map(v=>{ const b=v['BIỂN SỐ']||v['BIẼNSỐ']||v['Biển số']||''; return <option key={v._id} value={b}>{b}</option> })}
               </select>
             </div>
             {!selVe
-              ? <EmptyState icon='📈' title='Chọn xe để xem' sub='Timeline hiển thị toàn bộ lịch sử BDSC theo km' />
-              : (() => {
-                const veHistory = history.filter(h => h.bienSo === selVe).sort((a,b)=>a.kmThoiDiem-b.kmThoiDiem)
-                if (veHistory.length === 0) return <EmptyState icon='📭' title='Chưa có phiếu nào' sub={`Xe ${selVe} chưa có phiếu BDSC nào được ghi nhận`} />
-                const totalCost = veHistory.reduce((s,h)=>s+(h.tongTien||0),0)
-                return (
-                  <div>
-                    <div style={{ ...card, marginBottom:12, display:'flex', gap:16 }}>
-                      <div><div style={{ fontSize:20, fontWeight:700 }}>{veHistory.length}</div><div style={s}>Lần sửa</div></div>
-                      <div><div style={{ fontSize:20, fontWeight:700 }}>{totalCost.toLocaleString('vi-VN')}đ</div><div style={s}>Tổng chi phí</div></div>
-                      <div><div style={{ fontSize:20, fontWeight:700 }}>{veHistory.length>0?Math.round(totalCost/veHistory.length).toLocaleString('vi-VN')+'đ':'—'}</div><div style={s}>Trung bình/lần</div></div>
-                    </div>
-                    <div style={{ position:'relative', paddingLeft:24 }}>
-                      <div style={{ position:'absolute', left:8, top:0, bottom:0, width:2, background:'var(--color-border-secondary)' }} />
-                      {veHistory.map((h,i) => (
-                        <div key={h._id} style={{ position:'relative', marginBottom:14 }}>
-                          <div style={{ position:'absolute', left:-20, top:6, width:10, height:10, borderRadius:'50%', background:h.canhBao?'#f59e0b':'var(--color-accent)', border:'2px solid var(--color-bg-primary)' }} />
-                          <div style={{ ...card, marginBottom:0 }}>
-                            <div style={{ display:'flex', justifyContent:'space-between', fontSize:12 }}>
+              ? <Empty icon='📈' title='Chọn xe để xem timeline' sub='Timeline hiển thị toàn bộ lịch sử BDSC theo km' />
+              : veHistory.length===0
+                ? <Empty icon='📭' title={`${selVe} chưa có phiếu BDSC nào`} sub='' />
+                : (()=>{
+                  const total = veHistory.reduce((s,h)=>s+(h.tongTien||0),0)
+                  return (
+                    <>
+                      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10, marginBottom:16 }}>
+                        <StatCard val={veHistory.length} label='Lần sửa' color='var(--brand)' />
+                        <StatCard val={fmt(total)+'đ'} label='Tổng chi phí' color='var(--ink)' />
+                        <StatCard val={veHistory.length?fmt(Math.round(total/veHistory.length))+'đ':'—'} label='Trung bình/lần' color='var(--ink3)' />
+                      </div>
+                      <div style={{ position:'relative', paddingLeft:20 }}>
+                        <div style={{ position:'absolute', left:6, top:6, bottom:6, width:2, background:'var(--sep)' }} />
+                        {[...veHistory].sort((a,b)=>b.kmThoiDiem-a.kmThoiDiem).map(h=>(
+                          <div key={h._id} style={{ position:'relative', marginBottom:14 }}>
+                            <div style={{ position:'absolute', left:-17, top:4, width:10, height:10, borderRadius:'50%',
+                              background:h.canhBao?'var(--amber)':'var(--brand)', border:'2px solid var(--bg)' }} />
+                            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
                               <div>
-                                <Badge type={h.loaiBdsc==='baoDuongDinhKy'?'grn':'blu'}>{LOAI_BDSC_LABEL[h.loaiBdsc]}</Badge>
-                                <span style={{ marginLeft:8, fontWeight:600 }}>{(h.kmThoiDiem||0).toLocaleString()}km</span>
-                                <span style={s}> · {new Date(h.ngay).toLocaleDateString('vi-VN')}</span>
-                                {h.gara && <span style={s}> · {h.gara}</span>}
+                                <div style={{ display:'flex', gap:6, alignItems:'center', marginBottom:2 }}>
+                                  <Pill color={h.loaiBdsc==='baoDuongDinhKy'?'var(--green)':'var(--apple-blue)'}
+                                    bg={h.loaiBdsc==='baoDuongDinhKy'?'rgba(26,127,55,.1)':'rgba(0,85,204,.1)'}>
+                                    {LOAI_LABEL[h.loaiBdsc]}
+                                  </Pill>
+                                  <span style={{ fontSize:12, fontWeight:600, color:'var(--ink)' }}>{fmt(h.kmThoiDiem)}km</span>
+                                  <span style={{ fontSize:11, color:'var(--ink3)' }}>{new Date(h.ngay).toLocaleDateString('vi-VN')}</span>
+                                </div>
+                                {h.gara && <span style={{ fontSize:12, color:'var(--ink3)' }}>{h.gara}</span>}
+                                {(h.hangMuc||[]).length>0 && (
+                                  <div style={{ fontSize:12, color:'var(--ink2)', marginTop:2 }}>
+                                    {h.hangMuc.map(m=>m.ten).slice(0,3).join(' · ')}
+                                  </div>
+                                )}
+                                {h.canhBao && <div style={{ fontSize:11, color:'var(--amber)', marginTop:2 }}>⚠ {h.canhBao}</div>}
                               </div>
-                              <span style={{ fontWeight:700 }}>{(h.tongTien||0).toLocaleString('vi-VN')}đ</span>
+                              <span style={{ fontWeight:700, color:'var(--ink)', fontSize:13, flexShrink:0, marginLeft:8 }}>
+                                {fmt(h.tongTien)}đ
+                              </span>
                             </div>
-                            {(h.hangMuc||[]).length > 0 && <div style={{ ...s, marginTop:4 }}>{h.hangMuc.map(m=>m.ten).join(' · ')}</div>}
-                            {h.canhBao && <div style={{ fontSize:11, color:'#f59e0b', marginTop:4 }}>⚠ {h.canhBao}</div>}
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )
-              })()
+                        ))}
+                      </div>
+                    </>
+                  )
+                })()
             }
-          </div>
+          </>
         )}
 
         {/* ══ LỐP XE ══ */}
-        {tab === 'tire' && (
-          <div>
-            <div style={{ marginBottom:12 }}>
-              <label style={s}>Chọn xe để quản lý lốp</label>
-              <div style={{ display:'flex', gap:8, marginTop:4 }}>
-                <select style={{ ...inputStyle, flex:1 }} value={tireVe} onChange={e=>{ setTireVe(e.target.value); fetchTire(e.target.value) }}>
+        {tab==='tire' && (
+          <>
+            <div style={{ display:'flex', gap:8, marginBottom:14 }}>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:11, color:'var(--ink3)', marginBottom:4 }}>Chọn xe</div>
+                <select style={INPUT} value={tireVe} onChange={e=>{ setTireVe(e.target.value); loadTire(e.target.value) }}>
                   <option value=''>— Chọn xe —</option>
-                  {vehicles.map(v=>{ const bs=v['BIỂN SỐ']||v['BIẼNSỐ']||v['Biển số']||''; return <option key={v._id} value={bs}>{bs}</option> })}
+                  {vehicles.map(v=>{ const b=v['BIỂN SỐ']||v['BIẼNSỐ']||v['Biển số']||''; return <option key={v._id} value={b}>{b}</option> })}
                 </select>
-                {tireVe && (
-                  <select style={{ ...inputStyle, width:120 }} value={lopData.cauHinh||'6'}
-                    onChange={e => setLopData(p=>({ ...p, cauHinh:e.target.value }))}>
-                    <option value='4'>4 lốp (2 cầu)</option>
-                    <option value='6'>6 lốp (3 cầu)</option>
-                    <option value='10'>10 lốp (3 cầu kép)</option>
-                    <option value='12'>12 lốp (4 cầu)</option>
-                  </select>
-                )}
               </div>
+              {tireVe && (
+                <div>
+                  <div style={{ fontSize:11, color:'var(--ink3)', marginBottom:4 }}>Cấu hình</div>
+                  <select style={{ ...INPUT, width:130 }} value={lopData.cauHinh||'6'}
+                    onChange={e=>setLopData(p=>({...p,cauHinh:e.target.value}))}>
+                    <option value='4'>4 lốp · 2 cầu</option>
+                    <option value='6'>6 lốp · 2 cầu sau kép</option>
+                    <option value='10'>10 lốp · 3 cầu kép</option>
+                    <option value='12'>12 lốp · 4 cầu</option>
+                  </select>
+                </div>
+              )}
             </div>
 
             {!tireVe
-              ? <EmptyState icon='⭕' title='Chọn xe để xem lốp' sub='Click vào từng vị trí lốp để cập nhật thông tin và theo dõi chu kỳ đảo/thay' />
-              : tireLoading
-                ? <div style={s}>Đang tải…</div>
-                : (
-                  <div>
-                    <LopDiagram bienSo={tireVe} cauHinh={lopData.cauHinh||'6'} viTriLop={lopData.viTriLop||[]}
-                      kmHienTai={kmMap[tireVe]}
-                      onClickVt={(vt, data) => setTireModal({ viTri:vt, data:data||{} })} />
-                    <div style={{ display:'flex', gap:10, marginTop:10, marginBottom:6, fontSize:11 }}>
-                      <span>🟢 An toàn</span><span>🟡 Sắp đến hạn (85%+)</span><span>🔴 Quá hạn</span><span>⬜ Chưa nhập</span>
-                    </div>
-                    <div style={{ display:'flex', gap:8 }}>
-                      <button style={btnPrimary} onClick={async () => {
-                        const res = await apiFetch(`/api/bdsc/tire/${tireVe}`, { method:'PUT', body:JSON.stringify(lopData) })
-                        const d = await res.json(); setLopData(d); alert('Đã lưu cấu hình lốp')
-                      }}>💾 Lưu cấu hình</button>
-                    </div>
+              ? <Empty icon='⭕' title='Chọn xe để quản lý lốp'
+                  sub='Click vào từng vị trí để cập nhật. Màu = % chu kỳ còn lại. Đảo mỗi 10.000km.' />
+              : (
+                <>
+                  <LopDiagram cauHinh={lopData.cauHinh||'6'} viTriLop={lopData.viTriLop||[]}
+                    kmHienTai={null} onClickVt={(vt,d)=>setTireModal({viTri:vt,data:d})} />
+                  <div style={{ display:'flex', gap:12, marginTop:10, marginBottom:12, fontSize:11, color:'var(--ink3)' }}>
+                    <span style={{ color:'var(--green)' }}>● An toàn</span>
+                    <span style={{ color:'var(--amber)' }}>● Sắp hạn (85%+)</span>
+                    <span style={{ color:'var(--apple-red)' }}>● Quá hạn</span>
+                    <span>● Chưa nhập</span>
                   </div>
-                )
+                  <button style={BTN_PRIMARY} onClick={async()=>{
+                    const r = await apiFetch(`/api/bdsc/tire/${tireVe}`,{ method:'PUT', body:JSON.stringify(lopData) })
+                    const d = await r.json(); setLopData(d)
+                  }}>Lưu cấu hình lốp</button>
+                </>
+              )
             }
             {tireModal && (
               <TireModal viTri={tireModal.viTri} data={tireModal.data}
-                onSave={saveTireVt} onClose={() => setTireModal(null)} />
+                onSave={saveTireVt} onClose={()=>setTireModal(null)} />
             )}
-          </div>
+          </>
         )}
 
-        {/* ══ GIẤY TỜ XE ══ */}
-        {tab === 'docs' && (
-          <div>
-            <div style={{ marginBottom:12 }}>
-              <label style={s}>Chọn xe</label>
-              <select style={{ ...inputStyle, marginTop:4 }} value={docsVe} onChange={e=>{ setDocsVe(e.target.value); fetchDocs(e.target.value) }}>
+        {/* ══ GIẤY TỜ ══ */}
+        {tab==='docs' && (
+          <>
+            <div style={{ marginBottom:14 }}>
+              <div style={{ fontSize:11, color:'var(--ink3)', marginBottom:4 }}>Chọn xe</div>
+              <select style={INPUT} value={docsVe} onChange={e=>{ setDocsVe(e.target.value); loadDocs(e.target.value) }}>
                 <option value=''>— Chọn xe —</option>
-                {vehicles.map(v=>{ const bs=v['BIỂN SỐ']||v['BIẼNSỐ']||v['Biển số']||''; return <option key={v._id} value={bs}>{bs}</option> })}
+                {vehicles.map(v=>{ const b=v['BIỂN SỐ']||v['BIẼNSỐ']||v['Biển số']||''; return <option key={v._id} value={b}>{b}</option> })}
               </select>
             </div>
             {!docsVe
-              ? <EmptyState icon='📄' title='Chọn xe để quản lý giấy tờ' sub='Theo dõi hạn đăng kiểm, bảo hiểm, phù hiệu — cảnh báo tự động 30 ngày trước' />
+              ? <Empty icon='📄' title='Chọn xe để quản lý giấy tờ'
+                  sub='Theo dõi hạn đăng kiểm, bảo hiểm, phù hiệu — cảnh báo tự động 30 ngày trước' />
               : (
-                <div>
-                  <div style={card}>
-                    {Object.entries(DOCS_LABEL).map(([k,label]) => {
-                      const val  = docsData[k] ? new Date(docsData[k]).toISOString().slice(0,10) : ''
-                      const diff = docsData[k] ? Math.ceil((new Date(docsData[k]) - new Date()) / 86400000) : null
-                      return (
-                        <div key={k} style={{ display:'flex', alignItems:'center', gap:10, marginBottom:10 }}>
-                          <div style={{ flex:1 }}>
-                            <label style={s}>{label}</label>
-                            <input style={inputStyle} type='date' value={val}
-                              onChange={e=>setDocsData(p=>({ ...p, [k]:e.target.value }))} />
-                          </div>
-                          {diff !== null && (
-                            <Badge type={diff<0?'red':diff<=15?'red':diff<=30?'yel':'grn'}>
-                              {diff<0?'Hết hạn':diff<=30?`${diff}ngày`:'OK'}
-                            </Badge>
-                          )}
+                <>
+                  {DOCS_FIELDS.map(({ k, label }) => {
+                    const val  = docsData[k] ? new Date(docsData[k]).toISOString().slice(0,10) : ''
+                    const diff = docsData[k] ? Math.ceil((new Date(docsData[k])-new Date())/86400000) : null
+                    return (
+                      <div key={k} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 0', borderBottom:'1px solid var(--sep)' }}>
+                        <div style={{ flex:1 }}>
+                          <div style={{ fontSize:11, color:'var(--ink3)', marginBottom:4 }}>{label}</div>
+                          <input style={INPUT} type='date' value={val}
+                            onChange={e=>setDocsData(p=>({...p,[k]:e.target.value}))} />
                         </div>
-                      )
-                    })}
-                    <div style={{ marginTop:4 }}>
-                      <label style={s}>Ghi chú</label>
-                      <textarea style={{ ...inputStyle, height:60, resize:'vertical', marginTop:4 }} value={docsData.ghiChu||''} onChange={e=>setDocsData(p=>({ ...p, ghiChu:e.target.value }))} />
-                    </div>
+                        {diff!==null && (
+                          <Pill color={diff<=0?'var(--apple-red)':diff<=15?'var(--apple-red)':diff<=30?'var(--amber)':'var(--green)'}
+                            bg={diff<=15?'rgba(215,0,21,.1)':diff<=30?'rgba(196,85,0,.1)':'rgba(26,127,55,.1)'}>
+                            {diff<=0?'Hết hạn':diff<=30?`${diff} ngày`:'OK'}
+                          </Pill>
+                        )}
+                      </div>
+                    )
+                  })}
+                  <div style={{ marginTop:10, marginBottom:14 }}>
+                    <div style={{ fontSize:11, color:'var(--ink3)', marginBottom:4 }}>Ghi chú</div>
+                    <textarea style={{ ...INPUT, height:60, resize:'vertical' }}
+                      value={docsData.ghiChu||''} onChange={e=>setDocsData(p=>({...p,ghiChu:e.target.value}))} />
                   </div>
-                  <button style={btnPrimary} onClick={saveDocs} disabled={docsSaving}>{docsSaving?'Đang lưu…':'💾 Lưu giấy tờ'}</button>
-                </div>
+                  <button style={BTN_PRIMARY} onClick={saveDocs}>Lưu giấy tờ</button>
+                </>
               )
             }
-          </div>
+          </>
         )}
 
-        {/* ══ BẢNG GIÁ LỐP (từ Tờ trình) ══ */}
-        {tab === 'catalog' && (
-          <div>
-            <div style={{ ...card, marginBottom:12, borderColor:'rgba(59,130,246,.3)', background:'rgba(59,130,246,.05)' }}>
-              <div style={{ fontSize:13, fontWeight:700, marginBottom:4 }}>📋 Tờ trình 3413/TTr/HS/PMH/0126</div>
-              <div style={s}>Mua lốp xe thường xuyên HT HSH · 01/01/2026 – 30/06/2026</div>
-              <div style={{ display:'flex', gap:12, marginTop:6, fontSize:12 }}>
-                <span>Ưu tiên 1: <strong>LỐP XE VIỆT</strong> (Maxxis)</span>
-                <span>Ưu tiên 2: <strong>ALPHA</strong> (Bridgestone/DRC)</span>
+        {/* ══ BẢNG GIÁ LỐP ══ */}
+        {tab==='catalog' && (
+          <>
+            <div style={{ padding:'10px 14px', background:'rgba(0,85,204,.07)', borderRadius:10, marginBottom:14 }}>
+              <div style={{ fontWeight:600, fontSize:13, color:'var(--ink)', marginBottom:2 }}>
+                Tờ trình 3413/TTr/HS/PMH/0126
+              </div>
+              <div style={{ fontSize:12, color:'var(--ink3)' }}>
+                Mua lốp xe thường xuyên HT HSH · 01/01/2026 – 30/06/2026
+              </div>
+              <div style={{ display:'flex', gap:14, marginTop:6, fontSize:12 }}>
+                <span><strong>Ưu tiên 1:</strong> LỐP XE VIỆT (Maxxis)</span>
+                <span><strong>Ưu tiên 2:</strong> ALPHA (Bridgestone/DRC)</span>
               </div>
             </div>
 
-            {TIRE_CATALOG.map(t => (
-              <div key={t.id} style={card}>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:6 }}>
-                  <div>
-                    <span style={{ fontWeight:700, fontSize:14 }}>{t.size}</span>
-                    <Badge type={t.boBo==='kem'?'blu':'grn'} style={{ marginLeft:6 }}>Bố {t.boBo}</Badge>
+            {TIRE_CATALOG.map(t=>(
+              <div key={t.id} style={{ padding:'12px 0', borderBottom:'1px solid var(--sep)' }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                    <span style={{ fontWeight:700, fontSize:14, color:'var(--ink)' }}>{t.size}</span>
+                    <Pill color={t.boBo==='kem'?'var(--apple-blue)':'var(--green)'}
+                      bg={t.boBo==='kem'?'rgba(0,85,204,.1)':'rgba(26,127,55,.1)'}>
+                      Bố {t.boBo}
+                    </Pill>
                   </div>
-                  <span style={{ ...s, textAlign:'right' }}>SL dự kiến 6T:<br/><strong>{t.soLuong6T} lốp</strong></span>
+                  <span style={{ fontSize:12, color:'var(--ink3)' }}>SL 6T: <strong>{t.soLuong6T}</strong></span>
                 </div>
-                <div style={{ ...s, marginBottom:8 }}>🚛 {t.loaiXe}</div>
+                <div style={{ fontSize:12, color:'var(--ink3)', marginBottom:8 }}>🚛 {t.loaiXe}</div>
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-                  {[t.p1, t.p2].map((p, pi) => (
-                    <div key={pi} style={{ padding:'8px 10px', background:'var(--color-bg-tertiary)', borderRadius:7 }}>
-                      <Badge type={pi===0?'grn':'gry'}>Ưu tiên {pi+1}</Badge>
-                      <div style={{ fontWeight:600, fontSize:12, marginTop:4 }}>{p.ncc}</div>
-                      <div style={s}>{p.hang}</div>
-                      <div style={s}>{p.xuatXu}</div>
-                      <div style={{ marginTop:4, fontSize:13 }}>
-                        <span style={s}>TĐP: </span><strong>{(p.tdp).toLocaleString('vi-VN')}đ</strong>
+                  {[t.p1,t.p2].map((p,pi)=>(
+                    <div key={pi} style={{ padding:'10px 12px', background:'var(--fill-tertiary)', borderRadius:10 }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:6 }}>
+                        <Pill color={pi===0?'var(--green)':'var(--ink3)'}
+                          bg={pi===0?'rgba(26,127,55,.1)':'var(--fill-secondary)'}>
+                          {pi===0?'Ưu tiên 1':'Ưu tiên 2'}
+                        </Pill>
+                        <span style={{ fontSize:12, fontWeight:600, color:'var(--ink)' }}>{p.ncc}</span>
                       </div>
-                      <div style={{ fontSize:13 }}>
-                        <span style={s}>SĐP: </span><strong style={{ color:'var(--color-accent)' }}>{(p.sdp).toLocaleString('vi-VN')}đ</strong>
+                      <div style={{ fontSize:11, color:'var(--ink3)' }}>{p.hang} · {p.xuatXu}</div>
+                      <div style={{ marginTop:6, fontSize:12 }}>
+                        <span style={{ color:'var(--ink3)' }}>TĐP: </span>
+                        <span style={{ fontWeight:600, color:'var(--ink)' }}>{fmt(p.tdp)}đ</span>
+                      </div>
+                      <div style={{ fontSize:12 }}>
+                        <span style={{ color:'var(--ink3)' }}>SĐP: </span>
+                        <span style={{ fontWeight:700, color:'var(--brand)' }}>{fmt(p.sdp)}đ</span>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
             ))}
-          </div>
+          </>
         )}
 
       </div>
+
+      <style>{`@keyframes spin { to { transform:rotate(360deg) } }`}</style>
     </div>
   )
 }
