@@ -488,16 +488,26 @@ export default function PageBaoDuong({ token, user }) {
   }, [processTireOcr])
 
   const submitAllOcr = async () => {
-    let saved = 0
+    let saved = 0, failed = 0
     for (const result of ocrResults) {
-      if (!result.bienSo || !result.km) continue
-      if (detectLoaiBaoGia(result) === 'lop') continue // lốp xử lý riêng
-      const resp = await apiFetch('/api/bdsc', { method:'POST', body: JSON.stringify(result) })
+      if (!result.bienSo || detectLoaiBaoGia(result) === 'lop') continue
+      const payload = {
+        bienSo:     result.bienSo,
+        kmThoiDiem: +result.kmThoiDiem || +result.km || 0,
+        ngay:       result.ngay || new Date().toLocaleDateString('vi-VN'),
+        gara:       result.gara || result.garage || '',
+        soRO:       result.soRO || '',
+        tongTien:   +result.tongTien || 0,
+        hangMuc:    result.hangMuc   || [],
+        loaiBdsc:   result.loaiBdsc  || 'suaChuaPhatSinh',
+      }
+      const resp = await apiFetch('/api/bdsc', { method:'POST', body: JSON.stringify(payload) })
       if (resp.ok) saved++
+      else failed++
     }
-    setBdHistory(prev => [...ocrResults.filter(r=>r.bienSo && detectLoaiBaoGia(r)!=='lop'), ...prev])
+    setBdHistory(prev => [...prev])
     setOcrFiles([]); setOcrResults([])
-    alert(`Đã lưu ${saved} báo giá`)
+    alert(`Đã lưu ${saved} báo giá${failed ? ` · ${failed} lỗi` : ''}`)
   }
 
   const handleSaveTire = (result) => {
@@ -511,16 +521,36 @@ export default function PageBaoDuong({ token, user }) {
 
   const handleOcrUpdate = (idx, field, val) => {
     if (field === '__save') {
-      // lưu ngay 1 phiếu
       const result = ocrResults[idx]
-      if (result?.bienSo && result?.km) {
-        apiFetch('/api/bdsc', { method:'POST', body: JSON.stringify(result) })
-          .then(() => {
-            setBdHistory(prev => [result, ...prev])
-            setOcrFiles(p=>p.filter((_,j)=>j!==idx))
-            setOcrResults(p=>p.filter((_,j)=>j!==idx))
-          })
+      if (!result?.bienSo) return alert('Vui lòng nhập biển số xe')
+      if (!result?.km && !result?.kmThoiDiem) return alert('Vui lòng nhập số km')
+
+      // Map OCR field names → backend field names
+      const payload = {
+        bienSo:     result.bienSo,
+        kmThoiDiem: +result.kmThoiDiem || +result.km || 0,
+        ngay:       result.ngay || new Date().toLocaleDateString('vi-VN'),
+        gara:       result.gara || result.garage || '',
+        soRO:       result.soRO || '',
+        tongTien:   +result.tongTien || 0,
+        hangMuc:    result.hangMuc   || [],
+        loaiBdsc:   result.loaiBdsc  || 'suaChuaPhatSinh',
+        ghiChu:     result.soRO ? `Số RO: ${result.soRO}` : '',
       }
+
+      apiFetch('/api/bdsc', { method:'POST', body: JSON.stringify(payload) })
+        .then(async resp => {
+          if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}))
+            alert('Lỗi lưu phiếu: ' + (err.error || `HTTP ${resp.status}`))
+            return
+          }
+          const saved = await resp.json()
+          setBdHistory(prev => [saved, ...prev])
+          setOcrFiles(p => p.filter((_,j) => j !== idx))
+          setOcrResults(p => p.filter((_,j) => j !== idx))
+        })
+        .catch(e => alert('Lỗi kết nối: ' + e.message))
       return
     }
     setOcrResults(prev => prev.map((r,j) => j===idx ? {...r,[field]:val} : r))
