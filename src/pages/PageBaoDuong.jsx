@@ -2,6 +2,7 @@
 // 📁 FRONTEND — quanlyxever3/src/pages/PageBaoDuong.jsx
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 import { useState, useEffect, useRef, useCallback } from 'react'
+import * as React from 'react'
 
 const API = import.meta.env.VITE_API_URL || 'https://hsg-backend.onrender.com'
 const tok = () => localStorage.getItem('hsg_token') || ''
@@ -68,8 +69,8 @@ const TIRE_CATALOG = [
 const TABS = [
   { id:'overview', label:'Tổng quan' }, { id:'alert', label:'Cảnh báo BD' },
   { id:'cost', label:'Chi phí' }, { id:'timeline', label:'Timeline xe' },
-  { id:'tire', label:'Lốp xe' }, { id:'forecast', label:'Dự báo' },
-  { id:'ocr', label:'Scan báo giá' }, { id:'docs', label:'Giấy tờ xe' },
+  { id:'tire', label:'Thay lốp xe' }, { id:'forecast', label:'Dự báo' },
+  { id:'ocr', label:'BDSC' }, { id:'docs', label:'Giấy tờ xe' },
   { id:'gialop', label:'Giá lốp' },
 ]
 
@@ -384,7 +385,7 @@ export default function PageBaoDuong({ token, user }) {
       .catch(() => {})
   }, [])
 
-  const processOcr = useCallback(async (newFiles) => {
+  const processOcr = useCallback(async (newFiles, loai = 'bdsc') => {
     setOcrLoading(true)
     const results = []
     for (const f of newFiles) {
@@ -397,10 +398,17 @@ export default function PageBaoDuong({ token, user }) {
         })
         const resp = await apiFetch('/api/bdsc/ocr', {
           method: 'POST',
-          body: JSON.stringify({ base64: b64, mimeType: f.file.type || 'image/jpeg', filename: f.file.name })
+          body: JSON.stringify({ base64: b64, mimeType: f.file.type || 'image/jpeg', filename: f.file.name, loai })
         })
         results.push(resp.ok ? { ...(await resp.json()), aiRead: true }
-          : { bienSo:'', km:'', ngay:'', garage:'', soRO:'', tongTien:'', hangMuc:[], aiRead:false })
+          : { bienSo:'', km:'', ngay:'', garage:'', soRO:'', tongTien:'', hangMuc:[], lopDaThay:[], aiRead:false })
+      } catch {
+        results.push({ bienSo:'', km:'', ngay:'', garage:'', soRO:'', tongTien:'', hangMuc:[], lopDaThay:[], aiRead:false })
+      }
+    }
+    setOcrResults(prev => [...prev, ...results])
+    setOcrLoading(false)
+  }, [])
       } catch {
         results.push({ bienSo:'', km:'', ngay:'', garage:'', soRO:'', tongTien:'', hangMuc:[], aiRead:false })
       }
@@ -703,74 +711,226 @@ export default function PageBaoDuong({ token, user }) {
         </div>
       )}
 
-      {/* ── LỐP XE ──────────────────────────────────────────────────────── */}
-      {tab==='tire' && (
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1.1fr', gap:14 }}>
-          <div>
-            {/* Banner khi redirect từ OCR */}
-            {tireFromOcr && (
-              <div style={{ padding:'10px 14px', background:'rgba(0,85,204,.08)',
-                border:'1px solid rgba(0,85,204,.2)', borderRadius:8, marginBottom:12,
-                display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                <div style={{ fontSize:12, color:'var(--apple-blue)' }}>
-                  ⭕ Phiếu thay lốp từ OCR — Xe <strong>{tireFromOcr.bienSo}</strong> · {tireFromOcr.km}km · {tireFromOcr.ngay}
-                  <div style={{ fontSize:11, color:'var(--ink3)', marginTop:2 }}>Chọn vị trí lốp đã thay bên dưới, nhập km lắp</div>
-                </div>
-                <button onClick={() => setTireFromOcr(null)}
-                  style={{ background:'none', border:'none', cursor:'pointer', color:'var(--ink3)', fontSize:16 }}>✕</button>
-              </div>
-            )}
-            <div style={{ display:'flex', gap:8, marginBottom:14, flexWrap:'wrap' }}>
-              <select value={tireVe} onChange={e => setTireVe(e.target.value)} style={{ ...selectStyle, flex:1, minWidth:160 }}>
-                <option value="">-- Chọn xe --</option>
-                {vehicles.map(v => <option key={v._id} value={v.bienSo}>{v.bienSo}</option>)}
-              </select>
-              <select value={axleCfg} onChange={e => setAxleCfg(e.target.value)} style={selectStyle}>
-                {Object.entries(AXLE_CONFIGS).map(([k,v]) => <option key={k} value={k}>{v.label}</option>)}
-              </select>
-            </div>
-            {!tireVe
-              ? <div style={S.card}><EmptyState icon="🔧" title="Chọn xe để xem sơ đồ lốp" /></div>
-              : (
-                <div style={{ ...S.card, display:'flex', flexDirection:'column', alignItems:'center', padding:'24px 16px' }}>
-                  <TireView config={axleCfg} tireData={tireData[tireVe]||{}}
-                    onClickTire={(pos, data) => setTireModal({ pos, data, ve: tireVe })} />
-                  <div style={{ display:'flex', gap:16, marginTop:16, fontSize:11 }}>
-                    <span><span style={{ color:'var(--apple-green)' }}>■</span> Tốt</span>
-                    <span><span style={{ color:'var(--apple-orange)' }}>■</span> Sắp đến hạn</span>
-                    <span><span style={{ color:'var(--apple-red)' }}>■</span> Cần thay</span>
-                    <span><span style={{ color:'var(--sep)' }}>■</span> Chưa nhập</span>
-                  </div>
-                  <div style={{ fontSize:11, color:'var(--ink3)', marginTop:6 }}>Click ô lốp để nhập thông tin</div>
-                </div>
-              )
+      {/* ── THAY LỐP XE ─────────────────────────────────────────────────── */}
+      {tab==='tire' && (() => {
+        const tireFileRef = React.useRef()
+        const [tireOcrFiles, setTireOcrFiles]   = React.useState([])
+        const [tireOcrResults, setTireOcrResults] = React.useState([])
+        const [tireOcrLoading, setTireOcrLoading] = React.useState(false)
+
+        const processTireOcr = async (files) => {
+          setTireOcrLoading(true)
+          const results = []
+          for (const f of files) {
+            try {
+              const b64 = await new Promise((res, rej) => {
+                const reader = new FileReader()
+                reader.onload = () => res(reader.result.split(',')[1])
+                reader.onerror = rej
+                reader.readAsDataURL(f.file)
+              })
+              const resp = await apiFetch('/api/bdsc/ocr', {
+                method: 'POST',
+                body: JSON.stringify({ base64:b64, mimeType:f.file.type||'image/jpeg', filename:f.file.name, loai:'lop' })
+              })
+              results.push(resp.ok ? await resp.json() : { bienSo:'', km:'', ngay:new Date().toLocaleDateString('vi-VN'), garage:'', soRO:'', tongTien:'', lopDaThay:[], aiRead:false })
+            } catch {
+              results.push({ bienSo:'', km:'', ngay:new Date().toLocaleDateString('vi-VN'), garage:'', soRO:'', tongTien:'', lopDaThay:[], aiRead:false })
             }
-          </div>
-          <div style={S.card}>
-            <div style={S.secTitle}>Quy định thay lốp (mục 6.2 HSH.QLTS-05)</div>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8, marginBottom:14 }}>
-              {[
-                { val:'50.000km', label:'Lốp bố nylon', color:'var(--brand)' },
-                { val:'80.000km', label:'Lốp bố kẽm', color:'var(--apple-blue)' },
-                { val:'10.000km', label:'Chu kỳ đảo lốp', color:'var(--apple-green)' },
-              ].map((s,i) => (
-                <div key={i} style={{ background:'var(--bg-secondary)', borderRadius:8, padding:10, textAlign:'center' }}>
-                  <div style={{ fontSize:16, fontWeight:700, color:s.color }}>{s.val}</div>
-                  <div style={{ fontSize:10, color:'var(--ink3)', marginTop:2 }}>{s.label}</div>
+          }
+          setTireOcrResults(p => [...p, ...results])
+          setTireOcrLoading(false)
+        }
+
+        return (
+          <div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1.3fr', gap:14, marginBottom:16 }}>
+              {/* Upload zone */}
+              <div>
+                <div onClick={() => tireFileRef.current?.click()}
+                  onDragOver={e=>{ e.preventDefault(); e.currentTarget.style.borderColor='var(--brand)' }}
+                  onDragLeave={e=>e.currentTarget.style.borderColor='rgba(230,50,0,.3)'}
+                  onDrop={e=>{ e.preventDefault(); const fs=Array.from(e.dataTransfer.files).map(f=>({file:f})); setTireOcrFiles(p=>[...p,...fs]); processTireOcr(fs) }}
+                  style={{ border:'2px dashed rgba(230,50,0,.3)', borderRadius:12, padding:28,
+                    textAlign:'center', cursor:'pointer', background:'var(--brand-l)', marginBottom:12 }}>
+                  <input ref={tireFileRef} type="file" multiple accept="image/*,.pdf" style={{ display:'none' }}
+                    onChange={e=>{ const fs=Array.from(e.target.files).map(f=>({file:f})); setTireOcrFiles(p=>[...p,...fs]); processTireOcr(fs); e.target.value='' }} />
+                  <div style={{ fontSize:32, marginBottom:8 }}>⭕</div>
+                  <div style={{ fontWeight:600, fontSize:13, color:'var(--ink)', marginBottom:4 }}>Chụp ảnh / tải phiếu thay lốp</div>
+                  <div style={{ fontSize:12, color:'var(--ink3)', marginBottom:10 }}>JPG · PNG · PDF · AI tự đọc biển số, km, loại lốp</div>
+                  <button style={{ padding:'7px 20px', borderRadius:8, border:'none', background:'var(--brand)', color:'#fff', cursor:'pointer', fontSize:12, fontWeight:600 }}>Chọn file</button>
                 </div>
-              ))}
+                {/* Sơ đồ lốp nhỏ */}
+                <div style={{ ...S.card, marginBottom:0 }}>
+                  <div style={S.secTitle}>Sơ đồ lốp</div>
+                  <div style={{ display:'flex', gap:8, marginBottom:10, flexWrap:'wrap' }}>
+                    <select value={tireVe} onChange={e=>setTireVe(e.target.value)} style={{ ...selectStyle, flex:1, minWidth:130 }}>
+                      <option value="">-- Chọn xe --</option>
+                      {vehicles.map(v=><option key={v._id} value={v.bienSo}>{v.bienSo}</option>)}
+                    </select>
+                    <select value={axleCfg} onChange={e=>setAxleCfg(e.target.value)} style={selectStyle}>
+                      {Object.entries(AXLE_CONFIGS).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
+                    </select>
+                  </div>
+                  {tireVe ? (
+                    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', padding:'12px 0' }}>
+                      <TireView config={axleCfg} tireData={tireData[tireVe]||{}}
+                        onClickTire={(pos,data)=>setTireModal({pos,data,ve:tireVe})} />
+                      <div style={{ display:'flex', gap:10, marginTop:10, fontSize:10, color:'var(--ink3)' }}>
+                        <span><span style={{color:'var(--apple-green)'}}>■</span> Tốt</span>
+                        <span><span style={{color:'var(--apple-orange)'}}>■</span> Sắp hạn</span>
+                        <span><span style={{color:'var(--apple-red)'}}>■</span> Cần thay</span>
+                      </div>
+                    </div>
+                  ) : <div style={{ fontSize:12, color:'var(--ink3)', padding:'12px 0', textAlign:'center' }}>Chọn xe để xem sơ đồ</div>}
+                </div>
+              </div>
+
+              {/* Kết quả OCR + form */}
+              <div>
+                {tireOcrLoading && (
+                  <div style={{ display:'flex', alignItems:'center', gap:8, padding:12, color:'var(--brand)', fontSize:13 }}>
+                    <div style={{ width:14, height:14, border:'2px solid var(--sep)', borderTopColor:'var(--brand)', borderRadius:'50%', animation:'spin .6s linear infinite' }}/>
+                    AI đang đọc phiếu lốp…
+                  </div>
+                )}
+                {tireOcrFiles.length === 0 && !tireOcrLoading
+                  ? <div style={S.card}><EmptyState icon="⭕" title="Tải phiếu thay lốp để bắt đầu"
+                      sub="AI đọc biển số, km, thương hiệu lốp. Bạn chọn kích thước từ danh sách đã thẩm định giá và chọn vị trí lốp cần ghi nhận." /></div>
+                  : tireOcrFiles.map((f, i) => {
+                    const r = tireOcrResults[i]
+                    if (!r) return <div key={i} style={{ ...S.card, marginBottom:10, color:'var(--ink3)', fontSize:12 }}>Đang xử lý {f.file.name}…</div>
+
+                    return (
+                      <div key={i} style={{ ...S.card, marginBottom:10 }}>
+                        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
+                          <div style={{ display:'flex', gap:6, alignItems:'center' }}>
+                            {r.aiRead && <span style={S.badge('yel')}>AI đọc</span>}
+                            <span style={S.badge('blu')}>⭕ Thay lốp</span>
+                            <span style={{ fontSize:12, color:'var(--ink3)' }}>{f.file.name}</span>
+                          </div>
+                          <button onClick={()=>{ setTireOcrFiles(p=>p.filter((_,j)=>j!==i)); setTireOcrResults(p=>p.filter((_,j)=>j!==i)) }}
+                            style={{ background:'none', border:'none', cursor:'pointer', color:'var(--ink3)', fontSize:18 }}>✕</button>
+                        </div>
+
+                        {/* Fields chính */}
+                        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px 12px', marginBottom:12 }}>
+                          {[
+                            {k:'bienSo',label:'Biển số xe'},{k:'km',label:'Số km lắp đặt'},
+                            {k:'ngay',label:'Ngày lắp'},{k:'garage',label:'Garage / NCC'},
+                            {k:'tongTien',label:'Chi phí (đ)'},{k:'soRO',label:'Số phiếu / RO'},
+                          ].map(({k,label})=>(
+                            <div key={k}>
+                              <div style={{ fontSize:11, color:'var(--ink3)', marginBottom:3 }}>{label}</div>
+                              <input value={r[k]||''} onChange={e=>setTireOcrResults(p=>p.map((x,j)=>j===i?{...x,[k]:e.target.value}:x))}
+                                style={{ width:'100%', padding:'7px 10px', borderRadius:7, fontSize:13, background:'var(--bg-card)',
+                                  border:'1px solid var(--sep)', color:'var(--ink)', outline:'none', boxSizing:'border-box' }}
+                                onFocus={e=>e.target.style.borderColor='var(--brand)'}
+                                onBlur={e=>e.target.style.borderColor='var(--sep)'} />
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Lốp đã thay từ OCR */}
+                        {(r.lopDaThay||[]).length > 0 && (
+                          <div style={{ marginBottom:12 }}>
+                            <div style={{ ...S.secTitle, marginBottom:6 }}>Lốp đọc được từ phiếu</div>
+                            {r.lopDaThay.map((lop, li) => (
+                              <div key={li} style={{ display:'flex', gap:8, alignItems:'center', padding:'6px 10px',
+                                background:'var(--bg-secondary)', borderRadius:6, marginBottom:4, flexWrap:'wrap' }}>
+                                <span style={{ fontSize:12, fontWeight:600, color:'var(--ink)' }}>{lop.size||'?'}</span>
+                                <span style={{ fontSize:12, color:'var(--ink3)' }}>{lop.thuongHieu}</span>
+                                <span style={{ fontSize:12, color:'var(--ink3)' }}>x{lop.soLuong}</span>
+                                <span style={{ fontSize:12, fontWeight:600, marginLeft:'auto' }}>{Number(lop.thanhTien||0).toLocaleString('vi-VN')}đ</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Chọn kích thước từ TIRE_CATALOG */}
+                        <div style={{ marginBottom:12 }}>
+                          <div style={{ fontSize:11, color:'var(--ink3)', marginBottom:4 }}>Kích thước lốp (từ danh mục thẩm định giá)</div>
+                          <select value={r.sizeDaChon||''} onChange={e=>setTireOcrResults(p=>p.map((x,j)=>j===i?{...x,sizeDaChon:e.target.value}:x))}
+                            style={{ width:'100%', padding:'7px 10px', borderRadius:7, fontSize:13, background:'var(--bg-card)',
+                              border:'1px solid var(--sep)', color:'var(--ink)', outline:'none' }}>
+                            <option value=''>-- Chọn kích thước --</option>
+                            {TIRE_CATALOG.map(t=>(
+                              <option key={t.id} value={t.size}>{t.size} · {t.loaiXe} · SĐP {t.p1.sdp.toLocaleString('vi-VN')}đ ({t.p1.ncc})</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Vị trí lốp */}
+                        <div style={{ marginBottom:12 }}>
+                          <div style={{ fontSize:11, color:'var(--ink3)', marginBottom:4 }}>Vị trí lốp đã thay (có thể chọn nhiều)</div>
+                          <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+                            {(AXLE_CONFIGS[axleCfg]?.positions||[]).map(pos=>{
+                              const sel = (r.viTriChon||[]).includes(pos)
+                              return (
+                                <button key={pos} onClick={()=>{
+                                  const cur = r.viTriChon||[]
+                                  setTireOcrResults(p=>p.map((x,j)=>j===i?{...x,viTriChon:sel?cur.filter(v=>v!==pos):[...cur,pos]}:x))
+                                }} style={{ padding:'4px 10px', borderRadius:6, border:`1px solid ${sel?'var(--brand)':'var(--sep)'}`,
+                                  background: sel?'var(--brand-l)':'transparent', color:sel?'var(--brand)':'var(--ink3)',
+                                  fontSize:11, cursor:'pointer' }}>{POS_LABELS[pos]||pos}</button>
+                              )
+                            })}
+                          </div>
+                        </div>
+
+                        <div style={{ display:'flex', gap:8, justifyContent:'flex-end' }}>
+                          <button style={{ padding:'7px 18px', borderRadius:8, border:'1px solid var(--sep)',
+                            background:'transparent', color:'var(--ink3)', cursor:'pointer', fontSize:12 }}
+                            onClick={()=>{ setTireOcrFiles(p=>p.filter((_,j)=>j!==i)); setTireOcrResults(p=>p.filter((_,j)=>j!==i)) }}>
+                            Bỏ qua
+                          </button>
+                          <button style={{ padding:'7px 20px', borderRadius:8, border:'none',
+                            background:'var(--brand)', color:'#fff', cursor:'pointer', fontSize:12, fontWeight:600 }}
+                            onClick={async ()=>{
+                              if (!r.bienSo) return alert('Vui lòng nhập biển số xe')
+                              const payload = {
+                                bienSo:r.bienSo, km:+r.km||0, ngay:r.ngay, garage:r.garage,
+                                soRO:r.soRO, tongTien:+r.tongTien||0, loaiBaoGia:'lop',
+                                size:r.sizeDaChon||'', viTriLop:r.viTriChon||[],
+                                thuongHieu:(r.lopDaThay||[])[0]?.thuongHieu||'',
+                                lopDaThay:r.lopDaThay||[],
+                              }
+                              const resp = await apiFetch('/api/bdsc/tire-record', { method:'POST', body:JSON.stringify(payload) })
+                              if (resp.ok) {
+                                setTireOcrFiles(p=>p.filter((_,j)=>j!==i))
+                                setTireOcrResults(p=>p.filter((_,j)=>j!==i))
+                                alert(`Đã lưu phiếu thay lốp cho xe ${r.bienSo}`)
+                              } else {
+                                const err = await resp.json()
+                                alert('Lỗi: ' + (err.error||'không lưu được'))
+                              }
+                            }}>
+                            Xác nhận & Lưu
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })
+                }
+              </div>
             </div>
-            <div style={{ fontSize:12, color:'var(--ink3)', lineHeight:1.7 }}>
-              <strong style={{ color:'var(--ink2)' }}>Đảo lốp cầu trước:</strong><br/>
-              • Chu kỳ 1: Hoán đổi lốp trái ↔ phải<br/>
-              • Chu kỳ 2: Lật đổi lốp từ mặt phía trong ra ngoài<br/><br/>
-              <strong style={{ color:'var(--ink2)' }}>Đảo lốp cầu sau:</strong><br/>
-              • Chu kỳ 1: Đảo lốp vị trí trong ↔ ngoài mỗi cặp<br/>
-              • Chu kỳ 2: Lật đổi lốp từ mặt phía trong ra ngoài
+
+            {/* Quy định thay lốp */}
+            <div style={S.card}>
+              <div style={S.secTitle}>Quy định thay lốp (mục 6.2 HSH.QLTS-05)</div>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8 }}>
+                {[{val:'50.000km',label:'Lốp bố nylon',color:'var(--brand)'},{val:'80.000km',label:'Lốp bố kẽm',color:'var(--apple-blue)'},{val:'10.000km',label:'Chu kỳ đảo lốp',color:'var(--apple-green)'}]
+                  .map((s,i)=>(
+                    <div key={i} style={{ background:'var(--bg-secondary)', borderRadius:8, padding:10, textAlign:'center' }}>
+                      <div style={{ fontSize:16, fontWeight:700, color:s.color }}>{s.val}</div>
+                      <div style={{ fontSize:10, color:'var(--ink3)', marginTop:2 }}>{s.label}</div>
+                    </div>
+                  ))}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* ── DỰ BÁO ──────────────────────────────────────────────────────── */}
       {tab==='forecast' && (() => {
