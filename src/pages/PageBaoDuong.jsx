@@ -24,8 +24,8 @@ const BD_XETAI = [
 // ── Bảng giá lốp — Tờ trình 3413/TTr/HS/PMH/0126 ────────
 const TIRE_CATALOG = [
   { id:1,  size:'900R20-(18PR)',      boBo:'kem',   loaiXe:'Thaco 6.2T (thùng lửng/cẩu)',    soLuong6T:188,
-    p1:{ ncc:'LỐP XE VIỆT', hang:'Maxxis UR288',    xuatXu:'Thái Lan', tdp:6534000, sdp:5450000 },
-    p2:{ ncc:'ALPHA',        hang:'Maxxis UM938',    xuatXu:'Thái Lan', tdp:6151111, sdp:6151111 } },
+    p1:{ ncc:'ALPHA',        hang:'Bridgestone 900R20 M789 TL', xuatXu:'Thái Lan', tdp:6534000, sdp:5450000 },
+    p2:{ ncc:'LỐP XE VIỆT', hang:'Maxxis UR288 (gai xuôi)',    xuatXu:'Thái Lan', tdp:6240000, sdp:6240000 } },
   { id:2,  size:'11.00R20-(18PR)',    boBo:'kem',   loaiXe:'Thaco 14T (thùng bạt)',           soLuong6T:78,
     p1:{ ncc:'LỐP XE VIỆT', hang:'Maxxis UR288',    xuatXu:'Thái Lan', tdp:7111111, sdp:7111111 },
     p2:{ ncc:'ALPHA',        hang:'Bridgestone R150',xuatXu:'Thái Lan', tdp:8910000, sdp:7870000 } },
