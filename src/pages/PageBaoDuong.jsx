@@ -1,306 +1,271 @@
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 📁 FRONTEND — src/pages/PageBaoDuong.jsx
-// Quản lý bảo dưỡng, sửa chữa, lốp xe
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 📁 FRONTEND — quanlyxever3/src/pages/PageBaoDuong.jsx
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 import { useState, useEffect, useRef, useCallback } from 'react'
 
 const API = import.meta.env.VITE_API_URL || 'https://hsg-backend.onrender.com'
 const tok = () => localStorage.getItem('hsg_token') || ''
 const apiFetch = (p, o = {}) => fetch(`${API}${p}`, {
-  ...o,
-  headers: { Authorization: `Bearer ${tok()}`, 'Content-Type': 'application/json', ...o.headers }
+  ...o, headers: { Authorization: `Bearer ${tok()}`, 'Content-Type': 'application/json', ...o.headers }
 })
 
-// ── Bảng chu kỳ BD xe tải (HSH.QLTS-05 mục 6.1.3, lặp mỗi 30.000km) ──
+// ── Bảng chu kỳ BD xe tải (HSH.QLTS-05 mục 6.1.3) ──────────────────────
 const BD_XETAI = [
-  { moc: 5000,  items: ['Thay dầu động cơ', 'Kiểm tra lọc dầu, nước làm mát, dầu phanh, dầu trợ lực', 'Kiểm tra rò rỉ dầu động cơ, hộp số, visai', 'Kiểm tra bố thắng', 'Siết bulong sàn thùng, chassis', 'Kiểm tra áp suất lốp, độ mòn lốp', 'Kiểm tra ắc quy'] },
-  { moc: 10000, items: ['Thay dầu động cơ', 'Kiểm tra và vệ sinh lọc gió động cơ', 'Kiểm tra lọc nhiên liệu', 'Kiểm tra hệ thống treo', 'Kiểm tra bạc đạn bánh xe', 'Kiểm tra hệ thống điện tổng thể'] },
-  { moc: 15000, items: ['Thay dầu động cơ', 'Kiểm tra lọc dầu, nước làm mát, dầu phanh', 'Kiểm tra rò rỉ', 'Kiểm tra bố thắng', 'Siết bulong sàn thùng, chassis', 'Kiểm tra áp suất lốp, độ mòn lốp', 'Kiểm tra ắc quy'] },
-  { moc: 20000, items: ['Thay lọc nhiên liệu', 'Thay lọc gió', 'Cân chỉnh thước lái', 'Kiểm tra và bổ sung dầu hộp số, dầu cầu', 'Kiểm tra phốt láp, bạc đạn moay-ơ'] },
-  { moc: 25000, items: ['Thay dầu động cơ', 'Kiểm tra lọc dầu, nước làm mát, dầu phanh', 'Kiểm tra rò rỉ', 'Kiểm tra bố thắng', 'Siết bulong', 'Kiểm tra lốp, ắc quy'] },
-  { moc: 30000, items: ['Thay dầu hộp số', 'Thay dầu cầu', 'Thay dầu phanh', 'Xả và thay nước mát', 'Kiểm tra turbo', 'Kiểm tra kim phun', 'Kiểm tra cầu trục', 'Kiểm tra Máy lạnh'] },
+  { moc: 5000,  items: ['Thay dầu động cơ', 'Kiểm tra lọc dầu, nước làm mát, dầu phanh', 'Kiểm tra rò rỉ dầu, hộp số, visai', 'Kiểm tra bố thắng, siết bulong', 'Kiểm tra áp suất lốp, ắc quy'] },
+  { moc: 10000, items: ['Thay dầu động cơ', 'Vệ sinh lọc gió động cơ', 'Kiểm tra lọc nhiên liệu', 'Kiểm tra hệ thống treo', 'Kiểm tra bạc đạn bánh xe', 'Kiểm tra hệ thống điện'] },
+  { moc: 15000, items: ['Thay dầu động cơ', 'Kiểm tra lọc dầu, nước làm mát, dầu phanh', 'Kiểm tra rò rỉ', 'Siết bulong', 'Kiểm tra lốp, ắc quy'] },
+  { moc: 20000, items: ['Thay lọc nhiên liệu', 'Thay lọc gió', 'Cân chỉnh thước lái', 'Bổ sung dầu hộp số, cầu', 'Kiểm tra phốt láp, bạc đạn moay-ơ'] },
+  { moc: 25000, items: ['Thay dầu động cơ', 'Kiểm tra lọc dầu, nước làm mát, dầu phanh', 'Kiểm tra rò rỉ, bố thắng', 'Siết bulong, kiểm tra lốp, ắc quy'] },
+  { moc: 30000, items: ['Thay dầu hộp số', 'Thay dầu cầu', 'Thay dầu phanh', 'Xả và thay nước mát', 'Kiểm tra turbo, kim phun, cầu trục, máy lạnh'] },
 ]
 
-// Chu kỳ BD xe ô tô (7.4, lặp mỗi 60.000km)
-const BD_OTO = [
-  { moc: 5000,  items: ['Thay dầu động cơ, kiểm tra tổng quát'] },
-  { moc: 10000, items: ['Thay dầu, lọc dầu, kiểm tra phanh, khung gầm'] },
-  { moc: 15000, items: ['Thay dầu động cơ, kiểm tra tổng quát'] },
-  { moc: 20000, items: ['Thay dầu, lọc dầu, thay lọc gió điều hoà, vệ sinh lọc gió động cơ'] },
-  { moc: 30000, items: ['Thay dầu, lọc dầu, kiểm tra tổng quát, vệ sinh máy lạnh'] },
-  { moc: 40000, items: ['Thay dầu, lọc dầu, thay lọc gió điều hoà, vệ sinh lọc gió, thay dầu phanh, thay dầu hộp số MT'] },
-  { moc: 60000, items: ['Thay dầu, lọc dầu, thay lọc gió điều hoà, vệ sinh lọc gió, kiểm tra/thay bugi, vệ sinh máy lạnh'] },
-]
-
-// Cấu hình lốp theo số cầu
 const AXLE_CONFIGS = {
-  '4':  { label: '2 cầu đơn · 4 lốp (xe con/tải nhẹ)', positions: ['TT','TP','ST','SP'] },
-  '6':  { label: '2 cầu · 6 lốp (tải vừa)', positions: ['TT','TP','STN','STT','SPN','SPT'] },
-  '10': { label: '3 cầu · 10 lốp (tải lớn)', positions: ['TT','TP','C1TN','C1TT','C1PN','C1PT','C2TN','C2TT','C2PN','C2PT'] },
+  '4':  { label: '2 cầu đơn · 4 lốp', positions: ['TT','TP','ST','SP'] },
+  '6':  { label: '2 cầu · 6 lốp',     positions: ['TT','TP','STN','STT','SPN','SPT'] },
+  '10': { label: '3 cầu · 10 lốp',    positions: ['TT','TP','C1TN','C1TT','C1PN','C1PT','C2TN','C2TT','C2PN','C2PT'] },
 }
-
 const POS_LABELS = {
-  TT:'Trước trái', TP:'Trước phải',
-  ST:'Sau trái', SP:'Sau phải',
+  TT:'Trước trái', TP:'Trước phải', ST:'Sau trái', SP:'Sau phải',
   STN:'Sau trái ngoài', STT:'Sau trái trong', SPN:'Sau phải ngoài', SPT:'Sau phải trong',
-  C1TN:'Cầu 1 trái ngoài', C1TT:'Cầu 1 trái trong', C1PN:'Cầu 1 phải ngoài', C1PT:'Cầu 1 phải trong',
-  C2TN:'Cầu 2 trái ngoài', C2TT:'Cầu 2 trái trong', C2PN:'Cầu 2 phải ngoài', C2PT:'Cầu 2 phải trong',
+  C1TN:'Cầu1 trái ngoài', C1TT:'Cầu1 trái trong', C1PN:'Cầu1 phải ngoài', C1PT:'Cầu1 phải trong',
+  C2TN:'Cầu2 trái ngoài', C2TT:'Cầu2 trái trong', C2PN:'Cầu2 phải ngoài', C2PT:'Cầu2 phải trong',
 }
 
 const TABS = [
-  { id:'overview', label:'Tổng quan' },
-  { id:'alert',    label:'Cảnh báo BD' },
-  { id:'cost',     label:'Chi phí' },
-  { id:'timeline', label:'Timeline xe' },
-  { id:'tire',     label:'Lốp xe' },
-  { id:'forecast', label:'Dự báo' },
-  { id:'ocr',      label:'Scan báo giá' },
-  { id:'docs',     label:'Giấy tờ xe' },
+  { id:'overview', label:'Tổng quan' }, { id:'alert', label:'Cảnh báo BD' },
+  { id:'cost', label:'Chi phí' }, { id:'timeline', label:'Timeline xe' },
+  { id:'tire', label:'Lốp xe' }, { id:'forecast', label:'Dự báo' },
+  { id:'ocr', label:'Scan báo giá' }, { id:'docs', label:'Giấy tờ xe' },
 ]
 
-// ── Empty State component ──────────────────────────────────────────────────
+// ── Style helpers (app variables) ────────────────────────────────────────
+const S = {
+  card: {
+    background: 'var(--bg-card)', border: '1px solid var(--sep)',
+    borderRadius: 10, padding: 14,
+  },
+  secTitle: {
+    fontSize: 11, fontWeight: 600, color: 'var(--ink3)',
+    textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 10,
+  },
+  badge: (type) => {
+    const map = {
+      red:  { bg: 'var(--red-l)',   color: 'var(--apple-red)' },
+      yel:  { bg: 'rgba(230,150,0,.12)', color: 'var(--apple-orange)' },
+      grn:  { bg: 'var(--green-l)', color: 'var(--apple-green)' },
+      blu:  { bg: 'rgba(0,85,204,.10)',  color: 'var(--apple-blue)' },
+      gray: { bg: 'var(--bg-secondary)', color: 'var(--ink3)' },
+    }
+    const c = map[type] || map.gray
+    return {
+      display: 'inline-block', padding: '2px 8px', borderRadius: 20,
+      fontSize: 10, fontWeight: 600, background: c.bg, color: c.color,
+    }
+  },
+}
+
+// ── Empty state ───────────────────────────────────────────────────────────
 function EmptyState({ icon='📋', title, sub, action, onAction }) {
   return (
     <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
-      padding:'48px 24px', gap:12, textAlign:'center' }}>
-      <div style={{ fontSize:40 }}>{icon}</div>
-      <div style={{ fontWeight:600, fontSize:15 }}>{title}</div>
-      {sub && <div style={{ fontSize:13, color:'var(--color-text-secondary)', maxWidth:320, lineHeight:1.5 }}>{sub}</div>}
-      {action && <button onClick={onAction} style={{ marginTop:8, padding:'8px 20px', borderRadius:8,
-        background:'var(--color-text-info)', color:'#fff', border:'none', cursor:'pointer', fontSize:13, fontWeight:600 }}>
-        {action}
-      </button>}
+      padding:'52px 24px', gap:12, textAlign:'center' }}>
+      <div style={{ fontSize:42 }}>{icon}</div>
+      <div style={{ fontWeight:600, fontSize:15, color:'var(--ink)' }}>{title}</div>
+      {sub && <div style={{ fontSize:13, color:'var(--ink3)', maxWidth:320, lineHeight:1.6 }}>{sub}</div>}
+      {action && (
+        <button onClick={onAction} style={{ marginTop:8, padding:'8px 20px', borderRadius:8,
+          background:'var(--brand)', color:'#fff', border:'none', cursor:'pointer', fontSize:13, fontWeight:600 }}>
+          {action}
+        </button>
+      )}
     </div>
   )
 }
 
-// ── Badge ──────────────────────────────────────────────────────────────────
-function Badge({ type, children }) {
-  const colors = {
-    red:  { bg:'rgba(220,38,38,.12)', color:'#ef4444' },
-    yel:  { bg:'rgba(234,179,8,.12)', color:'#eab308' },
-    grn:  { bg:'rgba(34,197,94,.12)', color:'#22c55e' },
-    blu:  { bg:'rgba(59,130,246,.12)', color:'#60a5fa' },
-    gray: { bg:'rgba(148,163,184,.12)', color:'var(--color-text-secondary)' },
-  }
-  const c = colors[type] || colors.gray
+// ── Bar row ───────────────────────────────────────────────────────────────
+function BarRow({ label, pct, val, color='var(--brand)' }) {
   return (
-    <span style={{ display:'inline-block', padding:'2px 8px', borderRadius:20, fontSize:10,
-      fontWeight:600, background:c.bg, color:c.color }}>
-      {children}
-    </span>
+    <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8 }}>
+      <div style={{ width:100, fontSize:11, color:'var(--ink3)', textAlign:'right', flexShrink:0 }}>{label}</div>
+      <div style={{ flex:1, background:'var(--sep)', borderRadius:4, height:8, overflow:'hidden' }}>
+        <div style={{ width:`${pct}%`, height:'100%', borderRadius:4, background:color, transition:'width .6s ease' }}/>
+      </div>
+      <div style={{ fontSize:11, color:'var(--ink)', width:64, textAlign:'right', flexShrink:0, fontWeight:500 }}>{val}</div>
+    </div>
   )
 }
 
-// ── Tire diagram ───────────────────────────────────────────────────────────
+// ── Tire diagram ──────────────────────────────────────────────────────────
 function TireView({ config, tireData, onClickTire }) {
-  const cfg = AXLE_CONFIGS[config]
-  const getTire = pos => tireData?.[pos] || null
-
   const TireBox = ({ pos }) => {
-    const t = getTire(pos)
+    const t = tireData?.[pos]
     const kmMax = t?.loai === 'kem' ? 80000 : 50000
     const kmUsed = t ? (t.kmHienTai - t.kmLapDat) : 0
     const pct = t ? Math.min(kmUsed / kmMax, 1) : 0
-    let status = 'empty'
-    if (t) status = pct >= 1 ? 'crit' : pct >= 0.9 ? 'warn' : 'ok'
-
+    const status = !t ? 'empty' : pct >= 1 ? 'crit' : pct >= 0.9 ? 'warn' : 'ok'
     const colors = {
-      empty: { border:'var(--color-border-tertiary)', bg:'var(--color-background-secondary)' },
-      ok:    { border:'#22c55e', bg:'rgba(34,197,94,.08)' },
-      warn:  { border:'#eab308', bg:'rgba(234,179,8,.08)' },
-      crit:  { border:'#ef4444', bg:'rgba(239,68,68,.1)' },
+      empty: { border:'var(--sep)',         bg:'var(--bg-secondary)' },
+      ok:    { border:'var(--apple-green)', bg:'var(--green-l)' },
+      warn:  { border:'var(--apple-orange)',bg:'rgba(230,150,0,.08)' },
+      crit:  { border:'var(--apple-red)',   bg:'var(--red-l)' },
     }
     const c = colors[status]
-
     return (
       <div onClick={() => onClickTire(pos, t)} title={POS_LABELS[pos]}
         style={{ width:38, height:62, border:`2px solid ${c.border}`, borderRadius:7,
           background:c.bg, display:'flex', flexDirection:'column', alignItems:'center',
-          justifyContent:'center', gap:2, cursor:'pointer', transition:'transform .15s' }}
-        onMouseEnter={e => e.currentTarget.style.transform='scale(1.06)'}
+          justifyContent:'center', gap:3, cursor:'pointer', transition:'transform .12s' }}
+        onMouseEnter={e => e.currentTarget.style.transform='scale(1.07)'}
         onMouseLeave={e => e.currentTarget.style.transform='scale(1)'}>
         {t ? (
           <>
-            <div style={{ fontSize:8, fontWeight:700,
-              color: status==='crit'?'#ef4444':status==='warn'?'#eab308':'#22c55e' }}>
+            <div style={{ fontSize:8, fontWeight:700, color:
+              status==='crit'?'var(--apple-red)':status==='warn'?'var(--apple-orange)':'var(--apple-green)' }}>
               {Math.round(kmUsed/1000)}k
             </div>
-            <div style={{ width:24, height:4, borderRadius:2, background:'rgba(255,255,255,.1)', overflow:'hidden' }}>
-              <div style={{ width:`${pct*100}%`, height:'100%', borderRadius:2,
-                background: status==='crit'?'#ef4444':status==='warn'?'#eab308':'#22c55e' }}/>
+            <div style={{ width:22, height:3, borderRadius:2, background:'var(--sep)', overflow:'hidden' }}>
+              <div style={{ width:`${pct*100}%`, height:'100%', borderRadius:2, background:
+                status==='crit'?'var(--apple-red)':status==='warn'?'var(--apple-orange)':'var(--apple-green)' }}/>
             </div>
           </>
         ) : (
-          <div style={{ fontSize:9, color:'var(--color-text-tertiary)' }}>+</div>
+          <div style={{ fontSize:14, color:'var(--ink3)', lineHeight:1 }}>+</div>
         )}
-        <div style={{ fontSize:8, color:'var(--color-text-secondary)' }}>{pos}</div>
+        <div style={{ fontSize:8, color:'var(--ink3)' }}>{pos}</div>
       </div>
     )
   }
-
-  const Body = ({ label }) => (
-    <div style={{ width:70, height:28, background:'var(--color-background-secondary)',
-      border:'1px solid var(--color-border-tertiary)', borderRadius:6,
+  const AxleLabel = ({ label }) => (
+    <div style={{ width:72, height:26, background:'var(--bg-secondary)',
+      border:'1px solid var(--sep)', borderRadius:6,
       display:'flex', alignItems:'center', justifyContent:'center',
-      fontSize:10, color:'var(--color-text-secondary)' }}>
-      {label}
-    </div>
+      fontSize:9, color:'var(--ink3)', textAlign:'center' }}>{label}</div>
   )
+  const Bar = () => <div style={{ width:3, height:20, background:'var(--sep)', margin:'0 auto' }}/>
 
   if (config === '4') return (
-    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:12 }}>
-      <div style={{ display:'flex', gap:80, alignItems:'center' }}>
-        <TireBox pos="TT"/><Body label="TRƯỚC"/><TireBox pos="TP"/>
-      </div>
-      <div style={{ width:4, height:24, background:'var(--color-border-tertiary)', margin:'0 auto' }}/>
-      <div style={{ display:'flex', gap:80, alignItems:'center' }}>
-        <TireBox pos="ST"/><Body label="SAU"/><TireBox pos="SP"/>
-      </div>
+    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:10 }}>
+      <div style={{ display:'flex', gap:72, alignItems:'center' }}><TireBox pos="TT"/><AxleLabel label="TRƯỚC"/><TireBox pos="TP"/></div>
+      <Bar/>
+      <div style={{ display:'flex', gap:72, alignItems:'center' }}><TireBox pos="ST"/><AxleLabel label="SAU"/><TireBox pos="SP"/></div>
     </div>
   )
-
   if (config === '6') return (
-    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:12 }}>
-      <div style={{ display:'flex', gap:80, alignItems:'center' }}>
-        <TireBox pos="TT"/><Body label="CẦU TRƯỚC"/><TireBox pos="TP"/>
-      </div>
-      <div style={{ width:4, height:20, background:'var(--color-border-tertiary)', margin:'0 auto' }}/>
-      <div style={{ display:'flex', gap:20, alignItems:'center' }}>
-        <TireBox pos="STN"/><TireBox pos="STT"/>
-        <Body label="CẦU SAU"/>
-        <TireBox pos="SPT"/><TireBox pos="SPN"/>
+    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:10 }}>
+      <div style={{ display:'flex', gap:72, alignItems:'center' }}><TireBox pos="TT"/><AxleLabel label="CẦU TRƯỚC"/><TireBox pos="TP"/></div>
+      <Bar/>
+      <div style={{ display:'flex', gap:18, alignItems:'center' }}>
+        <TireBox pos="STN"/><TireBox pos="STT"/><AxleLabel label="CẦU SAU"/><TireBox pos="SPT"/><TireBox pos="SPN"/>
       </div>
     </div>
   )
-
-  // 10 tires
   return (
-    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:12 }}>
-      <div style={{ display:'flex', gap:80, alignItems:'center' }}>
-        <TireBox pos="TT"/><Body label="CẦU TRƯỚC"/><TireBox pos="TP"/>
+    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:10 }}>
+      <div style={{ display:'flex', gap:72, alignItems:'center' }}><TireBox pos="TT"/><AxleLabel label="CẦU TRƯỚC"/><TireBox pos="TP"/></div>
+      <Bar/>
+      <div style={{ display:'flex', gap:14, alignItems:'center' }}>
+        <TireBox pos="C1TN"/><TireBox pos="C1TT"/><AxleLabel label="CẦU SAU 1"/><TireBox pos="C1PT"/><TireBox pos="C1PN"/>
       </div>
-      <div style={{ width:4, height:16, background:'var(--color-border-tertiary)', margin:'0 auto' }}/>
-      <div style={{ display:'flex', gap:16, alignItems:'center' }}>
-        <TireBox pos="C1TN"/><TireBox pos="C1TT"/>
-        <Body label="CẦU SAU 1"/>
-        <TireBox pos="C1PT"/><TireBox pos="C1PN"/>
-      </div>
-      <div style={{ width:4, height:16, background:'var(--color-border-tertiary)', margin:'0 auto' }}/>
-      <div style={{ display:'flex', gap:16, alignItems:'center' }}>
-        <TireBox pos="C2TN"/><TireBox pos="C2TT"/>
-        <Body label="CẦU SAU 2"/>
-        <TireBox pos="C2PT"/><TireBox pos="C2PN"/>
+      <Bar/>
+      <div style={{ display:'flex', gap:14, alignItems:'center' }}>
+        <TireBox pos="C2TN"/><TireBox pos="C2TT"/><AxleLabel label="CẦU SAU 2"/><TireBox pos="C2PT"/><TireBox pos="C2PN"/>
       </div>
     </div>
   )
 }
 
-// ── OCR File card ──────────────────────────────────────────────────────────
+// ── OCR file card ─────────────────────────────────────────────────────────
 function OcrCard({ file, result, onUpdate, onRemove, idx }) {
-  const fields = ['bienSo','km','ngay','garage','soRO','tongTien']
-  const labels = { bienSo:'Biển số xe', km:'Số KM', ngay:'Ngày', garage:'Garage/NCC', soRO:'Số RO', tongTien:'Tổng tiền' }
-
+  const fields = [
+    { key:'bienSo',   label:'Biển số xe' },
+    { key:'km',       label:'Số KM' },
+    { key:'ngay',     label:'Ngày' },
+    { key:'garage',   label:'Garage / NCC' },
+    { key:'soRO',     label:'Số RO / Báo giá' },
+    { key:'tongTien', label:'Tổng tiền' },
+  ]
+  const inputStyle = {
+    width:'100%', padding:'6px 10px', borderRadius:6, fontSize:12,
+    background:'var(--bg)', border:'1px solid var(--sep)',
+    color:'var(--ink)', outline:'none',
+  }
   return (
-    <div style={{ border:'1px solid var(--color-border-tertiary)', borderRadius:10,
-      padding:14, marginBottom:12, background:'var(--color-background-secondary)' }}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+    <div style={{ ...S.card, marginBottom:10 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-          <span style={{ fontSize:13, fontWeight:600 }}>📄 {file.name}</span>
+          <span style={{ fontSize:13, fontWeight:600, color:'var(--ink)' }}>📄 {file.name}</span>
           {result?.aiRead && (
-            <span style={{ fontSize:9, padding:'2px 7px', borderRadius:10, fontWeight:700,
-              background:'rgba(249,115,22,.15)', color:'#f97316' }}>AI đọc</span>
+            <span style={{ ...S.badge('yel'), fontSize:9 }}>AI đọc</span>
           )}
         </div>
-        <button onClick={() => onRemove(idx)} style={{ background:'none', border:'none',
-          cursor:'pointer', color:'var(--color-text-secondary)', fontSize:16 }}>✕</button>
+        <button onClick={() => onRemove(idx)}
+          style={{ background:'none', border:'none', cursor:'pointer', color:'var(--ink3)', fontSize:18, lineHeight:1 }}>✕</button>
       </div>
-
       {result ? (
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'6px 12px' }}>
-          {fields.map(f => (
-            <div key={f}>
-              <div style={{ fontSize:10, color:'var(--color-text-secondary)', marginBottom:2 }}>{labels[f]}</div>
-              <input
-                value={result[f] || ''}
-                onChange={e => onUpdate(idx, f, e.target.value)}
-                style={{ width:'100%', padding:'5px 10px', borderRadius:6, fontSize:12,
-                  background:'var(--color-background-primary)', border:'1px solid var(--color-border-secondary)',
-                  color:'var(--color-text-primary)', outline:'none' }}
-              />
-            </div>
-          ))}
-          {result.hangMuc?.length > 0 && (
-            <div style={{ gridColumn:'1/-1', marginTop:6 }}>
-              <div style={{ fontSize:10, color:'var(--color-text-secondary)', marginBottom:4 }}>
-                Hạng mục nhận dạng ({result.hangMuc.length})
+        <>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px 14px', marginBottom:12 }}>
+            {fields.map(f => (
+              <div key={f.key}>
+                <div style={{ fontSize:11, color:'var(--ink3)', marginBottom:3 }}>{f.label}</div>
+                <input value={result[f.key] || ''} onChange={e => onUpdate(idx, f.key, e.target.value)}
+                  style={inputStyle} onFocus={e => e.target.style.borderColor='var(--brand)'}
+                  onBlur={e => e.target.style.borderColor='var(--sep)'}/>
               </div>
+            ))}
+          </div>
+          {result.hangMuc?.length > 0 && (
+            <div>
+              <div style={{ ...S.secTitle, marginBottom:6 }}>Hạng mục ({result.hangMuc.length})</div>
               {result.hangMuc.map((h, i) => (
-                <div key={i} style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4,
-                  padding:'4px 8px', background:'var(--color-background-primary)', borderRadius:6 }}>
-                  <span style={{ flex:1, fontSize:11 }}>{h.ten}</span>
-                  <span style={{ fontSize:11, fontWeight:600 }}>{h.thanhTien?.toLocaleString('vi-VN')}đ</span>
-                  <Badge type={h.loai==='baoDuong'?'grn':h.loai==='suaChua'?'yel':'blu'}>
-                    {h.loai==='baoDuong'?'BD định kỳ':h.loai==='suaChua'?'Sửa chữa':'Gia công'}
-                  </Badge>
-                  {h.canhBao && <Badge type="red">⚠ {h.canhBao}</Badge>}
+                <div key={i} style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 10px',
+                  background:'var(--bg-secondary)', borderRadius:6, marginBottom:4 }}>
+                  <span style={{ flex:1, fontSize:12, color:'var(--ink)' }}>{h.ten}</span>
+                  <span style={{ fontSize:12, fontWeight:600, color:'var(--ink2)' }}>{Number(h.thanhTien||0).toLocaleString('vi-VN')}đ</span>
+                  <span style={S.badge(h.mucDich==='baoDuongDinhKy'?'grn':h.loaiChiPhi==='giaCongNgoai'?'blu':'yel')}>
+                    {h.mucDich==='baoDuongDinhKy'?'BD định kỳ':h.loaiChiPhi==='giaCongNgoai'?'Gia công':'Sửa chữa'}
+                  </span>
+                  {h.canhBao && <span style={S.badge('red')}>⚠ {h.canhBao}</span>}
                 </div>
               ))}
             </div>
           )}
-        </div>
+        </>
       ) : (
-        <div style={{ textAlign:'center', padding:'16px 0', color:'var(--color-text-secondary)', fontSize:12 }}>
-          Đang xử lý...
-        </div>
+        <div style={{ textAlign:'center', padding:'20px 0', color:'var(--ink3)', fontSize:12 }}>Đang xử lý...</div>
       )}
     </div>
   )
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// MAIN COMPONENT
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 export default function PageBaoDuong({ token, user }) {
-  const [tab, setTab] = useState('overview')
-
-  // Data
-  const [vehicles, setVehicles] = useState([])
-  const [bdHistory, setBdHistory] = useState([])   // lịch sử BDSC — TODO: từ API /api/bdsc
-  const [tireData, setTireData]   = useState({})   // lốp xe — TODO: từ API /api/bdsc/tire
-  const [docsData, setDocsData]   = useState({})   // giấy tờ — TODO: từ API /api/bdsc/docs
+  const [tab, setTab]             = useState('overview')
+  const [vehicles, setVehicles]   = useState([])
+  const [bdHistory, setBdHistory] = useState([])
+  const [tireData, setTireData]   = useState({})
   const [loadingVe, setLoadingVe] = useState(true)
-
-  // Timeline
   const [selectedVe, setSelectedVe] = useState('')
-
-  // Tire
-  const [tireVe, setTireVe]         = useState('')
-  const [axleCfg, setAxleCfg]       = useState('6')
-  const [tireModal, setTireModal]   = useState(null) // { pos, data }
-
-  // OCR
-  const [ocrFiles, setOcrFiles]     = useState([])  // [{file, preview}]
-  const [ocrResults, setOcrResults] = useState([])  // [{bienSo,km,...,hangMuc}] — 1 per file
+  const [tireVe, setTireVe]       = useState('')
+  const [axleCfg, setAxleCfg]     = useState('6')
+  const [tireModal, setTireModal] = useState(null)
+  const [ocrFiles, setOcrFiles]   = useState([])
+  const [ocrResults, setOcrResults] = useState([])
   const [ocrLoading, setOcrLoading] = useState(false)
   const fileInputRef = useRef()
 
-  // Fetch danh sách xe (đã có sẵn từ API xe cũ)
   useEffect(() => {
-    apiFetch('/api/xe/all')
-      .then(r => r.json())
+    apiFetch('/api/xe/all').then(r => r.json())
       .then(d => { setVehicles(Array.isArray(d) ? d : []); setLoadingVe(false) })
       .catch(() => setLoadingVe(false))
+    apiFetch('/api/bdsc').then(r => r.json())
+      .then(d => Array.isArray(d) && setBdHistory(d))
+      .catch(() => {})
   }, [])
 
-  // OCR: gửi ảnh/PDF lên backend để AI đọc
-  const processOcr = useCallback(async (files) => {
+  const processOcr = useCallback(async (newFiles) => {
     setOcrLoading(true)
-    const newResults = [...ocrResults]
-
-    for (let i = 0; i < files.length; i++) {
-      const f = files[i]
-      const startIdx = ocrFiles.length + i
+    const results = []
+    for (const f of newFiles) {
       try {
         const b64 = await new Promise((res, rej) => {
           const reader = new FileReader()
@@ -308,513 +273,508 @@ export default function PageBaoDuong({ token, user }) {
           reader.onerror = rej
           reader.readAsDataURL(f.file)
         })
-
-        // Gọi backend OCR endpoint (cần thêm route /api/bdsc/ocr vào backend)
         const resp = await apiFetch('/api/bdsc/ocr', {
           method: 'POST',
-          body: JSON.stringify({
-            base64: b64,
-            mimeType: f.file.type || 'image/jpeg',
-            filename: f.file.name,
-          })
+          body: JSON.stringify({ base64: b64, mimeType: f.file.type || 'image/jpeg', filename: f.file.name })
         })
-        if (resp.ok) {
-          const data = await resp.json()
-          newResults[startIdx] = { ...data, aiRead: true }
-        } else {
-          // Nếu chưa có backend OCR — để trống cho user tự điền
-          newResults[startIdx] = { bienSo:'', km:'', ngay:'', garage:'', soRO:'', tongTien:'', hangMuc:[], aiRead:false }
-        }
+        results.push(resp.ok ? { ...(await resp.json()), aiRead: true }
+          : { bienSo:'', km:'', ngay:'', garage:'', soRO:'', tongTien:'', hangMuc:[], aiRead:false })
       } catch {
-        newResults[startIdx] = { bienSo:'', km:'', ngay:'', garage:'', soRO:'', tongTien:'', hangMuc:[], aiRead:false }
+        results.push({ bienSo:'', km:'', ngay:'', garage:'', soRO:'', tongTien:'', hangMuc:[], aiRead:false })
       }
     }
-    setOcrResults(newResults)
+    setOcrResults(prev => [...prev, ...results])
     setOcrLoading(false)
-  }, [ocrFiles, ocrResults])
+  }, [])
 
   const handleFileSelect = useCallback((e) => {
     const selected = Array.from(e.target.files)
-    const newFiles = selected.map(f => ({
-      file: f,
-      preview: f.type.startsWith('image/') ? URL.createObjectURL(f) : null
-    }))
-    setOcrFiles(prev => [...prev, ...newFiles])
-    processOcr(newFiles)
+    const wrapped = selected.map(f => ({ file: f, preview: f.type.startsWith('image/') ? URL.createObjectURL(f) : null }))
+    setOcrFiles(prev => [...prev, ...wrapped])
+    processOcr(wrapped)
+    e.target.value = ''
   }, [processOcr])
 
-  const removeOcrFile = useCallback((idx) => {
-    setOcrFiles(prev => prev.filter((_,i) => i !== idx))
-    setOcrResults(prev => prev.filter((_,i) => i !== idx))
-  }, [])
-
-  const updateOcrResult = useCallback((idx, field, val) => {
-    setOcrResults(prev => prev.map((r,i) => i===idx ? {...r,[field]:val} : r))
-  }, [])
+  const handleDrop = useCallback((e) => {
+    e.preventDefault()
+    const dropped = Array.from(e.dataTransfer.files).map(f => ({ file: f, preview: f.type.startsWith('image/') ? URL.createObjectURL(f) : null }))
+    setOcrFiles(prev => [...prev, ...dropped])
+    processOcr(dropped)
+  }, [processOcr])
 
   const submitAllOcr = async () => {
-    // Gửi tất cả kết quả OCR đã xác nhận lên backend
+    let saved = 0
     for (const result of ocrResults) {
       if (!result.bienSo || !result.km) continue
-      await apiFetch('/api/bdsc', { method:'POST', body: JSON.stringify(result) })
+      const resp = await apiFetch('/api/bdsc', { method:'POST', body: JSON.stringify(result) })
+      if (resp.ok) saved++
     }
-    setBdHistory(prev => [...ocrResults.map(r => ({ ...r, confirmedAt: new Date() })), ...prev])
-    setOcrFiles([])
-    setOcrResults([])
-    alert(`Đã lưu ${ocrResults.length} báo giá vào hệ thống`)
+    setBdHistory(prev => [...ocrResults.filter(r=>r.bienSo), ...prev])
+    setOcrFiles([]); setOcrResults([])
+    alert(`Đã lưu ${saved} báo giá`)
   }
 
-  // Tính cảnh báo BD dựa trên km GPS hiện tại
   const bdAlerts = vehicles.map(xe => {
     const km = xe.kmGPS || 0
     if (!km) return null
-    const cycle = xe.loaiXe?.includes('ô tô') ? BD_OTO : BD_XETAI
-    const cycleKm = xe.loaiXe?.includes('ô tô') ? 60000 : 30000
-    const lastBdKm = bdHistory.find(h => h.bienSo === xe.bienSo && h.loai === 'baoDuong')?.km || 0
-    const kmTuBD = km - lastBdKm
-    const mocTiepTheo = Math.ceil(km / 5000) * 5000
-    const conLai = mocTiepTheo - km
-    const pct = Math.min(kmTuBD / 5000, 1)
+    const lastBdKm = bdHistory.find(h => h.bienSo === xe.bienSo)?.km || 0
+    const mocTiep = Math.ceil(km / 5000) * 5000
+    const conLai = mocTiep - km
+    const pct = Math.min((km - lastBdKm) / 5000, 1)
     if (pct < 0.7) return null
-    return { xe, km, mocTiepTheo, conLai, pct, status: pct >= 1 ? 'crit' : 'warn' }
+    return { xe, km, mocTiep, conLai, pct, status: pct >= 1 ? 'crit' : 'warn' }
   }).filter(Boolean)
 
-  // CSS chung
-  const card = { background:'var(--color-background-secondary)', border:'1px solid var(--color-border-tertiary)', borderRadius:10, padding:14 }
-  const sectionTitle = { fontSize:11, fontWeight:600, color:'var(--color-text-secondary)', textTransform:'uppercase', letterSpacing:'.06em', marginBottom:10 }
+  // ── SELECT styles ──────────────────────────────────────────────────────
+  const selectStyle = {
+    padding:'7px 12px', borderRadius:8, fontSize:12, cursor:'pointer',
+    border:'1px solid var(--sep)', background:'var(--bg-card)',
+    color:'var(--ink)', outline:'none',
+  }
 
-  // ── Render các tab ─────────────────────────────────────────────────────
+  const alertRowStyle = (status) => ({
+    display:'flex', alignItems:'center', gap:12, padding:'10px 14px',
+    borderRadius:8, background:'var(--bg-card)', border:`1px solid ${status==='crit'?'rgba(215,0,21,.25)':status==='warn'?'rgba(196,85,0,.2)':'var(--sep)'}`,
+    marginBottom:6,
+  })
+
   return (
-    <div style={{ minHeight:'100vh', background:'var(--color-background-tertiary)' }}>
-      {/* Header */}
-      <div style={{ padding:'12px 16px', background:'var(--color-background-secondary)',
-        borderBottom:'1px solid var(--color-border-tertiary)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-        <div style={{ fontWeight:700, fontSize:15 }}>Bảo dưỡng & Sửa chữa</div>
-        <div style={{ fontSize:12, color:'var(--color-text-secondary)' }}>
-          {vehicles.length} xe · {bdHistory.length} lần BDSC đã ghi nhận
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div style={{ display:'flex', gap:4, padding:'8px 12px', background:'var(--color-background-secondary)',
-        borderBottom:'1px solid var(--color-border-tertiary)', overflowX:'auto' }}>
+    <div style={{ minHeight:'100vh' }}>
+      {/* ── Tab nav ────────────────────────────────────────────────────── */}
+      <div style={{ display:'flex', gap:4, marginBottom:16, overflowX:'auto',
+        paddingBottom:2, borderBottom:'1px solid var(--sep)' }}>
         {TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
-            style={{ padding:'6px 14px', borderRadius:6, border:'none', cursor:'pointer', fontSize:12,
-              fontWeight:500, whiteSpace:'nowrap',
-              background: tab===t.id ? '#f97316' : 'transparent',
-              color: tab===t.id ? '#fff' : 'var(--color-text-secondary)' }}>
+            style={{ padding:'7px 16px', borderRadius:8, border:'none', cursor:'pointer',
+              fontSize:12, fontWeight:500, whiteSpace:'nowrap', transition:'all .15s',
+              background: tab===t.id ? 'var(--brand)' : 'transparent',
+              color: tab===t.id ? '#fff' : 'var(--ink3)' }}>
             {t.label}
           </button>
         ))}
       </div>
 
-      {/* Content */}
-      <div style={{ padding:16 }}>
-
-        {/* ── TỔNG QUAN ─────────────────────────────────────────── */}
-        {tab === 'overview' && (
-          <div>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10, marginBottom:16 }}>
-              {[
-                { label:'Xe đến hạn BD', val: bdAlerts.length || 0, color: bdAlerts.length > 0 ? '#ef4444' : '#22c55e', sub:'trong 30 ngày tới' },
-                { label:'Lần BDSC đã ghi nhận', val: bdHistory.length, color:'var(--color-text-primary)', sub:'tổng cộng' },
-                { label:'Xe trong hệ thống', val: vehicles.length, color:'var(--color-text-primary)', sub:'đang theo dõi' },
-                { label:'Báo giá chờ xác nhận', val: ocrResults.length, color: ocrResults.length > 0 ? '#f97316' : 'var(--color-text-primary)', sub:'cần review' },
-              ].map((c,i) => (
-                <div key={i} style={card}>
-                  <div style={{ fontSize:11, color:'var(--color-text-secondary)', marginBottom:4 }}>{c.label}</div>
-                  <div style={{ fontSize:24, fontWeight:700, color:c.color }}>{c.val}</div>
-                  <div style={{ fontSize:11, color:'var(--color-text-secondary)' }}>{c.sub}</div>
-                </div>
-              ))}
-            </div>
-
-            {bdAlerts.length === 0 && bdHistory.length === 0 ? (
-              <EmptyState icon="🚛" title="Chưa có dữ liệu bảo dưỡng"
-                sub="Bắt đầu bằng cách scan báo giá sửa chữa hoặc nhập lịch sử bảo dưỡng thủ công. Hệ thống sẽ tự động tính toán khi có đủ dữ liệu km từ GPS."
-                action="Scan báo giá đầu tiên" onAction={() => setTab('ocr')} />
-            ) : (
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-                <div style={card}>
-                  <div style={sectionTitle}>Xe cần bảo dưỡng sớm</div>
-                  {bdAlerts.slice(0,5).map((a,i) => (
-                    <div key={i} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 0',
-                      borderBottom:'1px solid var(--color-border-tertiary)' }}>
-                      <Badge type={a.status==='crit'?'red':'yel'}>{a.status==='crit'?'Quá hạn':'Sắp đến'}</Badge>
-                      <div style={{ flex:1 }}>
-                        <div style={{ fontSize:12, fontWeight:600 }}>{a.xe.bienSo}</div>
-                        <div style={{ fontSize:11, color:'var(--color-text-secondary)' }}>Mốc {a.mocTiepTheo.toLocaleString()}km · Còn {a.conLai}km</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div style={card}>
-                  <div style={sectionTitle}>Lịch sử BDSC gần nhất</div>
-                  {bdHistory.slice(0,5).map((h,i) => (
-                    <div key={i} style={{ display:'flex', justifyContent:'space-between', padding:'6px 0',
-                      borderBottom:'1px solid var(--color-border-tertiary)', fontSize:12 }}>
-                      <span style={{ fontWeight:600 }}>{h.bienSo}</span>
-                      <span style={{ color:'var(--color-text-secondary)' }}>{h.ngay}</span>
-                      <span style={{ fontWeight:600 }}>{Number(h.tongTien||0).toLocaleString('vi-VN')}đ</span>
-                    </div>
-                  ))}
-                  {bdHistory.length === 0 && <div style={{ fontSize:12, color:'var(--color-text-secondary)', padding:'8px 0' }}>Chưa có dữ liệu</div>}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── CẢNH BÁO BD ──────────────────────────────────────── */}
-        {tab === 'alert' && (
-          <div>
-            {bdAlerts.length === 0 ? (
-              <EmptyState icon="✅" title="Không có cảnh báo"
-                sub={vehicles.length === 0
-                  ? 'Chưa có xe nào trong hệ thống. Dữ liệu km GPS cần được kết nối để tính toán chu kỳ bảo dưỡng.'
-                  : 'Tất cả xe đang trong chu kỳ bảo dưỡng an toàn. Hệ thống sẽ cảnh báo khi xe đạt 90% chu kỳ.'
-                } />
-            ) : bdAlerts.map((a,i) => (
-              <div key={i} style={{ ...card, marginBottom:8,
-                borderColor: a.status==='crit'?'rgba(239,68,68,.3)':'rgba(234,179,8,.2)',
-                background: a.status==='crit'?'rgba(239,68,68,.05)':'rgba(234,179,8,.03)' }}>
-                <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-                  <Badge type={a.status==='crit'?'red':'yel'}>{a.status==='crit'?'Quá hạn':Math.round(a.pct*100)+'%'}</Badge>
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontWeight:600, fontSize:13 }}>{a.xe.bienSo} · {a.xe.tenTaiSan || a.xe.loaiXe}</div>
-                    <div style={{ fontSize:12, color:'var(--color-text-secondary)', marginTop:2 }}>
-                      Mốc {a.mocTiepTheo.toLocaleString()}km · KM hiện tại {a.km.toLocaleString()}km · Còn {a.conLai}km
-                    </div>
-                  </div>
-                  <div style={{ textAlign:'right', fontSize:11, color:'var(--color-text-secondary)' }}>
-                    {/* Hạng mục BD tại mốc này */}
-                    {(BD_XETAI.find(b => a.mocTiepTheo % 30000 === b.moc || b.moc === a.mocTiepTheo % 30000) || BD_XETAI[0]).items.slice(0,3).join(' · ')}
-                  </div>
-                </div>
+      {/* ── TỔNG QUAN ─────────────────────────────────────────────────── */}
+      {tab==='overview' && (
+        <div>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10, marginBottom:14 }}>
+            {[
+              { label:'Xe đến hạn BD', val: bdAlerts.length, color: bdAlerts.length>0?'var(--apple-red)':'var(--ink)', sub:'trong 30 ngày tới' },
+              { label:'Lần BDSC đã ghi nhận', val: bdHistory.length, color:'var(--ink)', sub:'tổng cộng' },
+              { label:'Xe trong hệ thống', val: vehicles.length, color:'var(--ink)', sub:'đang theo dõi' },
+              { label:'Báo giá chờ xác nhận', val: ocrResults.length, color: ocrResults.length>0?'var(--brand)':'var(--ink)', sub:'cần review' },
+            ].map((c,i) => (
+              <div key={i} style={S.card}>
+                <div style={{ fontSize:11, color:'var(--ink3)', marginBottom:4 }}>{c.label}</div>
+                <div style={{ fontSize:26, fontWeight:700, color:c.color, lineHeight:1.2 }}>{c.val}</div>
+                <div style={{ fontSize:11, color:'var(--ink3)', marginTop:2 }}>{c.sub}</div>
               </div>
             ))}
-
-            <div style={{ ...card, marginTop:16 }}>
-              <div style={sectionTitle}>Bảng chu kỳ bảo dưỡng xe tải (quy định HSH.QLTS-05)</div>
-              {BD_XETAI.map(b => (
-                <div key={b.moc} style={{ display:'flex', gap:12, padding:'7px 0',
-                  borderBottom:'1px solid var(--color-border-tertiary)', fontSize:12 }}>
-                  <span style={{ fontWeight:700, color:'#f97316', minWidth:60 }}>{b.moc.toLocaleString()}km</span>
-                  <span style={{ color:'var(--color-text-secondary)' }}>{b.items.join(' · ')}</span>
-                </div>
-              ))}
-            </div>
           </div>
-        )}
+          {bdAlerts.length===0 && bdHistory.length===0 ? (
+            <div style={S.card}>
+              <EmptyState icon="🚛" title="Chưa có dữ liệu bảo dưỡng"
+                sub="Bắt đầu bằng cách scan báo giá sửa chữa. Hệ thống sẽ tự động tính toán chu kỳ khi có đủ dữ liệu."
+                action="Scan báo giá đầu tiên" onAction={() => setTab('ocr')} />
+            </div>
+          ) : (
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+              <div style={S.card}>
+                <div style={S.secTitle}>Xe cần bảo dưỡng sớm</div>
+                {bdAlerts.slice(0,5).map((a,i) => (
+                  <div key={i} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 0',
+                    borderBottom:'1px solid var(--sep)' }}>
+                    <span style={S.badge(a.status==='crit'?'red':'yel')}>{a.status==='crit'?'Quá hạn':'Sắp đến'}</span>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:13, fontWeight:600, color:'var(--ink)' }}>{a.xe.bienSo}</div>
+                      <div style={{ fontSize:11, color:'var(--ink3)' }}>Mốc {a.mocTiep.toLocaleString()}km · Còn {a.conLai}km</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div style={S.card}>
+                <div style={S.secTitle}>BDSC ghi nhận gần nhất</div>
+                {bdHistory.slice(0,5).map((h,i) => (
+                  <div key={i} style={{ display:'flex', justifyContent:'space-between', alignItems:'center',
+                    padding:'6px 0', borderBottom:'1px solid var(--sep)', fontSize:12 }}>
+                    <span style={{ fontWeight:600, color:'var(--ink)' }}>{h.bienSo}</span>
+                    <span style={{ color:'var(--ink3)' }}>{h.ngay}</span>
+                    <span style={{ fontWeight:600, color:'var(--ink)' }}>{Number(h.tongTien||0).toLocaleString('vi-VN')}đ</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
-        {/* ── CHI PHÍ ───────────────────────────────────────────── */}
-        {tab === 'cost' && (
-          <EmptyState icon="📊" title="Chưa có dữ liệu chi phí"
-            sub="Sau khi nhập các báo giá sửa chữa qua tính năng Scan, hệ thống sẽ tự động tổng hợp chi phí theo xe và theo garage, phát hiện bất thường."
-            action="Scan báo giá đầu tiên" onAction={() => setTab('ocr')} />
-        )}
+      {/* ── CẢNH BÁO BD ────────────────────────────────────────────────── */}
+      {tab==='alert' && (
+        <div>
+          {bdAlerts.length===0 ? (
+            <div style={S.card}>
+              <EmptyState icon="✅" title="Không có cảnh báo"
+                sub={vehicles.length===0
+                  ? 'Chưa có xe nào trong hệ thống hoặc chưa có dữ liệu km GPS.'
+                  : 'Tất cả xe trong chu kỳ an toàn. Hệ thống cảnh báo khi xe đạt 70% chu kỳ.'} />
+            </div>
+          ) : bdAlerts.map((a,i) => (
+            <div key={i} style={alertRowStyle(a.status)}>
+              <div style={{ width:34, height:34, borderRadius:8, display:'flex', alignItems:'center',
+                justifyContent:'center', fontSize:11, fontWeight:700, flexShrink:0,
+                background: a.status==='crit'?'var(--red-l)':'rgba(196,85,0,.1)',
+                color: a.status==='crit'?'var(--apple-red)':'var(--apple-orange)' }}>
+                {a.status==='crit'?'QUÁ':Math.round(a.pct*100)+'%'}
+              </div>
+              <div style={{ flex:1 }}>
+                <div style={{ fontWeight:600, fontSize:13, color:'var(--ink)' }}>{a.xe.bienSo} · {a.xe.tenTaiSan||a.xe.loaiXe}</div>
+                <div style={{ fontSize:12, color:'var(--ink3)', marginTop:2 }}>
+                  Mốc {a.mocTiep.toLocaleString()}km · KM hiện tại {a.km.toLocaleString()}km · Còn {a.conLai}km
+                </div>
+              </div>
+              <span style={S.badge(a.status==='crit'?'red':'yel')}>{a.status==='crit'?'Quá hạn':'Sắp đến'}</span>
+            </div>
+          ))}
 
-        {/* ── TIMELINE ─────────────────────────────────────────── */}
-        {tab === 'timeline' && (
+          <div style={{ ...S.card, marginTop:14 }}>
+            <div style={S.secTitle}>Chu kỳ bảo dưỡng xe tải (quy định HSH.QLTS-05, mục 6.1.3 · lặp mỗi 30.000km)</div>
+            {BD_XETAI.map(b => (
+              <div key={b.moc} style={{ display:'flex', gap:12, padding:'7px 0',
+                borderBottom:'1px solid var(--sep)', fontSize:12 }}>
+                <span style={{ fontWeight:700, color:'var(--brand)', minWidth:60, flexShrink:0 }}>{b.moc.toLocaleString()}km</span>
+                <span style={{ color:'var(--ink3)' }}>{b.items.join(' · ')}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── CHI PHÍ ─────────────────────────────────────────────────────── */}
+      {tab==='cost' && (
+        bdHistory.length===0
+          ? <div style={S.card}><EmptyState icon="📊" title="Chưa có dữ liệu chi phí"
+              sub="Sau khi nhập báo giá qua Scan, hệ thống tự động tổng hợp chi phí theo xe và theo garage."
+              action="Scan báo giá" onAction={() => setTab('ocr')} /></div>
+          : (() => {
+              const byXe = bdHistory.reduce((acc, h) => {
+                if (!acc[h.bienSo]) acc[h.bienSo] = 0
+                acc[h.bienSo] += Number(h.tongTien||0)
+                return acc
+              }, {})
+              const sorted = Object.entries(byXe).sort((a,b) => b[1]-a[1]).slice(0,8)
+              const maxVal = sorted[0]?.[1] || 1
+              const byGarage = bdHistory.reduce((acc,h) => {
+                if (!h.garage) return acc
+                if (!acc[h.garage]) acc[h.garage] = 0
+                acc[h.garage] += Number(h.tongTien||0)
+                return acc
+              }, {})
+              const sortedGarage = Object.entries(byGarage).sort((a,b)=>b[1]-a[1]).slice(0,6)
+              const maxG = sortedGarage[0]?.[1] || 1
+              return (
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+                  <div style={S.card}>
+                    <div style={S.secTitle}>Chi phí theo xe (tổng cộng)</div>
+                    {sorted.map(([bs, val], i) => (
+                      <BarRow key={bs} label={bs} pct={val/maxVal*100}
+                        val={val>=1e6?(val/1e6).toFixed(1)+'tr':(val/1e3).toFixed(0)+'k'}
+                        color={i===0?'var(--apple-red)':i<3?'var(--brand)':'var(--apple-green)'} />
+                    ))}
+                  </div>
+                  <div style={S.card}>
+                    <div style={S.secTitle}>Chi phí theo garage</div>
+                    {sortedGarage.map(([g, val]) => (
+                      <BarRow key={g} label={g.slice(0,16)} pct={val/maxG*100}
+                        val={val>=1e6?(val/1e6).toFixed(1)+'tr':(val/1e3).toFixed(0)+'k'} />
+                    ))}
+                    {sortedGarage.length===0 && <div style={{ fontSize:12, color:'var(--ink3)' }}>Chưa có dữ liệu garage</div>}
+                  </div>
+                </div>
+              )
+            })()
+      )}
+
+      {/* ── TIMELINE ────────────────────────────────────────────────────── */}
+      {tab==='timeline' && (
+        <div>
+          <select value={selectedVe} onChange={e => setSelectedVe(e.target.value)}
+            style={{ ...selectStyle, marginBottom:14, width:280 }}>
+            <option value="">-- Chọn xe --</option>
+            {vehicles.map(v => <option key={v._id} value={v.bienSo}>{v.bienSo} · {v.tenTaiSan||v.loaiXe}</option>)}
+          </select>
+          {!selectedVe
+            ? <div style={S.card}><EmptyState icon="🔍" title="Chọn xe để xem timeline" /></div>
+            : bdHistory.filter(h=>h.bienSo===selectedVe).length===0
+            ? <div style={S.card}><EmptyState icon="📋" title={`Chưa có lịch sử cho xe ${selectedVe}`}
+                action="Scan báo giá" onAction={() => setTab('ocr')} /></div>
+            : (
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 280px', gap:14 }}>
+                <div style={S.card}>
+                  <div style={{ position:'relative', paddingLeft:22 }}>
+                    <div style={{ position:'absolute', left:7, top:0, bottom:0, width:2, background:'var(--sep)' }}/>
+                    {bdHistory.filter(h=>h.bienSo===selectedVe).map((h,i) => (
+                      <div key={i} style={{ position:'relative', marginBottom:18 }}>
+                        <div style={{ position:'absolute', left:-18, top:4, width:10, height:10, borderRadius:'50%',
+                          border:`2px solid ${h.loai==='baoDuong'?'var(--apple-green)':'var(--brand)'}`,
+                          background: h.loai==='baoDuong'?'var(--green-l)':'var(--brand-l)' }}/>
+                        <div style={{ fontSize:10, color:'var(--ink3)', marginBottom:2 }}>{h.km?.toLocaleString()}km · {h.ngay}</div>
+                        <div style={{ fontSize:13, fontWeight:600, color:'var(--ink)' }}>
+                          {h.garage} · {Number(h.tongTien||0).toLocaleString('vi-VN')}đ
+                        </div>
+                        <div style={{ fontSize:12, color:'var(--ink3)' }}>
+                          {h.hangMuc?.slice(0,3).map(m=>m.ten).join(' · ')}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  {(() => {
+                    const veHistory = bdHistory.filter(h=>h.bienSo===selectedVe)
+                    const total = veHistory.reduce((s,h)=>s+Number(h.tongTien||0),0)
+                    return (
+                      <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                        {[
+                          { label:'Tổng chi phí', val: total>=1e6?(total/1e6).toFixed(1)+'tr':(total/1e3).toFixed(0)+'k đ' },
+                          { label:'Số lần BDSC', val: veHistory.length },
+                          { label:'Lần gần nhất', val: veHistory[0]?.ngay || '—' },
+                        ].map((s,i) => (
+                          <div key={i} style={{ ...S.card, padding:12 }}>
+                            <div style={{ fontSize:11, color:'var(--ink3)' }}>{s.label}</div>
+                            <div style={{ fontSize:18, fontWeight:700, color:'var(--ink)', marginTop:2 }}>{s.val}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  })()}
+                </div>
+              </div>
+            )
+          }
+        </div>
+      )}
+
+      {/* ── LỐP XE ──────────────────────────────────────────────────────── */}
+      {tab==='tire' && (
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1.1fr', gap:14 }}>
           <div>
-            <div style={{ marginBottom:12 }}>
-              <select value={selectedVe} onChange={e => setSelectedVe(e.target.value)}
-                style={{ padding:'7px 12px', borderRadius:8, border:'1px solid var(--color-border-secondary)',
-                  background:'var(--color-background-secondary)', color:'var(--color-text-primary)',
-                  fontSize:13, width:260 }}>
+            <div style={{ display:'flex', gap:8, marginBottom:14, flexWrap:'wrap' }}>
+              <select value={tireVe} onChange={e => setTireVe(e.target.value)} style={{ ...selectStyle, flex:1, minWidth:160 }}>
                 <option value="">-- Chọn xe --</option>
-                {vehicles.map(v => <option key={v._id} value={v.bienSo}>{v.bienSo} · {v.tenTaiSan||v.loaiXe}</option>)}
+                {vehicles.map(v => <option key={v._id} value={v.bienSo}>{v.bienSo}</option>)}
+              </select>
+              <select value={axleCfg} onChange={e => setAxleCfg(e.target.value)} style={selectStyle}>
+                {Object.entries(AXLE_CONFIGS).map(([k,v]) => <option key={k} value={k}>{v.label}</option>)}
               </select>
             </div>
-
-            {!selectedVe
-              ? <EmptyState icon="🔍" title="Chọn xe để xem timeline" sub="Chọn xe từ danh sách để xem lịch sử bảo dưỡng và sửa chữa theo km." />
-              : bdHistory.filter(h => h.bienSo === selectedVe).length === 0
-              ? <EmptyState icon="📋" title={`Chưa có lịch sử cho xe ${selectedVe}`}
-                  sub="Nhập báo giá sửa chữa hoặc ghi nhận bảo dưỡng định kỳ để xem timeline."
-                  action="Scan báo giá" onAction={() => setTab('ocr')} />
+            {!tireVe
+              ? <div style={S.card}><EmptyState icon="🔧" title="Chọn xe để xem sơ đồ lốp" /></div>
               : (
-                <div style={{ position:'relative', paddingLeft:24 }}>
-                  <div style={{ position:'absolute', left:8, top:0, bottom:0, width:2,
-                    background:'var(--color-border-tertiary)' }}/>
-                  {bdHistory.filter(h=>h.bienSo===selectedVe).map((h,i) => (
-                    <div key={i} style={{ position:'relative', marginBottom:16 }}>
-                      <div style={{ position:'absolute', left:-19, top:4, width:10, height:10,
-                        borderRadius:'50%', border:`2px solid ${h.loai==='baoDuong'?'#22c55e':'#f97316'}`,
-                        background: h.loai==='baoDuong'?'rgba(34,197,94,.3)':'rgba(249,115,22,.3)' }}/>
-                      <div style={{ fontSize:10, color:'var(--color-text-tertiary)', marginBottom:2 }}>
-                        {h.km?.toLocaleString()}km · {h.ngay}
-                      </div>
-                      <div style={{ fontSize:13, fontWeight:600 }}>{h.garage} · {Number(h.tongTien||0).toLocaleString('vi-VN')}đ</div>
-                      <div style={{ fontSize:11, color:'var(--color-text-secondary)' }}>
-                        {h.hangMuc?.slice(0,3).map(m=>m.ten).join(' · ')}
-                      </div>
-                    </div>
-                  ))}
+                <div style={{ ...S.card, display:'flex', flexDirection:'column', alignItems:'center', padding:'24px 16px' }}>
+                  <TireView config={axleCfg} tireData={tireData[tireVe]||{}}
+                    onClickTire={(pos, data) => setTireModal({ pos, data, ve: tireVe })} />
+                  <div style={{ display:'flex', gap:16, marginTop:16, fontSize:11 }}>
+                    <span><span style={{ color:'var(--apple-green)' }}>■</span> Tốt</span>
+                    <span><span style={{ color:'var(--apple-orange)' }}>■</span> Sắp đến hạn</span>
+                    <span><span style={{ color:'var(--apple-red)' }}>■</span> Cần thay</span>
+                    <span><span style={{ color:'var(--sep)' }}>■</span> Chưa nhập</span>
+                  </div>
+                  <div style={{ fontSize:11, color:'var(--ink3)', marginTop:6 }}>Click ô lốp để nhập thông tin</div>
                 </div>
               )
             }
           </div>
-        )}
-
-        {/* ── LỐP XE ────────────────────────────────────────────── */}
-        {tab === 'tire' && (
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1.2fr', gap:14 }}>
-            <div>
-              <div style={{ display:'flex', gap:10, marginBottom:14, flexWrap:'wrap' }}>
-                <select value={tireVe} onChange={e => setTireVe(e.target.value)}
-                  style={{ flex:1, minWidth:160, padding:'7px 10px', borderRadius:8, fontSize:12,
-                    border:'1px solid var(--color-border-secondary)',
-                    background:'var(--color-background-secondary)', color:'var(--color-text-primary)' }}>
-                  <option value="">-- Chọn xe --</option>
-                  {vehicles.map(v => <option key={v._id} value={v.bienSo}>{v.bienSo}</option>)}
-                </select>
-                <select value={axleCfg} onChange={e => setAxleCfg(e.target.value)}
-                  style={{ padding:'7px 10px', borderRadius:8, fontSize:12,
-                    border:'1px solid var(--color-border-secondary)',
-                    background:'var(--color-background-secondary)', color:'var(--color-text-primary)' }}>
-                  {Object.entries(AXLE_CONFIGS).map(([k,v]) => <option key={k} value={k}>{v.label}</option>)}
-                </select>
-              </div>
-
-              {!tireVe
-                ? <EmptyState icon="🔧" title="Chọn xe để xem sơ đồ lốp" sub="Chọn xe và cấu hình số cầu phù hợp." />
-                : (
-                  <div style={{ ...card, display:'flex', flexDirection:'column', alignItems:'center', padding:24 }}>
-                    <TireView
-                      config={axleCfg}
-                      tireData={tireData[tireVe] || {}}
-                      onClickTire={(pos, data) => setTireModal({ pos, data, ve: tireVe })}
-                    />
-                    <div style={{ display:'flex', gap:16, marginTop:16, fontSize:11 }}>
-                      <span><span style={{ color:'#22c55e' }}>■</span> Tốt</span>
-                      <span><span style={{ color:'#eab308' }}>■</span> Sắp đến hạn (≥90%)</span>
-                      <span><span style={{ color:'#ef4444' }}>■</span> Cần thay</span>
-                      <span><span style={{ color:'var(--color-border-tertiary)' }}>■</span> Chưa nhập</span>
-                    </div>
-                    <div style={{ fontSize:11, color:'var(--color-text-secondary)', marginTop:8 }}>
-                      Click vào ô lốp để nhập/cập nhật thông tin
-                    </div>
-                  </div>
-                )
-              }
+          <div style={S.card}>
+            <div style={S.secTitle}>Quy định thay lốp (mục 6.2 HSH.QLTS-05)</div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8, marginBottom:14 }}>
+              {[
+                { val:'50.000km', label:'Lốp bố nylon', color:'var(--brand)' },
+                { val:'80.000km', label:'Lốp bố kẽm', color:'var(--apple-blue)' },
+                { val:'10.000km', label:'Chu kỳ đảo lốp', color:'var(--apple-green)' },
+              ].map((s,i) => (
+                <div key={i} style={{ background:'var(--bg-secondary)', borderRadius:8, padding:10, textAlign:'center' }}>
+                  <div style={{ fontSize:16, fontWeight:700, color:s.color }}>{s.val}</div>
+                  <div style={{ fontSize:10, color:'var(--ink3)', marginTop:2 }}>{s.label}</div>
+                </div>
+              ))}
             </div>
-
-            <div>
-              <div style={{ ...card }}>
-                <div style={sectionTitle}>Quy định thay lốp (6.2)</div>
-                <div style={{ display:'flex', gap:8, marginBottom:12 }}>
-                  <div style={{ flex:1, background:'var(--color-background-primary)', borderRadius:8, padding:10, textAlign:'center' }}>
-                    <div style={{ fontSize:16, fontWeight:700, color:'#f97316' }}>50.000km</div>
-                    <div style={{ fontSize:10, color:'var(--color-text-secondary)' }}>Lốp bố nylon</div>
-                  </div>
-                  <div style={{ flex:1, background:'var(--color-background-primary)', borderRadius:8, padding:10, textAlign:'center' }}>
-                    <div style={{ fontSize:16, fontWeight:700, color:'#60a5fa' }}>80.000km</div>
-                    <div style={{ fontSize:10, color:'var(--color-text-secondary)' }}>Lốp bố kẽm</div>
-                  </div>
-                  <div style={{ flex:1, background:'var(--color-background-primary)', borderRadius:8, padding:10, textAlign:'center' }}>
-                    <div style={{ fontSize:16, fontWeight:700, color:'#22c55e' }}>10.000km</div>
-                    <div style={{ fontSize:10, color:'var(--color-text-secondary)' }}>Chu kỳ đảo lốp</div>
-                  </div>
-                </div>
-                <div style={{ fontSize:11, color:'var(--color-text-secondary)', lineHeight:1.6 }}>
-                  <strong>Hướng dẫn đảo lốp cầu trước:</strong><br/>
-                  • Chu kỳ 1: Hoán đổi lốp bên trái và bên phải<br/>
-                  • Chu kỳ 2: Lật đổi lốp từ mặt phía trong ra ngoài<br/><br/>
-                  <strong>Hướng dẫn đảo lốp cầu sau:</strong><br/>
-                  • Chu kỳ 1: Đảo lốp vị trí trong và ngoài của mỗi cặp<br/>
-                  • Chu kỳ 2: Lật đổi lốp từ mặt phía trong ra ngoài
-                </div>
-              </div>
+            <div style={{ fontSize:12, color:'var(--ink3)', lineHeight:1.7 }}>
+              <strong style={{ color:'var(--ink2)' }}>Đảo lốp cầu trước:</strong><br/>
+              • Chu kỳ 1: Hoán đổi lốp trái ↔ phải<br/>
+              • Chu kỳ 2: Lật đổi lốp từ mặt phía trong ra ngoài<br/><br/>
+              <strong style={{ color:'var(--ink2)' }}>Đảo lốp cầu sau:</strong><br/>
+              • Chu kỳ 1: Đảo lốp vị trí trong ↔ ngoài mỗi cặp<br/>
+              • Chu kỳ 2: Lật đổi lốp từ mặt phía trong ra ngoài
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* ── DỰ BÁO ───────────────────────────────────────────── */}
-        {tab === 'forecast' && (
+      {/* ── DỰ BÁO ──────────────────────────────────────────────────────── */}
+      {tab==='forecast' && (
+        <div style={S.card}>
           <EmptyState icon="📈" title="Chưa đủ dữ liệu để dự báo"
-            sub="Cần ít nhất 3 tháng dữ liệu km GPS và lịch sử BDSC để tính tốc độ chạy trung bình và dự báo ngân sách. Hệ thống sẽ tự động tính khi có đủ dữ liệu."
-            action="Xem cảnh báo BD hiện tại" onAction={() => setTab('alert')} />
-        )}
+            sub="Cần ít nhất 3 tháng dữ liệu km GPS và lịch sử BDSC để tính tốc độ chạy trung bình và dự báo ngân sách tháng tới."
+            action="Xem cảnh báo BD" onAction={() => setTab('alert')} />
+        </div>
+      )}
 
-        {/* ── SCAN BÁO GIÁ ─────────────────────────────────────── */}
-        {tab === 'ocr' && (
-          <div>
-            {/* Upload area */}
-            <div onClick={() => fileInputRef.current?.click()}
-              style={{ border:'2px dashed #f97316', borderRadius:12, padding:28, textAlign:'center',
-                cursor:'pointer', background:'rgba(249,115,22,.04)', marginBottom:16,
-                transition:'background .15s' }}
-              onMouseEnter={e => e.currentTarget.style.background='rgba(249,115,22,.08)'}
-              onMouseLeave={e => e.currentTarget.style.background='rgba(249,115,22,.04)'}
-              onDragOver={e => { e.preventDefault(); e.currentTarget.style.background='rgba(249,115,22,.1)' }}
-              onDragLeave={e => e.currentTarget.style.background='rgba(249,115,22,.04)'}
-              onDrop={e => {
-                e.preventDefault()
-                const dropped = Array.from(e.dataTransfer.files).map(f => ({
-                  file: f, preview: f.type.startsWith('image/') ? URL.createObjectURL(f) : null
-                }))
-                setOcrFiles(prev => [...prev, ...dropped])
-                processOcr(dropped)
-              }}>
-              <input ref={fileInputRef} type="file" multiple accept="image/*,.pdf" style={{ display:'none' }}
-                onChange={handleFileSelect} />
-              <div style={{ fontSize:32, marginBottom:8 }}>📷</div>
-              <div style={{ fontWeight:600, marginBottom:4 }}>Kéo thả hoặc click để tải báo giá</div>
-              <div style={{ fontSize:12, color:'var(--color-text-secondary)' }}>
-                Hỗ trợ JPG, PNG, PDF · Nhiều file cùng lúc · AI tự đọc và điền các trường
-              </div>
-              <button style={{ marginTop:12, padding:'8px 20px', borderRadius:8, border:'none',
-                background:'#f97316', color:'#fff', cursor:'pointer', fontWeight:600, fontSize:13 }}>
-                Chọn file
+      {/* ── SCAN BÁO GIÁ ────────────────────────────────────────────────── */}
+      {tab==='ocr' && (
+        <div>
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor='var(--brand)' }}
+            onDragLeave={e => e.currentTarget.style.borderColor='rgba(230,50,0,.3)'}
+            onDrop={handleDrop}
+            style={{ border:'2px dashed rgba(230,50,0,.3)', borderRadius:12, padding:32,
+              textAlign:'center', cursor:'pointer', background:'var(--brand-l)',
+              marginBottom:16, transition:'border-color .15s' }}>
+            <input ref={fileInputRef} type="file" multiple accept="image/*,.pdf"
+              style={{ display:'none' }} onChange={handleFileSelect} />
+            <div style={{ fontSize:36, marginBottom:8 }}>📷</div>
+            <div style={{ fontWeight:600, fontSize:14, color:'var(--ink)', marginBottom:4 }}>
+              Kéo thả hoặc click để tải báo giá
+            </div>
+            <div style={{ fontSize:12, color:'var(--ink3)', marginBottom:12 }}>
+              Hỗ trợ JPG · PNG · PDF · Nhiều file cùng lúc · AI tự đọc và điền các trường
+            </div>
+            <button style={{ padding:'8px 24px', borderRadius:8, border:'none',
+              background:'var(--brand)', color:'#fff', cursor:'pointer', fontWeight:600, fontSize:13 }}>
+              Chọn file
+            </button>
+          </div>
+
+          {ocrLoading && (
+            <div style={{ textAlign:'center', padding:12, color:'var(--brand)', fontSize:13,
+              display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
+              <div style={{ width:14, height:14, border:'2px solid var(--sep)',
+                borderTopColor:'var(--brand)', borderRadius:'50%', animation:'spin .6s linear infinite' }}/>
+              Đang phân tích báo giá với AI...
+            </div>
+          )}
+
+          {ocrFiles.length===0 && !ocrLoading
+            ? <div style={S.card}><EmptyState icon="🧾" title="Chưa có báo giá nào"
+                sub="Chụp ảnh hoặc scan file PDF báo giá. AI tự động đọc biển số, km, hạng mục và chi phí. Có thể chỉnh sửa trước khi lưu." /></div>
+            : ocrFiles.map((f, i) => (
+                <OcrCard key={i} idx={i} file={f.file} result={ocrResults[i]}
+                  onUpdate={(idx, field, val) => setOcrResults(prev => prev.map((r,j) => j===idx ? {...r,[field]:val} : r))}
+                  onRemove={(idx) => { setOcrFiles(p=>p.filter((_,j)=>j!==idx)); setOcrResults(p=>p.filter((_,j)=>j!==idx)) }} />
+              ))
+          }
+
+          {ocrResults.filter(r=>r?.bienSo).length > 0 && (
+            <div style={{ display:'flex', justifyContent:'flex-end', gap:10, marginTop:4 }}>
+              <button onClick={() => { setOcrFiles([]); setOcrResults([]) }}
+                style={{ padding:'8px 20px', borderRadius:8, border:'1px solid var(--sep)',
+                  background:'transparent', color:'var(--ink3)', cursor:'pointer', fontSize:13 }}>
+                Hủy tất cả
+              </button>
+              <button onClick={submitAllOcr}
+                style={{ padding:'8px 24px', borderRadius:8, border:'none',
+                  background:'var(--brand)', color:'#fff', cursor:'pointer', fontWeight:600, fontSize:13 }}>
+                Xác nhận & Lưu {ocrResults.filter(r=>r?.bienSo).length} báo giá
               </button>
             </div>
+          )}
 
-            {ocrLoading && (
-              <div style={{ textAlign:'center', padding:12, color:'#f97316', fontSize:13 }}>
-                Đang phân tích báo giá với AI...
-              </div>
-            )}
-
-            {/* File cards - mỗi file 1 card với fields có thể edit */}
-            {ocrFiles.map((f, i) => (
-              <OcrCard key={i} idx={i} file={f.file} result={ocrResults[i]}
-                onUpdate={updateOcrResult} onRemove={removeOcrFile} />
-            ))}
-
-            {ocrFiles.length === 0 && (
-              <EmptyState icon="🧾" title="Chưa có báo giá nào"
-                sub="Chụp ảnh hoặc scan file PDF báo giá sửa chữa. AI sẽ tự động đọc biển số, km, hạng mục và chi phí. Bạn có thể chỉnh sửa trước khi lưu." />
-            )}
-
-            {/* Submit button */}
-            {ocrResults.filter(r => r?.bienSo).length > 0 && (
-              <div style={{ display:'flex', justifyContent:'flex-end', marginTop:12, gap:10 }}>
-                <button onClick={() => { setOcrFiles([]); setOcrResults([]) }}
-                  style={{ padding:'8px 20px', borderRadius:8, border:'1px solid var(--color-border-secondary)',
-                    background:'transparent', color:'var(--color-text-secondary)', cursor:'pointer', fontSize:13 }}>
-                  Hủy tất cả
-                </button>
-                <button onClick={submitAllOcr}
-                  style={{ padding:'8px 20px', borderRadius:8, border:'none',
-                    background:'#f97316', color:'#fff', cursor:'pointer', fontWeight:600, fontSize:13 }}>
-                  Xác nhận & Lưu {ocrResults.filter(r=>r?.bienSo).length} báo giá
-                </button>
-              </div>
-            )}
-
-            {/* Note về backend OCR */}
-            <div style={{ marginTop:16, padding:12, borderRadius:8,
-              background:'rgba(59,130,246,.06)', border:'1px solid rgba(59,130,246,.15)',
-              fontSize:11, color:'var(--color-text-secondary)' }}>
-              <strong style={{ color:'#60a5fa' }}>Lưu ý kỹ thuật:</strong> Tính năng OCR cần thêm route
-              <code style={{ background:'rgba(255,255,255,.08)', padding:'1px 5px', borderRadius:4, margin:'0 4px' }}>POST /api/bdsc/ocr</code>
-              vào backend. Route này nhận base64 ảnh/PDF, gọi Claude Vision để trích xuất dữ liệu,
-              trả về JSON có cấu trúc. Nếu backend chưa có, các trường sẽ để trống để nhập tay.
-            </div>
+          <div style={{ marginTop:14, padding:12, borderRadius:8,
+            background:'rgba(0,85,204,.06)', border:'1px solid rgba(0,85,204,.15)',
+            fontSize:11, color:'var(--ink3)' }}>
+            <strong style={{ color:'var(--apple-blue)' }}>Lưu ý:</strong> Tính năng OCR cần route{' '}
+            <code style={{ background:'var(--bg-secondary)', padding:'1px 5px', borderRadius:4 }}>POST /api/bdsc/ocr</code>
+            {' '}trên backend. Nếu backend chưa có, các trường sẽ để trống để nhập tay.
           </div>
-        )}
+        </div>
+      )}
 
-        {/* ── GIẤY TỜ XE ──────────────────────────────────────── */}
-        {tab === 'docs' && (
-          <div>
-            {vehicles.length === 0 ? (
-              <EmptyState icon="📄" title="Chưa có xe nào để theo dõi giấy tờ" />
-            ) : (
+      {/* ── GIẤY TỜ XE ──────────────────────────────────────────────────── */}
+      {tab==='docs' && (
+        vehicles.length===0
+          ? <div style={S.card}><EmptyState icon="📄" title="Chưa có xe nào để theo dõi giấy tờ" /></div>
+          : <div style={S.card}>
               <div style={{ overflowX:'auto' }}>
-                <table style={{ width:'100%', borderCollapse:'collapse' }}>
+                <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
                   <thead>
-                    <tr style={{ fontSize:11, color:'var(--color-text-secondary)', borderBottom:'1px solid var(--color-border-tertiary)' }}>
-                      {['Biển số','Đăng kiểm','Bảo hiểm thân vỏ','Phù hiệu','Kiểm định cầu','Giấy phép NLX'].map(h => (
-                        <th key={h} style={{ padding:'8px 10px', textAlign:'left', fontWeight:600, textTransform:'uppercase', letterSpacing:'.04em' }}>{h}</th>
+                    <tr>
+                      {['Biển số','Đăng kiểm','Bảo hiểm thân vỏ','Phù hiệu','Kiểm định cầu','GPLX NLX'].map(h => (
+                        <th key={h} style={{ padding:'8px 12px', textAlign:'left', fontWeight:600,
+                          fontSize:11, color:'var(--ink3)', textTransform:'uppercase', letterSpacing:'.04em',
+                          borderBottom:'1px solid var(--sep)' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {vehicles.slice(0,15).map(v => {
-                      const doc = docsData[v.bienSo] || {}
-                      const DocCell = ({ date }) => {
-                        if (!date) return <td style={{ padding:'8px 10px' }}><Badge type="gray">Chưa nhập</Badge></td>
-                        const d = new Date(date), now = new Date()
-                        const days = Math.round((d-now)/864e5)
-                        return <td style={{ padding:'8px 10px' }}>
-                          <Badge type={days<15?'red':days<30?'yel':'grn'}>
-                            {days<0?`Quá hạn ${-days}ng`:days<30?`${days} ngày`:d.toLocaleDateString('vi-VN')}
-                          </Badge>
-                        </td>
-                      }
-                      return (
-                        <tr key={v._id} style={{ borderBottom:'1px solid var(--color-border-tertiary)', fontSize:12 }}>
-                          <td style={{ padding:'8px 10px', fontWeight:600 }}>{v.bienSo}</td>
-                          <DocCell date={doc.dangKiem}/>
-                          <DocCell date={doc.baoHiem}/>
-                          <DocCell date={doc.phuHieu}/>
-                          <DocCell date={doc.kiemDinhCau}/>
-                          <DocCell date={doc.gplxNLX}/>
-                        </tr>
-                      )
-                    })}
+                    {vehicles.slice(0,20).map(v => (
+                      <tr key={v._id} style={{ borderBottom:'1px solid var(--sep)' }}>
+                        <td style={{ padding:'9px 12px', fontWeight:600, color:'var(--ink)' }}>{v.bienSo}</td>
+                        {[null,null,null,null,null].map((_,i) => (
+                          <td key={i} style={{ padding:'9px 12px' }}>
+                            <span style={S.badge('gray')}>Chưa nhập</span>
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
-                <div style={{ marginTop:12, fontSize:11, color:'var(--color-text-secondary)' }}>
-                  Nhập ngày hết hạn giấy tờ cho từng xe — hệ thống sẽ cảnh báo trước 30 ngày.
-                  Tính năng cập nhật giấy tờ sẽ có trong phiên bản tiếp theo.
+                <div style={{ marginTop:12, fontSize:11, color:'var(--ink3)' }}>
+                  Nhập ngày hết hạn cho từng xe — hệ thống cảnh báo trước 30 ngày.
                 </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── TIRE MODAL ─────────────────────────────────────────── */}
-        {tireModal && (
-          <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.6)',
-            display:'flex', alignItems:'center', justifyContent:'center', zIndex:999 }}
-            onClick={() => setTireModal(null)}>
-            <div style={{ background:'var(--color-background-secondary)', borderRadius:14,
-              padding:20, width:300, boxShadow:'0 20px 60px rgba(0,0,0,.4)' }}
-              onClick={e => e.stopPropagation()}>
-              <div style={{ fontWeight:700, marginBottom:14 }}>
-                Lốp {tireModal.pos} — {POS_LABELS[tireModal.pos]}
-              </div>
-              {[
-                { key:'kmLapDat', label:'KM lắp đặt' },
-                { key:'loai', label:'Loại lốp (nylon/kem)' },
-                { key:'ngayLap', label:'Ngày lắp' },
-                { key:'thuongHieu', label:'Thương hiệu' },
-              ].map(f => (
-                <div key={f.key} style={{ marginBottom:10 }}>
-                  <div style={{ fontSize:11, color:'var(--color-text-secondary)', marginBottom:3 }}>{f.label}</div>
-                  <input defaultValue={tireModal.data?.[f.key] || ''}
-                    onChange={e => {
-                      const updated = { ...tireData }
-                      if (!updated[tireModal.ve]) updated[tireModal.ve] = {}
-                      if (!updated[tireModal.ve][tireModal.pos]) updated[tireModal.ve][tireModal.pos] = {}
-                      updated[tireModal.ve][tireModal.pos][f.key] = e.target.value
-                      setTireData(updated)
-                    }}
-                    style={{ width:'100%', padding:'6px 10px', borderRadius:7,
-                      border:'1px solid var(--color-border-secondary)',
-                      background:'var(--color-background-primary)', color:'var(--color-text-primary)',
-                      fontSize:12, outline:'none' }}/>
-                </div>
-              ))}
-              <div style={{ display:'flex', gap:8, marginTop:14 }}>
-                <button onClick={() => setTireModal(null)}
-                  style={{ flex:1, padding:8, borderRadius:8, border:'1px solid var(--color-border-secondary)',
-                    background:'transparent', color:'var(--color-text-secondary)', cursor:'pointer', fontSize:13 }}>
-                  Đóng
-                </button>
-                <button onClick={() => setTireModal(null)}
-                  style={{ flex:1, padding:8, borderRadius:8, border:'none',
-                    background:'#f97316', color:'#fff', cursor:'pointer', fontSize:13, fontWeight:600 }}>
-                  Lưu
-                </button>
               </div>
             </div>
+      )}
+
+      {/* ── TIRE MODAL ──────────────────────────────────────────────────── */}
+      {tireModal && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.55)',
+          display:'flex', alignItems:'center', justifyContent:'center', zIndex:999 }}
+          onClick={() => setTireModal(null)}>
+          <div style={{ ...S.card, width:300, boxShadow:'0 20px 60px rgba(0,0,0,.3)' }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ fontWeight:700, fontSize:14, color:'var(--ink)', marginBottom:14 }}>
+              Lốp {tireModal.pos} — {POS_LABELS[tireModal.pos]}
+            </div>
+            {[
+              { key:'kmLapDat', label:'KM lúc lắp đặt' },
+              { key:'loai', label:'Loại lốp (nylon / kem)' },
+              { key:'ngayLap', label:'Ngày lắp (dd/mm/yyyy)' },
+              { key:'thuongHieu', label:'Thương hiệu' },
+            ].map(f => (
+              <div key={f.key} style={{ marginBottom:10 }}>
+                <div style={{ fontSize:11, color:'var(--ink3)', marginBottom:3 }}>{f.label}</div>
+                <input defaultValue={tireModal.data?.[f.key]||''}
+                  onChange={e => {
+                    setTireData(prev => {
+                      const next = { ...prev, [tireModal.ve]: { ...(prev[tireModal.ve]||{}),
+                        [tireModal.pos]: { ...(prev[tireModal.ve]?.[tireModal.pos]||{}), [f.key]: e.target.value }}}
+                      return next
+                    })
+                  }}
+                  style={{ width:'100%', padding:'6px 10px', borderRadius:6, fontSize:12,
+                    border:'1px solid var(--sep)', background:'var(--bg)',
+                    color:'var(--ink)', outline:'none' }}
+                  onFocus={e => e.target.style.borderColor='var(--brand)'}
+                  onBlur={e => e.target.style.borderColor='var(--sep)'}/>
+              </div>
+            ))}
+            <div style={{ display:'flex', gap:8, marginTop:14 }}>
+              <button onClick={() => setTireModal(null)}
+                style={{ flex:1, padding:8, borderRadius:8, border:'1px solid var(--sep)',
+                  background:'transparent', color:'var(--ink3)', cursor:'pointer', fontSize:13 }}>
+                Đóng
+              </button>
+              <button onClick={() => setTireModal(null)}
+                style={{ flex:1, padding:8, borderRadius:8, border:'none',
+                  background:'var(--brand)', color:'#fff', cursor:'pointer', fontSize:13, fontWeight:600 }}>
+                Lưu
+              </button>
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   )
 }
