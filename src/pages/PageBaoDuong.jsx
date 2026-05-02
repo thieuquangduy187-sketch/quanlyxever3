@@ -31,47 +31,11 @@ const POS_LABELS = {
   C2TN:'Cầu2 trái ngoài', C2TT:'Cầu2 trái trong', C2PN:'Cầu2 phải ngoài', C2PT:'Cầu2 phải trong',
 }
 
-// ── Bảng giá lốp duyệt — Tờ trình 3413/TTr/HS/PMH/0126 ─────────────────
-// HT HSH · 01/01/2026 – 30/06/2026
-const TIRE_CATALOG = [
-  { id:1,  size:'900R20-(18PR)',       boBo:'kem',   loaiXe:'Thaco 6.2T (thùng lửng/cẩu)',  sl6T:188,
-    p1:{ ncc:'ALPHA',        hang:'Bridgestone 900R20 M789 TL',      xuatXu:'Thái Lan', tdp:6534000,    sdp:5450000 },
-    p2:{ ncc:'LỐP XE VIỆT', hang:'Maxxis UR288 (gai xuôi)',          xuatXu:'Thái Lan', tdp:6240000,    sdp:6240000 } },
-  { id:2,  size:'11.00R20-(18PR)',     boBo:'kem',   loaiXe:'Thaco 14T (thùng bạt)',         sl6T:78,
-    p1:{ ncc:'LỐP XE VIỆT', hang:'Maxxis UR288 (gai xuôi)',          xuatXu:'Thái Lan', tdp:7111111,    sdp:7111111 },
-    p2:{ ncc:'ALPHA',        hang:'Bridgestone R150 (gai hỗn hợp)',   xuatXu:'Thái Lan', tdp:8910000,    sdp:7870000 } },
-  { id:3,  size:'11.00-22-(18PR)',     boBo:'kem',   loaiXe:'Chenglong 8.2–8.4T',            sl6T:18,
-    p1:{ ncc:'LỐP XE VIỆT', hang:'Maxxis UR288 / 11R22.5',           xuatXu:'Thái Lan', tdp:6488889,    sdp:6488889 },
-    p2:{ ncc:'ALPHA',        hang:'Bridgestone R150 (gai hỗn hợp)',   xuatXu:'Thái Lan', tdp:8910000,    sdp:7870000 } },
-  { id:4,  size:'750-16-(18PR)',       boBo:'nylon', loaiXe:'Mitsubishi/Veam',               sl6T:18,
-    p1:{ ncc:'LỐP XE VIỆT', hang:'Maxxis M276 (gai xuôi)',           xuatXu:'Việt Nam', tdp:2603780,    sdp:2603780 },
-    p2:{ ncc:'ALPHA',        hang:'Bridgestone R288 (gai hỗn hợp)',   xuatXu:'Thái Lan', tdp:4374000,    sdp:3950000 } },
-  { id:5,  size:'10.00R20-(18PR)',     boBo:'kem',   loaiXe:'Hino 6.75–8.4T',               sl6T:32,
-    p1:{ ncc:'LỐP XE VIỆT', hang:'Maxxis UR288 (gai xuôi)',          xuatXu:'Thái Lan', tdp:6720000,    sdp:6720000 },
-    p2:{ ncc:'ALPHA',        hang:'Bridgestone R150 (gai hỗn hợp)',   xuatXu:'Thái Lan', tdp:8478000,    sdp:7450000 } },
-  { id:6,  size:'245/70R19.5-(18PR)', boBo:'kem',   loaiXe:'Hyundai 12.35T',                sl6T:6,
-    p1:{ ncc:'ALPHA',        hang:'Bridgestone (gai hỗn hợp)',        xuatXu:'Thái Lan', tdp:5346000,    sdp:4750000 },
-    p2:{ ncc:'LỐP XE VIỆT', hang:'Maxxis UR275 (gai xuôi)',          xuatXu:'Thái Lan', tdp:4591667,    sdp:4591667 } },
-  { id:7,  size:'8.25R16-(18PR)',      boBo:'nylon', loaiXe:'Thaco 3.45T (thùng bạt)',       sl6T:6,
-    p1:{ ncc:'LỐP XE VIỆT', hang:'Maxxis M276 (gai xuôi)',           xuatXu:'Việt Nam', tdp:2955260,    sdp:2955260 },
-    p2:{ ncc:'ALPHA',        hang:'Bridgestone BS585 (gai hỗn hợp)',  xuatXu:'Thái Lan', tdp:4914000,    sdp:4250000 } },
-  { id:8,  size:'7.00R16-(16PR)',      boBo:'nylon', loaiXe:'Mitsubishi/Veam (nhỏ)',         sl6T:48,
-    p1:{ ncc:'LỐP XE VIỆT', hang:'Maxxis MA265 (gai xuôi)',          xuatXu:'Việt Nam', tdp:2083630,    sdp:2083630 },
-    p2:{ ncc:'ALPHA',        hang:'DRC bố nylon (gai hỗn hợp)',       xuatXu:'Việt Nam', tdp:2390000,    sdp:2570000 } },
-  { id:9,  size:'205/65R15',           boBo:'kem',   loaiXe:'Toyota Innova',                 sl6T:7,
-    p1:{ ncc:'LỐP XE VIỆT', hang:'Maxxis MAP5 (gai xuôi)',           xuatXu:'Thái Lan', tdp:1498148,    sdp:1205000 },
-    p2:{ ncc:'ALPHA',        hang:'Bridgestone B390 (gai hỗn hợp)',   xuatXu:'Thái Lan', tdp:2030400,    sdp:1750000 } },
-  { id:10, size:'265/65R17',           boBo:'kem',   loaiXe:'Toyota/Ford bán tải',           sl6T:4,
-    p1:{ ncc:'LỐP XE VIỆT', hang:'Maxxis HT780 (gai xuôi)',          xuatXu:'Thái Lan', tdp:2981481,    sdp:2567000 },
-    p2:{ ncc:'ALPHA',        hang:'Bridgestone D684 (gai hỗn hợp)',   xuatXu:'Thái Lan', tdp:3952800,    sdp:3370000 } },
-]
-
 const TABS = [
   { id:'overview', label:'Tổng quan' }, { id:'alert', label:'Cảnh báo BD' },
   { id:'cost', label:'Chi phí' }, { id:'timeline', label:'Timeline xe' },
   { id:'tire', label:'Lốp xe' }, { id:'forecast', label:'Dự báo' },
   { id:'ocr', label:'Scan báo giá' }, { id:'docs', label:'Giấy tờ xe' },
-  { id:'gialop', label:'Giá lốp' },
 ]
 
 // ── Style helpers (app variables) ────────────────────────────────────────
@@ -759,66 +723,6 @@ export default function PageBaoDuong({ token, user }) {
                 </div>
               </div>
             </div>
-      )}
-
-      {/* ── GIÁ LỐP ────────────────────────────────────────────────────── */}
-      {tab==='gialop' && (
-        <div>
-          <div style={{ ...S.card, marginBottom:12, background:'rgba(0,85,204,.06)',
-            border:'1px solid rgba(0,85,204,.15)' }}>
-            <div style={{ fontWeight:600, fontSize:13, color:'var(--ink)', marginBottom:2 }}>
-              Tờ trình 3413/TTr/HS/PMH/0126 — Mua lốp xe thường xuyên HT HSH
-            </div>
-            <div style={{ fontSize:12, color:'var(--ink3)' }}>
-              Hiệu lực 01/01/2026 – 30/06/2026 · Duyệt 2 NCC: <strong>LỐP XE VIỆT</strong> (Maxxis) & <strong>ALPHA</strong> (Bridgestone/DRC)
-            </div>
-          </div>
-
-          {TIRE_CATALOG.map(t => (
-            <div key={t.id} style={{ ...S.card, marginBottom:8 }}>
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:8 }}>
-                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                  <span style={{ fontWeight:700, fontSize:14, color:'var(--ink)' }}>{t.size}</span>
-                  <span style={S.badge(t.boBo==='kem'?'blu':'grn')}>Bố {t.boBo}</span>
-                </div>
-                <span style={{ fontSize:11, color:'var(--ink3)' }}>
-                  SL 6 tháng: <strong style={{ color:'var(--ink)' }}>{t.sl6T}</strong> lốp
-                </span>
-              </div>
-
-              <div style={{ fontSize:12, color:'var(--ink3)', marginBottom:10 }}>🚛 {t.loaiXe}</div>
-
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-                {[t.p1, t.p2].map((p, pi) => (
-                  <div key={pi} style={{ padding:'10px 12px', background:'var(--bg-secondary)',
-                    borderRadius:8, border:`1px solid ${pi===0?'rgba(26,127,55,.25)':'var(--sep)'}` }}>
-                    <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:6 }}>
-                      <span style={S.badge(pi===0?'grn':'gray')}>Ưu tiên {pi+1}</span>
-                      <span style={{ fontSize:12, fontWeight:600, color:'var(--ink)' }}>{p.ncc}</span>
-                    </div>
-                    <div style={{ fontSize:11, color:'var(--ink3)', marginBottom:6 }}>
-                      {p.hang} · {p.xuatXu}
-                    </div>
-                    <div style={{ display:'flex', gap:12, fontSize:12 }}>
-                      <div>
-                        <span style={{ color:'var(--ink3)' }}>TĐP: </span>
-                        <span style={{ fontWeight:500, color:'var(--ink2)' }}>
-                          {p.tdp.toLocaleString('vi-VN')}đ
-                        </span>
-                      </div>
-                      <div>
-                        <span style={{ color:'var(--ink3)' }}>SĐP: </span>
-                        <span style={{ fontWeight:700, color:'var(--brand)' }}>
-                          {p.sdp.toLocaleString('vi-VN')}đ
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
       )}
 
       {/* ── TIRE MODAL ──────────────────────────────────────────────────── */}
