@@ -7,21 +7,21 @@ const API = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 const getToken = () => localStorage.getItem('hsg_token') || ''
 
 const PAGE_META = {
-  overview:              { label: 'Tổng quan',           section: null },
-  xe_tai:                { label: 'Xe tải',              section: 'Quản lý' },
-  oto_con:               { label: 'Ô tô con',            section: 'Quản lý' },
-  nhat_trinh:            { label: 'Nhật trình tháng',    section: 'Nghiệp vụ' },
-  nhat_trinh_ngay:       { label: 'Nhật trình ngày',     section: 'Nghiệp vụ' },
-  gia_dau:               { label: 'Giá dầu diesel',      section: 'Nghiệp vụ' },
-  gps:                   { label: 'Giám sát GPS',        section: 'Nghiệp vụ' },
-  chuyen_doi:            { label: 'Chuyển đổi HSG→HSH',  section: 'Nghiệp vụ' },
-  bao_cao_nhat_trinh:    { label: 'Báo cáo nhật trình',  section: 'Báo cáo' },
-  hieu_qua:              { label: 'Hiệu quả xe tải',     section: 'Báo cáo' },
-  analyze:               { label: 'Phân tích AI',        section: 'Báo cáo' },
-  import:                { label: 'Import dữ liệu',      section: null },
+  overview:              { label: 'Tổng quan',            section: null },
+  xe_tai:                { label: 'Xe tải',               section: 'Quản lý' },
+  oto_con:               { label: 'Ô tô con',             section: 'Quản lý' },
+  nhat_trinh:            { label: 'Nhật trình tháng',     section: 'Nghiệp vụ' },
+  nhat_trinh_ngay:       { label: 'Nhật trình ngày',      section: 'Nghiệp vụ' },
+  gia_dau:               { label: 'Giá dầu diesel',       section: 'Nghiệp vụ' },
+  gps:                   { label: 'Giám sát GPS',         section: 'Nghiệp vụ' },
+  chuyen_doi:            { label: 'Chuyển đổi HSG→HSH',   section: 'Nghiệp vụ' },
+  bao_duong:             { label: 'Bảo dưỡng & Sửa chữa', section: 'Nghiệp vụ' },
+  bao_cao_nhat_trinh:    { label: 'Báo cáo nhật trình',   section: 'Báo cáo' },
+  hieu_qua:              { label: 'Hiệu quả xe tải',      section: 'Báo cáo' },
+  analyze:               { label: 'Phân tích AI',         section: 'Báo cáo' },
+  import:                { label: 'Import dữ liệu',       section: null },
 }
 
-// Sun icon
 const SunIcon = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="5"/>
@@ -32,7 +32,6 @@ const SunIcon = () => (
   </svg>
 )
 
-// Moon icon
 const MoonIcon = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
@@ -68,16 +67,12 @@ export default function Topbar({ page, isMobile, onMenuClick, user, onLogout, lo
       padding: '0 18px', gap: 10,
       position: 'sticky', top: 0, zIndex: 50,
     }}>
-
-      {/* Mobile hamburger */}
       {isMobile && (
         <button onClick={onMenuClick} style={{
           background: 'none', border: 'none', cursor: 'pointer',
           padding: 6, color: 'var(--ink2)', fontSize: 18, lineHeight: 1,
         }}>☰</button>
       )}
-
-      {/* Breadcrumb + title */}
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden' }}>
         {meta.section && (
           <>
@@ -90,7 +85,6 @@ export default function Topbar({ page, isMobile, onMenuClick, user, onLogout, lo
         <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)', whiteSpace: 'nowrap' }}>
           {meta.label}
         </span>
-        {/* Loading spinner */}
         {isLoading && (
           <div style={{
             width: 14, height: 14, border: '2px solid var(--sep)',
@@ -98,7 +92,6 @@ export default function Topbar({ page, isMobile, onMenuClick, user, onLogout, lo
             animation: 'spin .6s linear infinite', flexShrink: 0,
           }} />
         )}
-        {/* Error badge */}
         {hasError && !isLoading && (
           <span style={{
             fontSize: 11, padding: '2px 8px', borderRadius: 20,
@@ -106,8 +99,6 @@ export default function Topbar({ page, isMobile, onMenuClick, user, onLogout, lo
           }}>Lỗi tải dữ liệu</span>
         )}
       </div>
-
-      {/* System status — admin only */}
       {user?.role === 'admin' && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 5,
@@ -124,8 +115,6 @@ export default function Topbar({ page, isMobile, onMenuClick, user, onLogout, lo
           {systemOk ? 'Hệ thống ổn định' : 'Mất kết nối'}
         </div>
       )}
-
-      {/* Online stats — admin */}
       {user?.role === 'admin' && stats && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 8,
@@ -141,22 +130,15 @@ export default function Topbar({ page, isMobile, onMenuClick, user, onLogout, lo
           <span style={{ color: 'var(--label-tertiary)' }}>lượt</span>
         </div>
       )}
-
-      {/* Dark mode toggle */}
-      <button
-        onClick={onToggleDark}
-        title={darkMode ? 'Chế độ sáng' : 'Chế độ tối'}
+      <button onClick={onToggleDark} title={darkMode ? 'Chế độ sáng' : 'Chế độ tối'}
         style={{
           width: 32, height: 32, borderRadius: 8,
           border: '0.5px solid var(--sep)', background: 'var(--bg-secondary)',
           cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
           stroke: 'var(--ink2)', color: 'var(--ink2)',
-        }}
-      >
+        }}>
         {darkMode ? <SunIcon /> : <MoonIcon />}
       </button>
-
-      {/* User pill */}
       {user && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{
@@ -180,7 +162,6 @@ export default function Topbar({ page, isMobile, onMenuClick, user, onLogout, lo
           }}>Đăng xuất</button>
         </div>
       )}
-
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes pulse { from { opacity: 1; } to { opacity: 0.3; } }
