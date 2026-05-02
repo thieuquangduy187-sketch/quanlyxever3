@@ -402,14 +402,14 @@ export default function PageBaoDuong({ token, user }) {
         })
         results.push(resp.ok ? { ...(await resp.json()), aiRead: true }
           : { bienSo:'', km:'', ngay:'', garage:'', soRO:'', tongTien:'', hangMuc:[], lopDaThay:[], aiRead:false })
-      } catch {
+      } catch (_) {
         results.push({ bienSo:'', km:'', ngay:'', garage:'', soRO:'', tongTien:'', hangMuc:[], lopDaThay:[], aiRead:false })
       }
     }
     setOcrResults(prev => [...prev, ...results])
     setOcrLoading(false)
   }, [])
-      } catch {
+      } catch (_) {
         results.push({ bienSo:'', km:'', ngay:'', garage:'', soRO:'', tongTien:'', hangMuc:[], aiRead:false })
       }
     }
@@ -734,7 +734,7 @@ export default function PageBaoDuong({ token, user }) {
                 body: JSON.stringify({ base64:b64, mimeType:f.file.type||'image/jpeg', filename:f.file.name, loai:'lop' })
               })
               results.push(resp.ok ? await resp.json() : { bienSo:'', km:'', ngay:new Date().toLocaleDateString('vi-VN'), garage:'', soRO:'', tongTien:'', lopDaThay:[], aiRead:false })
-            } catch {
+            } catch (_) {
               results.push({ bienSo:'', km:'', ngay:new Date().toLocaleDateString('vi-VN'), garage:'', soRO:'', tongTien:'', lopDaThay:[], aiRead:false })
             }
           }
