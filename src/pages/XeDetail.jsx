@@ -745,4 +745,3 @@ function DangKiemGCNTab({ bienSo }) {
       </div>
     </div>
   )
-}
