@@ -554,6 +554,7 @@ function DangKiemGCNTab({ bienSo }) {
   if (err)     return <div style={{ padding:24, fontSize:13, color:'var(--apple-red)' }}>{err}</div>
   return <GiayChungNhanKD dk={dk} />
 }
+  export default function XeDetail() {
   const [xe, setXe] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -745,5 +746,4 @@ function DangKiemGCNTab({ bienSo }) {
       </div>
     </div>
   )
-}
 }
