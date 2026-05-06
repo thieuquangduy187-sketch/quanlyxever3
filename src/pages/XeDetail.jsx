@@ -142,18 +142,423 @@ function Section({ title, children }) {
 }
 
 // ── MAIN PAGE ─────────────────────────────────────────────────────────────────
-export default function XeDetail() {
+const API_BASE_FETCH = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+const authFetch = (path, opts = {}) => fetch(`${API_BASE_FETCH}${path}`, {
+  ...opts,
+  headers: { Authorization: `Bearer ${localStorage.getItem('hsg_token') || ''}`, 'Content-Type': 'application/json', ...(opts.headers||{}) }
+})
+
+// ── Đăng kiểm Tab ─────────────────────────────────────────
+const DK_FIELDS = [
+  { group: 'Đăng ký', fields: [
+    { k:'bienSo',         label:'Biển số' },
+    { k:'ngayDangKy',     label:'Ngày đăng ký' },
+    { k:'soSoKiemDinh',   label:'Số sổ kiểm định' },
+    { k:'soSoQuanLy',     label:'Số sổ quản lý' },
+    { k:'chuPhuongTien',  label:'Chủ phương tiện' },
+    { k:'diaChiChu',      label:'Địa chỉ chủ PT' },
+  ]},
+  { group: 'Kỹ thuật', fields: [
+    { k:'loaiPhuongTien',  label:'Loại phương tiện' },
+    { k:'nhanHieu',        label:'Nhãn hiệu' },
+    { k:'soLoai',          label:'Số loại / Model' },
+    { k:'soKhung',         label:'Số khung' },
+    { k:'soMay',           label:'Số máy' },
+    { k:'namSanXuat',      label:'Năm sản xuất' },
+    { k:'noiSanXuat',      label:'Nơi sản xuất' },
+  ]},
+  { group: 'Trọng tải', fields: [
+    { k:'taiTrongThietKe',   label:'Tải trọng TK (kg)' },
+    { k:'trongLuongBanThan', label:'Trọng lượng bản thân (kg)' },
+    { k:'soNguoi',           label:'Số người cho phép chở' },
+    { k:'taiTrongKeo',       label:'Tải trọng kéo TK (kg)' },
+  ]},
+  { group: 'Kích thước', fields: [
+    { k:'kichThuocBao',   label:'Kích thước bao (DxRxC mm)' },
+    { k:'kichThuocThung', label:'Kích thước thùng (DxRxC mm)' },
+    { k:'chieuDaiCoSo',   label:'Chiều dài cơ sở (mm)' },
+    { k:'congThucBanhXe', label:'Công thức bánh xe' },
+    { k:'vetBanhXe',      label:'Vết bánh xe (mm)' },
+  ]},
+  { group: 'Động cơ & lốp', fields: [
+    { k:'nhienLieu',   label:'Nhiên liệu' },
+    { k:'dungTich',    label:'Dung tích (cm³)' },
+    { k:'congSuat',    label:'Công suất (kW/rpm)' },
+    { k:'soLop',       label:'Số lốp theo cầu' },
+    { k:'coLop',       label:'Cỡ lốp theo cầu' },
+  ]},
+  { group: 'Phí kiểm định', fields: [
+    { k:'ngayNopPhi',     label:'Ngày nộp phí' },
+    { k:'donViThuPhi',    label:'Đơn vị thu phí' },
+    { k:'soBienLai',      label:'Số biên lai' },
+    { k:'phiDenHetNgay',  label:'Phí nộp đến hết ngày' },
+  ]},
+]
+
+function DangKiemTab({ bienSo }) {
+  const [dk, setDk]           = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [err, setErr]         = useState('')
+  const [editHistory, setEditHistory] = useState(false)
+  const [historyDraft, setHistoryDraft] = useState([])
+  const [saving, setSaving]   = useState(false)
+
+  useEffect(() => {
+    if (!bienSo) return
+    const bs = bienSo.replace(/[\s.]/g,'')
+    authFetch(`/api/dang-kiem/${encodeURIComponent(bs)}`)
+      .then(r => r.ok ? r.json() : r.json().then(e => Promise.reject(e)))
+      .then(d => { setDk(d); setHistoryDraft(d.lichSuKD || []) })
+      .catch(e => setErr(e.error || 'Chưa có dữ liệu đăng kiểm cho xe này'))
+      .finally(() => setLoading(false))
+  }, [bienSo])
+
+  const saveHistory = async () => {
+    setSaving(true)
+    try {
+      const bs = bienSo.replace(/[\s.]/g,'')
+      const r  = await authFetch(`/api/dang-kiem/${encodeURIComponent(bs)}/history`, {
+        method: 'PUT', body: JSON.stringify({ lichSuKD: historyDraft })
+      })
+      const d = await r.json()
+      setDk(d); setEditHistory(false)
+    } catch (e) { alert('Lỗi: ' + e.message) }
+    setSaving(false)
+  }
+
+  const downloadExcel = () => {
+    const url = `${API_BASE_FETCH}/api/dang-kiem/export/excel`
+    const a   = document.createElement('a')
+    a.href = url; a.setAttribute('download','dang_kiem_xetai.xlsx'); a.click()
+  }
+
+  const row = (label, val) => (
+    <div key={label} style={{ display:'flex', padding:'6px 14px', gap:10, borderBottom:'0.5px solid var(--sep)' }}>
+      <div style={{ fontSize:11.5, color:'var(--label-secondary)', minWidth:170, flexShrink:0, paddingTop:1 }}>{label}</div>
+      <div style={{ fontSize:12.5, fontWeight:500, color: val && val !== '-' ? '#1C1C1C' : '#ABABAB', flex:1 }}>{val || '-'}</div>
+    </div>
+  )
+
+  if (loading) return <div style={{ padding:24, color:'var(--label-secondary)', fontSize:13 }}>Đang tải...</div>
+
+  if (err) return (
+    <div style={{ padding:24 }}>
+      <div style={{ background:'rgba(255,59,48,.06)', border:'0.5px solid rgba(255,59,48,.2)', borderRadius:10, padding:16, color:'var(--apple-red)', fontSize:13, marginBottom:14 }}>
+        {err}
+      </div>
+      <div style={{ fontSize:12, color:'var(--label-secondary)', lineHeight:1.8 }}>
+        Để import dữ liệu đăng kiểm, chạy script:<br/>
+        <code style={{ background:'#F5F3EF', padding:'2px 8px', borderRadius:5, fontSize:11, display:'block', marginTop:6 }}>
+          JWT_TOKEN=... node src/scripts/importDangKiem.js /path/to/html_folder
+        </code>
+      </div>
+    </div>
+  )
+
+  if (!dk) return null
+
+  // Thời hạn KĐ — màu theo ngày còn lại
+  const parseDate = s => { const p=(s||'').split('/'); return p.length===3?new Date(`${p[2]}-${p[1]}-${p[0]}`):null }
+  const hanDate   = parseDate(dk.thoiHanKDHienTai)
+  const daysLeft  = hanDate ? Math.ceil((hanDate - new Date()) / 86400000) : null
+  const hanColor  = daysLeft === null ? 'var(--label-secondary)' : daysLeft < 0 ? 'var(--apple-red)' : daysLeft < 30 ? 'var(--apple-orange)' : 'var(--apple-green)'
+
+  return (
+    <div>
+      {/* Banner thời hạn KĐ */}
+      <div style={{ margin:'0 0 14px', padding:'12px 14px', background:'var(--bg-card)', border:'0.5px solid var(--sep)', borderRadius:12, display:'flex', alignItems:'center', gap:12, justifyContent:'space-between' }}>
+        <div>
+          <div style={{ fontSize:11, color:'var(--label-secondary)', marginBottom:3 }}>Thời hạn kiểm định hiện tại</div>
+          <div style={{ fontSize:18, fontWeight:700, color:hanColor }}>{dk.thoiHanKDHienTai || '-'}</div>
+          {daysLeft !== null && (
+            <div style={{ fontSize:11, color:hanColor, marginTop:2 }}>
+              {daysLeft < 0 ? `Đã hết hạn ${Math.abs(daysLeft)} ngày` : `Còn ${daysLeft} ngày`}
+            </div>
+          )}
+        </div>
+        <button onClick={downloadExcel} style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 14px', border:'0.5px solid var(--sep)', borderRadius:8, background:'transparent', cursor:'pointer', fontSize:12, color:'var(--apple-green)', fontFamily:'inherit' }}>
+          ↓ Excel 290 xe
+        </button>
+      </div>
+
+      {/* Thông tin theo nhóm */}
+      {DK_FIELDS.map(grp => (
+        <div key={grp.group} style={{ background:'var(--bg-card)', border:'0.5px solid var(--sep)', borderRadius:12, overflow:'hidden', marginBottom:10 }}>
+          <div style={{ fontSize:10.5, fontWeight:700, textTransform:'uppercase', letterSpacing:'.08em', color:'var(--label-secondary)', padding:'10px 14px 0' }}>{grp.group}</div>
+          <div style={{ paddingBottom:4 }}>
+            {grp.fields.map(f => row(f.label, dk[f.k]))}
+          </div>
+        </div>
+      ))}
+
+      {/* Lịch sử kiểm định */}
+      <div style={{ background:'var(--bg-card)', border:'0.5px solid var(--sep)', borderRadius:12, overflow:'hidden', marginBottom:10 }}>
+        <div style={{ padding:'10px 14px 0', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+          <div style={{ fontSize:10.5, fontWeight:700, textTransform:'uppercase', letterSpacing:'.08em', color:'var(--label-secondary)' }}>Lịch sử kiểm định</div>
+          <button onClick={() => setEditHistory(e => !e)} style={{ fontSize:11, color:'var(--apple-blue)', border:'none', background:'none', cursor:'pointer', padding:'2px 0' }}>
+            {editHistory ? 'Huỷ' : 'Chỉnh sửa'}
+          </button>
+        </div>
+
+        {!editHistory ? (
+          <div style={{ padding:'8px 0 4px' }}>
+            {(dk.lichSuKD || []).length === 0
+              ? <div style={{ padding:'8px 14px', fontSize:12, color:'#ABABAB', fontStyle:'italic' }}>Chưa có lịch sử</div>
+              : (dk.lichSuKD || []).map((l, i) => {
+                const isLatest = l.ngayKD === dk.ngayKDGanNhat
+                return (
+                  <div key={i} style={{ display:'grid', gridTemplateColumns:'80px 90px 80px 1fr 110px', gap:6, padding:'7px 14px', borderBottom:'0.5px solid var(--sep)', fontSize:11.5, background:isLatest?'rgba(52,199,89,.06)':undefined }}>
+                    <span style={{ color:'var(--label-secondary)' }}>{l.tramKD}</span>
+                    <span>{l.soPhieu}</span>
+                    <span>{l.ngayKD}</span>
+                    <span style={{ color:'var(--label-secondary)' }}>{l.soTem || '-'}</span>
+                    <span style={{ fontWeight:isLatest?700:400, color:isLatest?hanColor:undefined }}>{l.thoiHanKD || '-'}</span>
+                  </div>
+                )
+              })}
+          </div>
+        ) : (
+          <div style={{ padding:'10px 14px' }}>
+            {historyDraft.map((h, i) => (
+              <div key={i} style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr 1fr 28px', gap:6, marginBottom:6 }}>
+                {['tramKD','soPhieu','ngayKD','soTem','thoiHanKD'].map(k => (
+                  <input key={k} value={h[k]||''} placeholder={k} onChange={e => setHistoryDraft(p=>p.map((r,j)=>j===i?{...r,[k]:e.target.value}:r))}
+                    style={{ padding:'5px 8px', border:'0.5px solid var(--sep)', borderRadius:6, fontSize:11, background:'var(--bg-grouped)', color:'var(--label-primary)', fontFamily:'inherit' }} />
+                ))}
+                <button onClick={()=>setHistoryDraft(p=>p.filter((_,j)=>j!==i))}
+                  style={{ border:'none', background:'none', cursor:'pointer', color:'var(--apple-red)', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
+              </div>
+            ))}
+            <div style={{ display:'flex', gap:8, marginTop:8 }}>
+              <button onClick={()=>setHistoryDraft(p=>[...p,{tramKD:'',soPhieu:'',ngayKD:'',lanKD:'1',soTem:'',thoiHanKD:''}])}
+                style={{ fontSize:12, border:'0.5px solid var(--sep)', borderRadius:6, padding:'5px 12px', background:'transparent', cursor:'pointer', fontFamily:'inherit' }}>+ Thêm dòng</button>
+              <button onClick={saveHistory} disabled={saving}
+                style={{ fontSize:12, border:'none', borderRadius:6, padding:'5px 14px', background:'var(--apple-green)', color:'#fff', cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>
+                {saving ? 'Đang lưu...' : 'Lưu lịch sử'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Chứng nhận Kiểm định — render giống PDF gốc ──────────
+function GiayChungNhanKD({ dk }) {
+  if (!dk) return null
+
+  const parseDate = s => { const p=(s||'').split('/'); return p.length===3?new Date(`${p[2]}-${p[1]}-${p[0]}`):null }
+  const hanDate   = parseDate(dk.thoiHanKDHienTai)
+  const daysLeft  = hanDate ? Math.ceil((hanDate - new Date()) / 86400000) : null
+  const hanColor  = daysLeft === null ? 'var(--label-secondary)' : daysLeft < 0 ? 'var(--apple-red)' : daysLeft < 30 ? 'var(--apple-orange)' : 'var(--apple-green)'
+
+  // Tìm lần KĐ hiện tại (gần hôm nay nhất)
+  const currentKD = (dk.lichSuKD || []).find(l => l.ngayKD === dk.ngayKDGanNhat) || dk.lichSuKD?.[0]
+
+  const row = (label, val, labelEn) => (
+    <div style={{ display:'grid', gridTemplateColumns:'180px 1fr', gap:4, padding:'4px 0', borderBottom:'0.5px solid var(--sep)', alignItems:'center' }}>
+      <div>
+        <div style={{ fontSize:11, color:'var(--label-secondary)' }}>{label}</div>
+        {labelEn && <div style={{ fontSize:9.5, color:'#ABABAB', fontStyle:'italic' }}>{labelEn}</div>}
+      </div>
+      <div style={{ fontSize:12, fontWeight:500, color: val && val!=='-' ? 'var(--label-primary)' : '#ABABAB' }}>{val || '-'}</div>
+    </div>
+  )
+
+  // Parse lốp thành dạng "Cầu 1 · 2 lốp · 9.00-20"
+  const lopChips = () => {
+    const so = (dk.soLop || '').split(';').map(s=>s.trim())
+    const co = (dk.coLop || '').split(';').map(s=>s.trim())
+    const len = Math.max(so.length, co.length)
+    if (!len || (!so[0] && !co[0])) return null
+    return Array.from({length:len}, (_,i) => ({
+      cau: `Cầu ${i+1}`, soLop: so[i]||'?', coLop: co[i]||'?'
+    }))
+  }
+  const chips = lopChips()
+
+  return (
+    <div style={{ border:'0.5px solid var(--sep)', borderRadius:12, overflow:'hidden', background:'var(--bg-card)', marginBottom:12 }}>
+      {/* Header trạm */}
+      <div style={{ background:'var(--bg-grouped)', padding:'10px 14px', borderBottom:'0.5px solid var(--sep)', display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
+        <div>
+          <div style={{ fontWeight:600, fontSize:13 }}>Cơ sở đăng kiểm {currentKD?.tramKD || dk.donViThuPhi || '-'}</div>
+          <div style={{ fontSize:10, color:'var(--label-secondary)', fontStyle:'italic', marginTop:1 }}>Periodical Technical Inspection Station</div>
+        </div>
+        <div style={{ textAlign:'right', fontSize:11, color:'var(--label-secondary)', lineHeight:1.7 }}>
+          <div>Ngày KĐ: <strong style={{ color:'var(--label-primary)' }}>{currentKD?.ngayKD || '-'}</strong></div>
+          <div>Số phiếu: <strong style={{ color:'var(--label-primary)' }}>{currentKD?.soPhieu || '-'}</strong></div>
+        </div>
+      </div>
+
+      {/* Tiêu đề */}
+      <div style={{ padding:'10px 14px', textAlign:'center', borderBottom:'0.5px solid var(--sep)' }}>
+        <div style={{ fontWeight:600, fontSize:13, color:'var(--apple-blue)', lineHeight:1.5 }}>
+          CHỨNG NHẬN KIỂM ĐỊNH AN TOÀN KỸ THUẬT VÀ BẢO VỆ MÔI TRƯỜNG XE CƠ GIỚI
+        </div>
+        <div style={{ fontSize:10, color:'var(--label-secondary)', fontStyle:'italic', marginTop:2 }}>
+          Periodical Inspection Certificate of Motor Vehicle for Compliance with Technical Safety and Environmental Protection Requirements
+        </div>
+      </div>
+
+      {/* Biển số + số quản lý */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', padding:'8px 14px', borderBottom:'0.5px solid var(--sep)', gap:12 }}>
+        <div>
+          <div style={{ fontSize:10, color:'var(--label-secondary)' }}>Biển đăng ký <span style={{ fontStyle:'italic' }}>(Registration plate)</span></div>
+          <div style={{ fontSize:20, fontWeight:700, letterSpacing:'.05em', color:'var(--apple-blue)', marginTop:2 }}>{dk.bienSo || '-'}</div>
+        </div>
+        <div>
+          <div style={{ fontSize:10, color:'var(--label-secondary)' }}>Số quản lý phương tiện <span style={{ fontStyle:'italic' }}>(Vehicle inspection No.)</span></div>
+          <div style={{ fontSize:13, fontWeight:600, marginTop:2 }}>{dk.soSoQuanLy || '-'}</div>
+        </div>
+      </div>
+
+      {/* Thông số kỹ thuật */}
+      <div style={{ padding:'8px 14px', borderBottom:'0.5px solid var(--sep)' }}>
+        <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.07em', color:'var(--label-secondary)', marginBottom:8 }}>
+          Thông số kỹ thuật — Specifications
+        </div>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0 16px' }}>
+          <div>
+            {row('Loại phương tiện', dk.loaiPhuongTien, 'Vehicle type')}
+            {row('Nhãn hiệu', dk.nhanHieu, 'Trademark')}
+            {row('Số loại / Model', dk.soLoai, 'Model code')}
+            {row('Số khung', dk.soKhung, 'Chassis No.')}
+            {row('Số máy', dk.soMay, 'Engine No.')}
+            {row('Năm sản xuất', dk.namSanXuat, 'Production year')}
+            {row('Nơi sản xuất', dk.noiSanXuat, 'Production country')}
+          </div>
+          <div>
+            {row('KL toàn bộ TK/CPLN (kg)', dk.taiTrongThietKe ? `${dk.taiTrongThietKe} / ${dk.taiTrongThietKe}` : '-', 'Max. total mass: Designed/Authorized')}
+            {row('KL bản thân / Kerb (kg)', dk.trongLuongBanThan, 'Kerb mass')}
+            {row('Tải trọng thiết kế (kg)', dk.taiTrongThietKe, 'Max. cargo payload')}
+            {row('Số người cho phép chở', dk.soNguoi, 'Passenger capacity')}
+            {row('Kích thước bao (mm)', dk.kichThuocBao, 'Overall dimensions')}
+            {row('Kích thước thùng (mm)', dk.kichThuocThung, 'Cargo dimensions')}
+            {row('Chiều dài cơ sở (mm)', dk.chieuDaiCoSo, 'Wheel space')}
+          </div>
+        </div>
+      </div>
+
+      {/* Động cơ */}
+      <div style={{ padding:'8px 14px', borderBottom:'0.5px solid var(--sep)' }}>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0 16px' }}>
+          <div>
+            {row('Loại nhiên liệu', dk.nhienLieu, 'Fuel')}
+            {row('Dung tích làm việc (cm³)', dk.dungTich, 'Engine displacement')}
+          </div>
+          <div>
+            {row('Công suất / Số vòng quay', dk.congSuat, 'Max.output/rpm')}
+            {row('Công thức bánh xe', dk.congThucBanhXe, 'Drive configuration')}
+          </div>
+        </div>
+      </div>
+
+      {/* Lốp xe */}
+      {chips && (
+        <div style={{ padding:'8px 14px', borderBottom:'0.5px solid var(--sep)' }}>
+          <div style={{ fontSize:10, color:'var(--label-secondary)', marginBottom:6 }}>
+            Số lượng lốp / cỡ lốp / trục — <span style={{ fontStyle:'italic' }}>The number of tires / tire size / axle</span>
+          </div>
+          <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+            {chips.map((c,i) => (
+              <span key={i} style={{ padding:'3px 10px', background:'var(--bg-grouped)', border:'0.5px solid var(--sep)', borderRadius:20, fontSize:11, color:'var(--label-secondary)' }}>
+                <strong style={{ color:'var(--label-primary)' }}>{c.cau}</strong> · {c.soLop} lốp · {c.coLop}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Phí kiểm định */}
+      <div style={{ padding:'8px 14px', borderBottom:'0.5px solid var(--sep)' }}>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0 16px' }}>
+          <div>
+            {row('Ngày nộp phí', dk.ngayNopPhi)}
+            {row('Số biên lai', dk.soBienLai)}
+          </div>
+          <div>
+            {row('Đơn vị thu phí', dk.donViThuPhi)}
+            {row('Phí nộp đến hết ngày', dk.phiDenHetNgay)}
+          </div>
+        </div>
+      </div>
+
+      {/* Số tem + lịch sử */}
+      <div style={{ padding:'8px 14px', borderBottom:'0.5px solid var(--sep)' }}>
+        <div style={{ fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'.07em', color:'var(--label-secondary)', marginBottom:8 }}>
+          Lịch sử kiểm định
+        </div>
+        <table style={{ width:'100%', borderCollapse:'collapse', fontSize:11.5 }}>
+          <thead>
+            <tr>
+              {['Trạm KĐ','Số phiếu','Ngày KĐ','Lần KĐ','Số tem GCN','Thời hạn KĐ'].map(h => (
+                <th key={h} style={{ textAlign:'left', padding:'4px 8px', fontSize:10, textTransform:'uppercase', letterSpacing:'.05em', color:'var(--label-secondary)', borderBottom:'0.5px solid var(--sep)', fontWeight:600 }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {(dk.lichSuKD || []).length === 0
+              ? <tr><td colSpan={6} style={{ padding:'10px 8px', color:'#ABABAB', fontStyle:'italic', fontSize:12 }}>Chưa có lịch sử</td></tr>
+              : (dk.lichSuKD || []).map((l, i) => {
+                const isCurrent = l.ngayKD === dk.ngayKDGanNhat
+                return (
+                  <tr key={i} style={{ background: isCurrent ? 'rgba(52,199,89,.07)' : undefined }}>
+                    {[l.tramKD, l.soPhieu, l.ngayKD, l.lanKD||'-', l.soTem||'-', l.thoiHanKD||'-'].map((v,j) => (
+                      <td key={j} style={{ padding:'5px 8px', borderBottom:'0.5px solid var(--sep)', fontWeight: isCurrent&&j===5?700:400, color: isCurrent&&j===5?hanColor:undefined }}>{v}</td>
+                    ))}
+                  </tr>
+                )
+              })
+            }
+          </tbody>
+        </table>
+      </div>
+
+      {/* Footer — thời hạn hiện tại */}
+      <div style={{ padding:'10px 14px', background: daysLeft !== null && daysLeft < 0 ? 'rgba(255,59,48,.08)' : 'rgba(52,199,89,.08)', display:'flex', alignItems:'center', gap:10, justifyContent:'space-between' }}>
+        <div>
+          <span style={{ fontSize:12, color:'var(--label-secondary)' }}>Chứng nhận có hiệu lực đến hết ngày </span>
+          <span style={{ fontWeight:700, fontSize:13, color:hanColor }}>{dk.thoiHanKDHienTai || '-'}</span>
+          {daysLeft !== null && (
+            <span style={{ fontSize:11, color:hanColor, marginLeft:8 }}>
+              ({daysLeft < 0 ? `Hết hạn ${Math.abs(daysLeft)} ngày` : `Còn ${daysLeft} ngày`})
+            </span>
+          )}
+        </div>
+        {currentKD?.soTem && (
+          <span style={{ fontSize:11, color:'var(--label-secondary)' }}>Số tem: <strong>{currentKD.soTem}</strong></span>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function DangKiemGCNTab({ bienSo }) {
+  const [dk, setDk]           = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [err, setErr]         = useState('')
+
+  useEffect(() => {
+    if (!bienSo) return
+    const bs = bienSo.replace(/[\s.]/g,'')
+    authFetch(`/api/dang-kiem/${encodeURIComponent(bs)}`)
+      .then(r => r.ok ? r.json() : r.json().then(e => Promise.reject(e)))
+      .then(d => setDk(d))
+      .catch(e => setErr(e.error || 'Chưa có dữ liệu đăng kiểm'))
+      .finally(() => setLoading(false))
+  }, [bienSo])
+
+  if (loading) return <div style={{ padding:24, color:'var(--label-secondary)', fontSize:13 }}>Đang tải...</div>
+  if (err)     return <div style={{ padding:24, fontSize:13, color:'var(--apple-red)' }}>{err}</div>
+  return <GiayChungNhanKD dk={dk} />
+}
   const [xe, setXe] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [activeTab, setActiveTab] = useState('info')  // 'info' | 'dkd'
   const isMobile = useIsMobile()
-
-  // Đăng kiểm data
-  const [kd, setKd]           = useState(null)
-  const [kdLoading, setKdLoading] = useState(false)
-  const [kdEdit, setKdEdit]   = useState(false)
-  const [kdForm, setKdForm]   = useState({})
-  const [kdSaving, setKdSaving] = useState(false)
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -175,7 +580,6 @@ export default function XeDetail() {
           setXe(d)
           setLoading(false)
           document.title = `${d.bienSo} — Chi tiết xe`
-          fetchKD(d.bienSo)
           return
         }
       }
@@ -192,44 +596,12 @@ export default function XeDetail() {
         setXe(d)
         setLoading(false)
         document.title = `${d.bienSo || id} — Chi tiết xe`
-        // Fetch KD data sau khi có biển số
-        fetchKD(d.bienSo || id)
       })
       .catch(e => {
         setError('Lỗi tải dữ liệu: ' + e.message)
         setLoading(false)
       })
   }, [])
-
-  const fetchKD = useCallback((bienSo) => {
-    if (!bienSo) return
-    setKdLoading(true)
-    const tok = localStorage.getItem('hsg_token') || ''
-    const base = import.meta.env.VITE_API_URL || 'http://localhost:3000'
-    fetch(`${base}/api/xe-kd/${encodeURIComponent(bienSo)}`, {
-      headers: { Authorization: `Bearer ${tok}` }
-    })
-      .then(r => r.ok ? r.json() : null)
-      .then(d => { setKd(d); if (d?.kdHienHanh) setKdForm(d.kdHienHanh) })
-      .catch(() => {})
-      .finally(() => setKdLoading(false))
-  }, [])
-
-  const saveKD = useCallback(async () => {
-    if (!xe?.bienSo) return
-    setKdSaving(true)
-    const tok  = localStorage.getItem('hsg_token') || ''
-    const base = import.meta.env.VITE_API_URL || 'http://localhost:3000'
-    try {
-      const res = await fetch(`${base}/api/xe-kd/${encodeURIComponent(xe.bienSo)}`, {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${tok}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kdHienHanh: kdForm }),
-      })
-      if (res.ok) { const d = await res.json(); setKd(d); setKdEdit(false) }
-    } catch(e) { alert('Lỗi lưu: ' + e.message) }
-    finally { setKdSaving(false) }
-  }, [xe, kdForm])
 
   if (loading) return (
     <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', minHeight:'100vh', gap:14, background:'var(--bg-grouped)', fontFamily:"'Be Vietnam Pro',sans-serif" }}>
@@ -291,174 +663,68 @@ export default function XeDetail() {
             </div>
           </div>
 
-          <Section title="Thông tin cơ bản">
-            <InfoRow label="Biển số" value={xe.bienSo} />
-            <InfoRow label="Mã TS kế toán" value={xe.maTaiSan} />
-            <InfoRow label="Mã hiện tại" value={xe.maHienTai} />
-            <InfoRow label="Tên tài sản" value={xe.tenTaiSan} />
-            <InfoRow label="Loại thùng" value={xe.loaiThung} />
-            <InfoRow label="Hãng xe" value={xe.loaiXe} />
-            <InfoRow label="Tải trọng" value={xe.taiTrong ? xe.taiTrong + ' tấn' : null} />
-            <InfoRow label="Năm sản xuất" value={xe.namSX && xe.namSX !== '0' ? xe.namSX : null} />
-            <InfoRow label="Ngày đưa vào SD" value={xe.ngayDuaVaoSD} />
-            <InfoRow label="Pháp nhân" value={xe.phapNhan} />
-          </Section>
+          {/* ── Tab bar ── */}
+          <div style={{ display:'flex', gap:0, borderBottom:'0.5px solid var(--sep)', marginBottom:14 }}>
+            {[['info','Thông tin xe'], ['dkd','Đăng kiểm'], ['gcn','Chứng nhận KĐ']].map(([id, label]) => (
+              <button key={id} onClick={() => setActiveTab(id)} style={{
+                padding:'8px 16px', fontSize:12.5, fontWeight:activeTab===id ? 600 : 400,
+                border:'none', background:'transparent', cursor:'pointer', fontFamily:'inherit',
+                borderBottom:`2px solid ${activeTab===id ? 'var(--apple-blue)' : 'transparent'}`,
+                color: activeTab===id ? 'var(--apple-blue)' : 'var(--label-secondary)',
+                marginBottom:-1,
+              }}>{label}</button>
+            ))}
+          </div>
 
-          <Section title="Vị trí & sử dụng">
-            <InfoRow label="Cửa hàng SD" value={xe.cuaHang} />
-            <InfoRow label="Tỉnh mới" value={xe.tinhMoi} />
-            <InfoRow label="Tỉnh cũ" value={xe.tinhCu} />
-            <InfoRow label="Tỉnh gộp" value={xe.tinhGop} />
-            <InfoRow label="Miền" value={xe.mien} tag={mienStyle} />
-          </Section>
+          {/* ── Tab: Thông tin xe ── */}
+          {activeTab === 'info' && (
+            <>
+              <Section title="Thông tin cơ bản">
+                <InfoRow label="Biển số" value={xe.bienSo} />
+                <InfoRow label="Mã TS kế toán" value={xe.maTaiSan} />
+                <InfoRow label="Mã hiện tại" value={xe.maHienTai} />
+                <InfoRow label="Tên tài sản" value={xe.tenTaiSan} />
+                <InfoRow label="Loại thùng" value={xe.loaiThung} />
+                <InfoRow label="Hãng xe" value={xe.loaiXe} />
+                <InfoRow label="Tải trọng" value={xe.taiTrong ? xe.taiTrong + ' tấn' : null} />
+                <InfoRow label="Năm sản xuất" value={xe.namSX && xe.namSX !== '0' ? xe.namSX : null} />
+                <InfoRow label="Ngày đưa vào SD" value={xe.ngayDuaVaoSD} />
+                <InfoRow label="Pháp nhân" value={xe.phapNhan} />
+              </Section>
 
-          {(xe.nguyenGia || xe.gtcl) && (
-            <Section title="Tài chính">
-              {xe.nguyenGia ? <InfoRow label="Nguyên giá" value={fmtCur(xe.nguyenGia)} money /> : null}
-              {xe.gtcl
-                ? <InfoRow label="GTCL" value={fmtCur(xe.gtcl)} money />
-                : xe.nguyenGia ? <InfoRow label="GTCL" value="Đã khấu hao hết" /> : null
-              }
-            </Section>
+              <Section title="Vị trí & sử dụng">
+                <InfoRow label="Cửa hàng SD" value={xe.cuaHang} />
+                <InfoRow label="Tỉnh mới" value={xe.tinhMoi} />
+                <InfoRow label="Tỉnh cũ" value={xe.tinhCu} />
+                <InfoRow label="Tỉnh gộp" value={xe.tinhGop} />
+                <InfoRow label="Miền" value={xe.mien} tag={mienStyle} />
+              </Section>
+
+              {(xe.nguyenGia || xe.gtcl) && (
+                <Section title="Tài chính">
+                  {xe.nguyenGia ? <InfoRow label="Nguyên giá" value={fmtCur(xe.nguyenGia)} money /> : null}
+                  {xe.gtcl
+                    ? <InfoRow label="GTCL" value={fmtCur(xe.gtcl)} money />
+                    : xe.nguyenGia ? <InfoRow label="GTCL" value="Đã khấu hao hết" /> : null
+                  }
+                </Section>
+              )}
+
+              {(xe.dai || xe.rong || xe.cao) && (
+                <Section title="Kích thước thùng xe">
+                  {xe.dai  ? <InfoRow label="Dài (m)"  value={parseFloat(xe.dai).toFixed(2)} /> : null}
+                  {xe.rong ? <InfoRow label="Rộng (m)" value={parseFloat(xe.rong).toFixed(2)} /> : null}
+                  {xe.cao  ? <InfoRow label="Cao (m)"  value={parseFloat(xe.cao).toFixed(2)} /> : null}
+                </Section>
+              )}
+            </>
           )}
 
-          {(xe.dai || xe.rong || xe.cao) && (
-            <Section title="Kích thước thùng xe">
-              {xe.dai  ? <InfoRow label="Dài (m)"  value={parseFloat(xe.dai).toFixed(2)} /> : null}
-              {xe.rong ? <InfoRow label="Rộng (m)" value={parseFloat(xe.rong).toFixed(2)} /> : null}
-              {xe.cao  ? <InfoRow label="Cao (m)"  value={parseFloat(xe.cao).toFixed(2)} /> : null}
-            </Section>
-          )}
+          {/* ── Tab: Đăng kiểm ── */}
+          {activeTab === 'dkd' && <DangKiemTab bienSo={xe.bienSo} />}
 
-          {/* ── ĐĂNG KIỂM ──────────────────────────────────── */}
-          {kdLoading && (
-            <div style={{ background:'var(--bg-card)', border:'0.5px solid var(--sep)', borderRadius:14, padding:'14px 16px', marginBottom:12, color:'var(--label-secondary)', fontSize:12 }}>
-              Đang tải dữ liệu đăng kiểm...
-            </div>
-          )}
-          {!kdLoading && kd && (
-            <div style={{ background:'var(--bg-card)', border:'0.5px solid var(--sep)', borderRadius:14, overflow:'hidden', marginBottom:12 }}>
-              {/* Header */}
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px 16px 0' }}>
-                <div style={{ fontSize:10.5, fontWeight:700, textTransform:'uppercase', letterSpacing:'.08em', color:'var(--label-secondary)' }}>
-                  Chứng nhận kiểm định
-                </div>
-                <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-                  {kd.kdHienHanh?.thoiHanKD && (() => {
-                    const [d,m,y] = (kd.kdHienHanh.thoiHanKD).split('/')
-                    const diff = Math.ceil((new Date(`${y}-${m}-${d}`) - new Date()) / 86400000)
-                    const clr  = diff < 0 ? '#FF3B30' : diff <= 30 ? '#FF9500' : '#34C759'
-                    return <span style={{ fontSize:11, fontWeight:600, color:clr, background:`${clr}18`, padding:'2px 8px', borderRadius:20 }}>
-                      {diff < 0 ? 'Hết hạn' : diff <= 30 ? `Còn ${diff} ngày` : `Đến ${kd.kdHienHanh.thoiHanKD}`}
-                    </span>
-                  })()}
-                  <a href={`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/xe-kd/export-excel`}
-                    onClick={e => { const tok = localStorage.getItem('hsg_token')||''; if(!tok){e.preventDefault();alert('Cần đăng nhập');} }}
-                    style={{ fontSize:11, color:'var(--apple-blue)', background:'rgba(0,122,255,.08)', padding:'3px 10px', borderRadius:20, textDecoration:'none', fontWeight:600 }}>
-                    ↓ Excel 290 xe
-                  </a>
-                </div>
-              </div>
-              {/* KĐ fields */}
-              <div style={{ paddingBottom:6 }}>
-                {[
-                  ['Số sổ KĐ',       kd.soSoKiemDinh],
-                  ['Số sổ quản lý',   kd.soSoQuanLy],
-                  ['Chủ phương tiện', kd.chuPhuongTien],
-                  ['Địa chỉ',         kd.diaChiChu],
-                  ['Ngày đăng ký',    kd.ngayDangKy],
-                  ['Loại phương tiện',kd.loaiPhuongTien],
-                  ['Nhãn hiệu',       kd.nhanHieu],
-                  ['Số loại',         kd.soLoai],
-                  ['Số khung',        kd.soKhungThucTe],
-                  ['Số máy',          kd.soMayThucTe],
-                  ['Năm / Nơi SX',    kd.namSanXuat ? `${kd.namSanXuat}${kd.noiSanXuat ? ' · ' + kd.noiSanXuat : ''}` : null],
-                  ['Tải trọng TK',    kd.taiTrongThietKe ? kd.taiTrongThietKe + ' kG' : null],
-                  ['TL bản thân',     kd.trongLuongBanThan ? kd.trongLuongBanThan + ' kG' : null],
-                  ['Kích thước bao',  kd.kichThuocBao],
-                  ['Kích thước thùng',kd.kichThuocThung],
-                  ['Cỡ lốp',          kd.coLop],
-                  ['Nhiên liệu',      kd.nhieuLieu],
-                  ['Dung tích / CS',  kd.dungTich ? `${kd.dungTich} cm³${kd.congSuatLonNhat ? ' · ' + kd.congSuatLonNhat : ''}` : null],
-                  ['Phí KĐ đến',      kd.phiNopDenHetNgay],
-                ].map(([label, val]) => (
-                  <div key={label} style={{ display:'flex', padding:'7px 14px', gap:10, borderBottom:'0.5px solid var(--sep)' }}>
-                    <div style={{ fontSize:11.5, color:'var(--label-secondary)', minWidth:130, flexShrink:0 }}>{label}</div>
-                    <div style={{ fontSize:12.5, fontWeight:500, color: val ? '#1C1C1C' : '#BBB', fontStyle: val ? 'normal' : 'italic' }}>
-                      {val || '—'}
-                    </div>
-                  </div>
-                ))}
-
-                {/* KĐ hiện hành — editable */}
-                <div style={{ padding:'10px 14px 4px' }}>
-                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
-                    <div style={{ fontSize:10.5, fontWeight:700, textTransform:'uppercase', letterSpacing:'.07em', color:'var(--label-secondary)' }}>
-                      Kiểm định hiện hành
-                    </div>
-                    {!kdEdit
-                      ? <button onClick={() => setKdEdit(true)} style={{ fontSize:11, color:'var(--apple-blue)', background:'none', border:'none', cursor:'pointer', fontFamily:'inherit' }}>Cập nhật</button>
-                      : <div style={{ display:'flex', gap:6 }}>
-                          <button onClick={saveKD} disabled={kdSaving} style={{ fontSize:11, color:'#fff', background:'var(--apple-green)', border:'none', borderRadius:6, padding:'3px 10px', cursor:'pointer', fontFamily:'inherit' }}>{kdSaving ? '...' : 'Lưu'}</button>
-                          <button onClick={() => { setKdEdit(false); setKdForm(kd?.kdHienHanh || {}) }} style={{ fontSize:11, color:'var(--label-secondary)', background:'none', border:'none', cursor:'pointer', fontFamily:'inherit' }}>Huỷ</button>
-                        </div>
-                    }
-                  </div>
-                  {[
-                    ['tramKD',    'Trạm KĐ'],
-                    ['soPhieu',   'Số phiếu'],
-                    ['ngayKD',    'Ngày KĐ'],
-                    ['lanKD',     'Lần KĐ'],
-                    ['soTem',     'Số tem GCN'],
-                    ['thoiHanKD', 'Thời hạn KĐ'],
-                  ].map(([field, label]) => (
-                    <div key={field} style={{ display:'flex', gap:10, padding:'5px 0', borderBottom:'0.5px solid var(--sep)', alignItems:'center' }}>
-                      <div style={{ fontSize:11.5, color:'var(--label-secondary)', minWidth:116, flexShrink:0 }}>{label}</div>
-                      {kdEdit
-                        ? <input value={kdForm[field] || ''} onChange={e => setKdForm(p => ({ ...p, [field]: e.target.value }))}
-                            placeholder="dd/mm/yyyy hoặc nhập tay"
-                            style={{ flex:1, fontSize:12, padding:'3px 8px', border:'0.5px solid #CCC', borderRadius:6, fontFamily:'inherit', outline:'none' }} />
-                        : <div style={{ fontSize:12.5, fontWeight:500, color: kdForm[field] ? '#1C1C1C' : '#BBB', fontStyle: kdForm[field] ? 'normal' : 'italic' }}>
-                            {kdForm[field] || '—'}
-                          </div>
-                      }
-                    </div>
-                  ))}
-                </div>
-
-                {/* Lịch sử KĐ */}
-                {kd.lichSuKD?.length > 0 && (
-                  <div style={{ padding:'8px 14px 10px' }}>
-                    <div style={{ fontSize:10.5, fontWeight:700, textTransform:'uppercase', letterSpacing:'.07em', color:'var(--label-secondary)', marginBottom:6 }}>Lịch sử kiểm định</div>
-                    <div style={{ overflowX:'auto' }}>
-                      <table style={{ width:'100%', borderCollapse:'collapse', fontSize:11 }}>
-                        <thead>
-                          <tr>{['Trạm','Số phiếu','Ngày KĐ','Lần','Thời hạn'].map(h => (
-                            <th key={h} style={{ padding:'4px 6px', textAlign:'left', color:'var(--label-secondary)', fontWeight:600, borderBottom:'0.5px solid var(--sep)', fontSize:10, textTransform:'uppercase', letterSpacing:'.05em', whiteSpace:'nowrap' }}>{h}</th>
-                          ))}</tr>
-                        </thead>
-                        <tbody>
-                          {kd.lichSuKD.map((r,i) => (
-                            <tr key={i} style={{ background: i===0?'rgba(52,199,89,.06)':'transparent' }}>
-                              {[r.tramKD, r.soPhieu, r.ngayKD, r.lanKD, r.thoiHanKD].map((v,j) => (
-                                <td key={j} style={{ padding:'4px 6px', borderBottom:'0.5px solid var(--sep)', color: i===0&&j===4?'#34C759':'#1C1C1C', fontWeight: i===0&&j===4?600:400, whiteSpace:'nowrap', fontSize:11 }}>{v||'—'}</td>
-                              ))}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-          {!kdLoading && !kd && (
-            <div style={{ background:'var(--bg-card)', border:'0.5px solid var(--sep)', borderRadius:14, padding:'14px 16px', marginBottom:12 }}>
-              <div style={{ fontSize:10.5, fontWeight:700, textTransform:'uppercase', letterSpacing:'.08em', color:'var(--label-secondary)', marginBottom:6 }}>Chứng nhận kiểm định</div>
-              <div style={{ fontSize:12, color:'#909090', fontStyle:'italic' }}>Chưa có dữ liệu đăng kiểm cho xe này. Chạy script import để đồng bộ.</div>
-            </div>
-          )}
+          {/* ── Tab: Chứng nhận KĐ ── */}
+          {activeTab === 'gcn' && <DangKiemGCNTab bienSo={xe.bienSo} />}
         </div>
       </div>
 
