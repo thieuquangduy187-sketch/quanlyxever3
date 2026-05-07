@@ -247,7 +247,7 @@ export default function App() {
           {page === 'analyze'                && <PageAnalyze />}
           {page === 'admin_users'            && <PageAdminUsers />}
           {page === 'bao_duong'               && <PageBaoDuong token={token} user={user} />}
-          {page === 'chung_tu_xe'           && <PageChungTuXe />
+          {page === 'chung_tu_xe'             && <PageChungTuXe />}
           {page === 'chung_nhan_kd'           && <PageChungNhanKD />}
         </main>
       </div>
