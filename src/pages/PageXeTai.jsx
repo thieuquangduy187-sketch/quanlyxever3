@@ -41,6 +41,8 @@ const ALL_COLS = [
   { k: 'hasTaiNan',   l: 'Có tai nạn',           sort: true },
   { k: 'hasDieuDong', l: 'Đã điều động',         sort: true },
   { k: 'cayDieuDong', l: 'Cây điều động',        sort: false },
+  { k: 'thoiHanKD',   l: 'Hạn đăng kiểm',       sort: true  },
+  { k: 'thoiHanPhuHieu', l: 'Hạn phù hiệu',     sort: true  },
 ]
 
 // Derive dynamic columns from actual API data keys
@@ -93,6 +95,36 @@ function KpiCard({ icon, label, value, sub, color }) {
 export default function PageXeTai({ data, rowsLoaded }) {
   const s = data?.xeTai?.stats || {}
   const rows = data?.xeTai?.rows || []
+
+  // ── Merge dữ liệu đăng kiểm vào rows ─────────────────
+  const [dkMap, setDkMap] = useState({})
+  useEffect(() => {
+    fetch(`${API}/api/dang-kiem`, {
+      headers: { Authorization: `Bearer ${getToken()}` }
+    })
+      .then(r => r.ok ? r.json() : [])
+      .then(list => {
+        if (!Array.isArray(list)) return
+        const map = {}
+        list.forEach(d => {
+          const key = (d.bienSo || '').toUpperCase().replace(/[-.\s]/g, '')
+          if (key) map[key] = { thoiHanKD: d.thoiHanKDHienTai || '', thoiHanPhuHieu: d.thoiHanPhuHieu || '' }
+        })
+        setDkMap(map)
+      })
+      .catch(() => {})
+  }, [])
+
+  // Rows đã merge thêm thoiHanKD + thoiHanPhuHieu
+  const mergedRows = useMemo(() => {
+    if (!Object.keys(dkMap).length) return rows
+    return rows.map(r => {
+      const key = (r.bienSo || '').toUpperCase().replace(/[-.\s]/g, '')
+      const dk  = dkMap[key]
+      if (!dk) return r
+      return { ...r, thoiHanKD: dk.thoiHanKD, thoiHanPhuHieu: dk.thoiHanPhuHieu }
+    })
+  }, [rows, dkMap])
 
   const [search, setSearch] = useState('')
   const [filterMien, setFilterMien] = useState('')
@@ -191,11 +223,11 @@ export default function PageXeTai({ data, rowsLoaded }) {
   const tto = ['< 1T','1–2.5T','2.5–6T','6–10T','> 10T']
   ttArr.sort((a,b) => tto.indexOf(a.name) - tto.indexOf(b.name))
 
-  const dynamicCols = useMemo(() => deriveColsFromData(rows), [rows])
+  const dynamicCols = useMemo(() => deriveColsFromData(mergedRows), [mergedRows])
   const visibleCols = useMemo(() => dynamicCols.filter(c => visibleKeys.includes(c.k)), [dynamicCols, visibleKeys])
 
   const filtered = useMemo(() => {
-    let r = rows.filter(row => {
+    let r = mergedRows.filter(row => {
       const s2 = search.toLowerCase()
       const ms = !s2 || (row.bienSo||'').toLowerCase().includes(s2) || (row.cuaHang||'').toLowerCase().includes(s2) || (row.tinhMoi||'').toLowerCase().includes(s2)
       const mm = !filterMien || row.mien === filterMien
@@ -355,7 +387,7 @@ export default function PageXeTai({ data, rowsLoaded }) {
 
   const mienTag = { 'Miền Nam': { bg:'var(--brand-l)', color:'var(--brand)' }, 'Miền Bắc': { bg:'var(--teal-l)', color:'var(--teal)' }, 'Miền Trung': { bg:'var(--amber-l)', color:'var(--amber)' } }
 
-  const isLoading = !rowsLoaded?.xe_tai && rows.length === 0
+  const isLoading = !rowsLoaded?.xe_tai && mergedRows.length === 0
 
   return (
     <div style={fullscreen ? {
@@ -449,7 +481,7 @@ export default function PageXeTai({ data, rowsLoaded }) {
             <option value="cuahang">🏪 Xe cửa hàng</option>
             <option value="tonkho">🏭 Xe tổng kho</option>
           </select>
-          <span style={{ fontSize:11, color:'var(--ink3)' }}>{filtered.length} / {rows.length} xe</span>
+          <span style={{ fontSize:11, color:'var(--ink3)' }}>{filtered.length} / {mergedRows.length} xe</span>
           <div style={{ marginLeft:'auto', display:'flex', gap:6 }}>
             <button onClick={() => setShowColPicker(true)}
               style={{ padding:'5px 11px', borderRadius:7, border:'1px solid var(--border)', background:'var(--card)', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
@@ -470,24 +502,6 @@ export default function PageXeTai({ data, rowsLoaded }) {
             <button onClick={exportExcel}
               style={{ padding:'5px 11px', borderRadius:7, border:'none', background:'var(--green)', color:'#fff', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
               ⬇ Tải Excel
-            </button>
-
-            <button onClick={async () => {
-              try {
-                const API = import.meta.env.VITE_API_URL || 'http://localhost:3000'
-                const resp = await fetch(`${API}/api/dang-kiem/export/excel`, {
-                  headers: { Authorization: `Bearer ${localStorage.getItem('hsg_token') || ''}` }
-                })
-                if (!resp.ok) { alert('Chưa có dữ liệu đăng kiểm. Hãy chạy script import trước.'); return }
-                const blob = await resp.blob()
-                const url  = URL.createObjectURL(blob)
-                const a    = document.createElement('a')
-                a.href = url; a.download = `DangKiem_290xe_${new Date().toISOString().slice(0,10)}.xlsx`
-                document.body.appendChild(a); a.click()
-                document.body.removeChild(a); URL.revokeObjectURL(url)
-              } catch(e) { alert('Lỗi: ' + e.message) }
-            }} style={{ padding:'5px 11px', borderRadius:7, border:'none', background:'var(--apple-blue)', color:'#fff', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
-              ⬇ Đăng kiểm
             </button>
             <input ref={uploadRef} type="file" accept=".xlsx,.xls,.csv"
               style={{ display:'none' }} onChange={handleUpload} />
@@ -685,6 +699,23 @@ export default function PageXeTai({ data, rowsLoaded }) {
                         if (col.k === 'taiTrong') return <td key="tt" style={{ padding:'8px 10px', textAlign:'center' }}>{r.taiTrong}</td>
                         if (col.k === 'hasTaiNan') return <td key="tn" style={{ padding:'8px 10px', textAlign:'center' }}>{r.hasTaiNan ? <span style={{ background:'var(--red-l)', color:'var(--red)', fontWeight:600, fontSize:10.5, padding:'2px 7px', borderRadius:4 }}>Có</span> : ''}</td>
                         if (col.k === 'hasDieuDong') return <td key="dd" style={{ padding:'8px 10px', textAlign:'center' }}>{r.hasDieuDong ? <span style={{ background:'var(--teal-l)', color:'var(--teal)', fontWeight:600, fontSize:10.5, padding:'2px 7px', borderRadius:4 }}>Có</span> : ''}</td>
+
+                        if (col.k === 'thoiHanKD' || col.k === 'thoiHanPhuHieu') {
+                          const val = r[col.k]
+                          if (!val) return <td key={col.k} style={{ padding:'8px 10px', color:'var(--ink3)', textAlign:'center' }}>—</td>
+                          const [d,m,y] = val.split('/'); const dt = d&&m&&y ? new Date(`${y}-${m}-${d}`) : null
+                          const days = dt ? Math.ceil((dt - new Date()) / 86400000) : null
+                          const color = days === null ? 'var(--ink3)' : days < 0 ? '#D70015' : days <= 7 ? '#E05000' : days <= 30 ? '#B07800' : '#1A7F37'
+                          const bg    = days === null ? 'transparent' : days < 0 ? 'rgba(215,0,21,.1)' : days <= 7 ? 'rgba(224,80,0,.1)' : days <= 30 ? 'rgba(176,120,0,.1)' : 'rgba(26,127,55,.08)'
+                          return (
+                            <td key={col.k} style={{ padding:'6px 10px', textAlign:'center', whiteSpace:'nowrap' }}>
+                              <span style={{ background:bg, color, fontWeight:600, fontSize:11, padding:'2px 8px', borderRadius:6, display:'inline-block' }}>
+                                {val}
+                              </span>
+                              {days !== null && <div style={{ fontSize:10, color, marginTop:1 }}>{days < 0 ? `hết ${Math.abs(days)}ng` : `còn ${days}ng`}</div>}
+                            </td>
+                          )
+                        }
 
                         const isEditing = editCell?.rowIdx === globalIdx && editCell?.field === col.k
                         return (
