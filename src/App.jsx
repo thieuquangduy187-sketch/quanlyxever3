@@ -22,6 +22,7 @@ import PageImport from './pages/PageImport'
 import PageAnalyze from './pages/PageAnalyze'
 import PageHieuQua from './pages/PageHieuQua'
 import PageAdminUsers from './pages/PageAdminUsers'
+import PageChungTuXe from './pages/PageChungTuXe'
 import PageChungNhanKD from './pages/PageChungNhanKD'
 import PageBaoDuong from './pages/PageBaoDuong'
 import LoadingScreen from './components/LoadingScreen'
@@ -246,6 +247,7 @@ export default function App() {
           {page === 'analyze'                && <PageAnalyze />}
           {page === 'admin_users'            && <PageAdminUsers />}
           {page === 'bao_duong'               && <PageBaoDuong token={token} user={user} />}
+          {page === 'chung_tu_xe'           && <PageChungTuXe />
           {page === 'chung_nhan_kd'           && <PageChungNhanKD />}
         </main>
       </div>
