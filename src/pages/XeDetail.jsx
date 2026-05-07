@@ -291,54 +291,21 @@ function DangKiemTab({ bienSo }) {
         </div>
       ))}
 
-      {/* Lịch sử kiểm định */}
+      {/* Lịch sử kiểm định — chỉ 2 field */}
       <div style={{ background:'var(--bg-card)', border:'0.5px solid var(--sep)', borderRadius:12, overflow:'hidden', marginBottom:10 }}>
-        <div style={{ padding:'10px 14px 0', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-          <div style={{ fontSize:10.5, fontWeight:700, textTransform:'uppercase', letterSpacing:'.08em', color:'var(--label-secondary)' }}>Lịch sử kiểm định</div>
-          <button onClick={() => setEditHistory(e => !e)} style={{ fontSize:11, color:'var(--apple-blue)', border:'none', background:'none', cursor:'pointer', padding:'2px 0' }}>
-            {editHistory ? 'Huỷ' : 'Chỉnh sửa'}
-          </button>
+        <div style={{ fontSize:10.5, fontWeight:700, textTransform:'uppercase', letterSpacing:'.08em', color:'var(--label-secondary)', padding:'10px 14px 0' }}>
+          Lịch sử kiểm định
         </div>
-
-        {!editHistory ? (
-          <div style={{ padding:'8px 0 4px' }}>
-            {(dk.lichSuKD || []).length === 0
-              ? <div style={{ padding:'8px 14px', fontSize:12, color:'#ABABAB', fontStyle:'italic' }}>Chưa có lịch sử</div>
-              : (dk.lichSuKD || []).map((l, i) => {
-                const isLatest = l.ngayKD === dk.ngayKDGanNhat
-                return (
-                  <div key={i} style={{ display:'grid', gridTemplateColumns:'80px 90px 80px 1fr 110px', gap:6, padding:'7px 14px', borderBottom:'0.5px solid var(--sep)', fontSize:11.5, background:isLatest?'rgba(52,199,89,.06)':undefined }}>
-                    <span style={{ color:'var(--label-secondary)' }}>{l.tramKD}</span>
-                    <span>{l.soPhieu}</span>
-                    <span>{l.ngayKD}</span>
-                    <span style={{ color:'var(--label-secondary)' }}>{l.soTem || '-'}</span>
-                    <span style={{ fontWeight:isLatest?700:400, color:isLatest?hanColor:undefined }}>{l.thoiHanKD || '-'}</span>
-                  </div>
-                )
-              })}
+        <div style={{ display:'flex', gap:0, padding:'8px 0 4px' }}>
+          <div style={{ flex:1, padding:'6px 14px', borderBottom:'0.5px solid var(--sep)' }}>
+            <div style={{ fontSize:11, color:'var(--label-secondary)', marginBottom:3 }}>Ngày KĐ gần nhất</div>
+            <div style={{ fontSize:13, fontWeight:600, color:'var(--label-primary)' }}>{dk.ngayKDGanNhat || '-'}</div>
           </div>
-        ) : (
-          <div style={{ padding:'10px 14px' }}>
-            {historyDraft.map((h, i) => (
-              <div key={i} style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr 1fr 28px', gap:6, marginBottom:6 }}>
-                {['tramKD','soPhieu','ngayKD','soTem','thoiHanKD'].map(k => (
-                  <input key={k} value={h[k]||''} placeholder={k} onChange={e => setHistoryDraft(p=>p.map((r,j)=>j===i?{...r,[k]:e.target.value}:r))}
-                    style={{ padding:'5px 8px', border:'0.5px solid var(--sep)', borderRadius:6, fontSize:11, background:'var(--bg-grouped)', color:'var(--label-primary)', fontFamily:'inherit' }} />
-                ))}
-                <button onClick={()=>setHistoryDraft(p=>p.filter((_,j)=>j!==i))}
-                  style={{ border:'none', background:'none', cursor:'pointer', color:'var(--apple-red)', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
-              </div>
-            ))}
-            <div style={{ display:'flex', gap:8, marginTop:8 }}>
-              <button onClick={()=>setHistoryDraft(p=>[...p,{tramKD:'',soPhieu:'',ngayKD:'',lanKD:'1',soTem:'',thoiHanKD:''}])}
-                style={{ fontSize:12, border:'0.5px solid var(--sep)', borderRadius:6, padding:'5px 12px', background:'transparent', cursor:'pointer', fontFamily:'inherit' }}>+ Thêm dòng</button>
-              <button onClick={saveHistory} disabled={saving}
-                style={{ fontSize:12, border:'none', borderRadius:6, padding:'5px 14px', background:'var(--apple-green)', color:'#fff', cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>
-                {saving ? 'Đang lưu...' : 'Lưu lịch sử'}
-              </button>
-            </div>
+          <div style={{ flex:1, padding:'6px 14px', borderBottom:'0.5px solid var(--sep)', borderLeft:'0.5px solid var(--sep)' }}>
+            <div style={{ fontSize:11, color:'var(--label-secondary)', marginBottom:3 }}>Thời hạn KĐ hiện tại</div>
+            <div style={{ fontSize:13, fontWeight:600, color:hanColor }}>{dk.thoiHanKDHienTai || '-'}</div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   )
@@ -554,7 +521,6 @@ function DangKiemGCNTab({ bienSo }) {
   if (err)     return <div style={{ padding:24, fontSize:13, color:'var(--apple-red)' }}>{err}</div>
   return <GiayChungNhanKD dk={dk} />
 }
-  export default function XeDetail() {
   const [xe, setXe] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -666,7 +632,7 @@ function DangKiemGCNTab({ bienSo }) {
 
           {/* ── Tab bar ── */}
           <div style={{ display:'flex', gap:0, borderBottom:'0.5px solid var(--sep)', marginBottom:14 }}>
-            {[['info','Thông tin xe'], ['dkd','Đăng kiểm'], ['gcn','Chứng nhận KĐ']].map(([id, label]) => (
+            {[['info','Thông tin xe'], ['dkd','Đăng kiểm']].map(([id, label]) => (
               <button key={id} onClick={() => setActiveTab(id)} style={{
                 padding:'8px 16px', fontSize:12.5, fontWeight:activeTab===id ? 600 : 400,
                 border:'none', background:'transparent', cursor:'pointer', fontFamily:'inherit',
@@ -723,9 +689,6 @@ function DangKiemGCNTab({ bienSo }) {
 
           {/* ── Tab: Đăng kiểm ── */}
           {activeTab === 'dkd' && <DangKiemTab bienSo={xe.bienSo} />}
-
-          {/* ── Tab: Chứng nhận KĐ ── */}
-          {activeTab === 'gcn' && <DangKiemGCNTab bienSo={xe.bienSo} />}
         </div>
       </div>
 
