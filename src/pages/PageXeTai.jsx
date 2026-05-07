@@ -471,6 +471,24 @@ export default function PageXeTai({ data, rowsLoaded }) {
               style={{ padding:'5px 11px', borderRadius:7, border:'none', background:'var(--green)', color:'#fff', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
               ⬇ Tải Excel
             </button>
+
+            <button onClick={async () => {
+              try {
+                const API = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+                const resp = await fetch(`${API}/api/dang-kiem/export/excel`, {
+                  headers: { Authorization: `Bearer ${localStorage.getItem('hsg_token') || ''}` }
+                })
+                if (!resp.ok) { alert('Chưa có dữ liệu đăng kiểm. Hãy chạy script import trước.'); return }
+                const blob = await resp.blob()
+                const url  = URL.createObjectURL(blob)
+                const a    = document.createElement('a')
+                a.href = url; a.download = `DangKiem_290xe_${new Date().toISOString().slice(0,10)}.xlsx`
+                document.body.appendChild(a); a.click()
+                document.body.removeChild(a); URL.revokeObjectURL(url)
+              } catch(e) { alert('Lỗi: ' + e.message) }
+            }} style={{ padding:'5px 11px', borderRadius:7, border:'none', background:'var(--apple-blue)', color:'#fff', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+              ⬇ Đăng kiểm
+            </button>
             <input ref={uploadRef} type="file" accept=".xlsx,.xls,.csv"
               style={{ display:'none' }} onChange={handleUpload} />
             <button onClick={() => uploadRef.current?.click()} disabled={uploading}
