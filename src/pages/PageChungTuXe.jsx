@@ -161,7 +161,9 @@ function XeTable({ rows, type, onEdit }) {
                     {r.trangThaiXe === 'dungHoatDong' && <AlertBadge level="red" small />}
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--label-secondary)' }}>
-                    {r.nhanHieu && `${r.nhanHieu} · `}
+                    {r.cuaHang && <span style={{ marginRight: 8 }}>🏪 {r.cuaHang}</span>}
+                    {r.tinhMoi && <span style={{ marginRight: 8 }}>📍 {r.tinhMoi}</span>}
+                    {r.nhanHieu && <span>{r.nhanHieu} · </span>}
                     {type === 'kd' ? (
                       <>Hạn KĐ: <strong style={{ color: A.color }}>{r.thoiHanKDHienTai || '-'}</strong>
                         {alert?.daysLeft != null && ` · ${alert.daysLeft < 0 ? `Hết hạn ${Math.abs(alert.daysLeft)} ngày` : `Còn ${alert.daysLeft} ngày lịch / ${alert.workingDaysLeft} ngày LV`}`}
@@ -382,6 +384,8 @@ export default function PageChungTuXe() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <AlertBadge level={r.alertKD?.level} small />
                     <span style={{ fontWeight: 600, fontSize: 13 }}>{r.bienSo}</span>
+                    {r.cuaHang && <span style={{ fontSize: 11, color: 'var(--label-secondary)' }}>🏪 {r.cuaHang}</span>}
+                    {r.tinhMoi && <span style={{ fontSize: 11, color: 'var(--label-secondary)' }}>📍 {r.tinhMoi}</span>}
                     <span style={{ fontSize: 12, color: 'var(--label-secondary)' }}>Hạn: {r.thoiHanKDHienTai || '-'}</span>
                   </div>
                   <button onClick={() => setEditing(r)} style={{ padding: '4px 10px', border: '0.5px solid rgba(215,0,21,.3)',
@@ -464,6 +468,8 @@ export default function PageChungTuXe() {
                       {r.trangThaiXe === 'dungHoatDong' && <span style={{ fontSize: 11, padding: '2px 8px', background: 'rgba(215,0,21,.15)', color: '#D70015', borderRadius: 20 }}>🔴 Dừng HĐ</span>}
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--label-secondary)' }}>
+                      {r.cuaHang && <span style={{ marginRight: 8 }}>🏪 {r.cuaHang}</span>}
+                      {r.tinhMoi && <span style={{ marginRight: 8 }}>📍 {r.tinhMoi}</span>}
                       KĐ: <strong>{r.thoiHanKDHienTai || '-'}</strong>
                       {r.thoiHanPhuHieu && <> · PH: <strong>{r.thoiHanPhuHieu}</strong></>}
                     </div>
