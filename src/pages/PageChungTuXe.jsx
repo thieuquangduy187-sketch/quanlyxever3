@@ -199,6 +199,43 @@ function XeTable({ rows, type, onEdit }) {
   )
 }
 
+// ── Tab đăng kiểm có filter ───────────────────────────────
+function FilterableKDTab({ stats, kdAlerts, onEdit }) {
+  const [activeFilter, setActiveFilter] = useState(null)
+  const filtered = activeFilter ? kdAlerts.filter(r => r.alertKD?.level === activeFilter) : kdAlerts
+
+  return (
+    <div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, marginBottom: 14 }}>
+        {Object.entries({ red: 'Hết hạn', orange: 'Sắp hết (<7 LV)', yellow: 'Chú ý (<30 ng)', green: 'An toàn' }).map(([k, label]) => (
+          <div key={k} onClick={() => setActiveFilter(p => p === k ? null : k)}
+            style={{ background: activeFilter === k ? ALERT[k].bg : 'var(--bg-card)',
+              border: `${activeFilter === k ? '2px' : '0.5px'} solid ${ALERT[k].border}`,
+              borderRadius: 10, padding: '10px 14px', textAlign: 'center',
+              cursor: 'pointer', transition: 'all .15s',
+              boxShadow: activeFilter === k ? `0 0 0 2px ${ALERT[k].border}` : 'none' }}>
+            <div style={{ fontSize: 22, fontWeight: 700, color: ALERT[k].color }}>{stats.kd[k]}</div>
+            <div style={{ fontSize: 11, color: ALERT[k].color, marginTop: 2 }}>{label}</div>
+            {activeFilter === k && <div style={{ fontSize: 10, color: ALERT[k].color, marginTop: 3 }}>▼ đang lọc</div>}
+          </div>
+        ))}
+      </div>
+      {activeFilter && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+          <AlertBadge level={activeFilter} />
+          <span style={{ fontSize: 12, color: 'var(--label-secondary)' }}>— {filtered.length} xe</span>
+          <button onClick={() => setActiveFilter(null)}
+            style={{ fontSize: 11, color: 'var(--label-secondary)', border: 'none',
+              background: 'none', cursor: 'pointer', textDecoration: 'underline', fontFamily: 'inherit' }}>
+            Xem tất cả
+          </button>
+        </div>
+      )}
+      <XeTable rows={filtered} type="kd" onEdit={onEdit} />
+    </div>
+  )
+}
+
 // ── MAIN ─────────────────────────────────────────────────
 export default function PageChungTuXe() {
   const [tab,     setTab]     = useState('dashboard')
@@ -399,19 +436,8 @@ export default function PageChungTuXe() {
         </div>
       )}
 
-      {/* ══ ĐĂNG KIỂM ══ */}
       {tab === 'dang_kiem' && (
-        <div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, marginBottom: 14 }}>
-            {Object.entries({ red: 'Hết hạn', orange: 'Sắp hết (<7 LV)', yellow: 'Chú ý (<30 ng)', green: 'An toàn' }).map(([k, label]) => (
-              <div key={k} style={{ background: ALERT[k].bg, border: `0.5px solid ${ALERT[k].border}`, borderRadius: 10, padding: '10px 14px', textAlign: 'center' }}>
-                <div style={{ fontSize: 22, fontWeight: 700, color: ALERT[k].color }}>{stats.kd[k]}</div>
-                <div style={{ fontSize: 11, color: ALERT[k].color, marginTop: 2 }}>{label}</div>
-              </div>
-            ))}
-          </div>
-          <XeTable rows={kdAlerts} type="kd" onEdit={setEditing} />
-        </div>
+        <FilterableKDTab stats={stats} kdAlerts={kdAlerts} onEdit={setEditing} />
       )}
 
       {/* ══ PHÙ HIỆU ══ */}
